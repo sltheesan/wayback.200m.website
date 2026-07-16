@@ -193,19 +193,27 @@ export default function AdminLayout() {
         </aside>
       )}
 
-      {/* Desktop Sidebar */}
-      <aside
+      {/* Desktop Sidebar Container */}
+      <div
         className="desktop-sidebar"
         style={{
           width: collapsed ? 64 : 240, flexShrink: 0,
-          background: 'rgba(10,14,26,0.98)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
           position: 'sticky', top: 0, height: '100vh',
           transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflow: 'hidden', zIndex: 30,
+          zIndex: 30,
         }}
       >
-        <SidebarContent />
+        {/* Actual Sidebar Panel with hidden overflow */}
+        <aside
+          style={{
+            width: '100%', height: '100%',
+            background: 'rgba(10,14,26,0.98)',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
+            overflow: 'hidden',
+          }}
+        >
+          <SidebarContent />
+        </aside>
 
         {/* Collapse toggle */}
         <button
@@ -217,11 +225,22 @@ export default function AdminLayout() {
             background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)',
             cursor: 'pointer', display: 'flex', alignItems: 'center',
             justifyContent: 'center', color: '#64748b', zIndex: 50,
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = '#6366f1';
+            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = '#64748b';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)';
+            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
           }}
         >
           {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>
-      </aside>
+      </div>
 
       {/* Main content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>

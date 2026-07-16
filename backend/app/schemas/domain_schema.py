@@ -71,7 +71,7 @@ class DomainAnalysisResponse(BaseModel):
     risk_level: str
     peak_score: int
     avg_score: int
-    category_confidence: Dict[str, int] = {}
+    category_confidence: Dict[str, float] = {}
     flags: List[str] = Field(description="Unique flagged risk categories across snapshots")
     snapshots_checked: int
     last_updated: datetime
