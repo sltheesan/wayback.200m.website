@@ -62,7 +62,7 @@ export default function AddUserModal({ onClose, onSaved }: Props) {
             <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Email *</label><input required type="email" style={fieldStyle} value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="john@example.com" /></div>
             <div style={{ position: 'relative' }}>
               <label style={labelStyle}>Password *</label>
-              <input required type={showPwd ? 'text' : 'password'} style={{ ...fieldStyle, paddingRight: 40 }} value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="Min 8 chars" />
+              <input required type={showPwd ? 'text' : 'password'} style={{ ...fieldStyle, paddingRight: 40 }} value={form.password} onChange={(e) => set('password', e.target.value)} placeholder="Enter password" />
               <button type="button" onClick={() => setShowPwd(!showPwd)} style={{ position: 'absolute', right: 12, bottom: 11, background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 0 }}>
                 {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>

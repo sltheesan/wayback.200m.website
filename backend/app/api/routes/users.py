@@ -111,9 +111,8 @@ async def create_user(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username or email already in use.")
 
-    errors = validate_password_strength(body.password)
-    if errors:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=errors)
+    if not body.password or not body.password.strip():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password cannot be empty.")
 
     new_user = User(
         full_name=body.full_name,
@@ -368,9 +367,8 @@ async def admin_reset_password(
 
     temp_password: str | None = None
     if body.new_password:
-        errors = validate_password_strength(body.new_password)
-        if errors:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=errors)
+        if not body.new_password or not body.new_password.strip():
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password cannot be empty.")
         target.hashed_password = hash_password(body.new_password)
     else:
         temp_password = generate_temp_password()
