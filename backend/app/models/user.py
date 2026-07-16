@@ -35,13 +35,13 @@ class User(Base):
 
     # Role & Status
     role: Mapped[str] = mapped_column(
-        SAEnum(UserRole, name="user_role", create_type=True),
+        SAEnum(UserRole, name="user_role", create_type=False),
         default=UserRole.user,
         nullable=False,
         index=True
     )
     status: Mapped[str] = mapped_column(
-        SAEnum(UserStatus, name="user_status", create_type=True),
+        SAEnum(UserStatus, name="user_status", create_type=False),
         default=UserStatus.active,
         nullable=False,
         index=True
