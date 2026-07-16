@@ -89,3 +89,7 @@ class DomainAnalysisResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DomainAnalysisSubmitResponse(BaseModel):
+    task_id: str
+    message: str = "Analysis started in background"

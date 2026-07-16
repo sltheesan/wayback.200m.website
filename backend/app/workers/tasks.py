@@ -1,10 +1,22 @@
 import asyncio
 import nest_asyncio
+import time
+import json
 from datetime import datetime, timedelta
 from sqlalchemy import delete
 from backend.app.workers.celery_worker import celery_app
 from backend.app.core.database import AsyncSessionLocal
+from backend.app.models.user import User
+from backend.app.models.login_history import LoginHistory
+from backend.app.models.activity_log import ActivityLog
+from backend.app.models.notification import Notification
+from backend.app.models.scan_record import ScanRecord, ScanSource
 from backend.app.models.domain import Domain
+from backend.app.models.snapshot import Snapshot
+from backend.app.models.analysis import AnalysisFlag
+from backend.app.models.timeline import DomainTimeline
+from backend.app.models.threat_intel import ThreatIntelligence
+from backend.app.models.system_settings import SystemSettings
 from backend.app.services.pipeline import analyze_domain_pipeline
 from backend.app.services.cdx_service import fetch_snapshots_with_proxy_rotation
 from backend.app.utils.logger import logger
@@ -43,16 +55,63 @@ def _pick_evidence_snapshot(result: dict) -> dict | None:
         "flags": snap.get("flags", []),
     }
 
+def _enrich_snapshots_with_ai(result: dict) -> dict:
+    snapshots = result.get("snapshots", [])
+    for snap in snapshots:
+        raw_meta = snap.get("extraction_metadata")
+        if raw_meta and isinstance(raw_meta, str):
+            try:
+                parsed = json.loads(raw_meta)
+                clf = parsed.get("classifier", {})
+                snap["ai_intelligence"] = {
+                    "primary_category": clf.get("primary_category"),
+                    "confidence": clf.get("confidence"),
+                    "all_scores": clf.get("all_scores"),
+                    "detected_language": clf.get("detected_language"),
+                    "summary": clf.get("summary"),
+                    "detectors": parsed.get("detectors"),
+                    "detector_boost": parsed.get("detector_boost"),
+                }
+            except Exception:
+                snap["ai_intelligence"] = None
+        elif not snap.get("ai_intelligence"):
+            snap["ai_intelligence"] = None
+    return result
+
 @celery_app.task(name="tasks.analyze_domain")
-def analyze_domain_task(domain: str, force_refresh: bool = False) -> dict:
+def analyze_domain_task(domain: str, force_refresh: bool = False, user_id: int | None = None) -> dict:
     """
     Celery task that analyzes a single domain in the background.
+    Additionally records admin scan history when completed.
     """
-    logger.info(f"[Celery Task] Initiating background analysis for {domain}")
+    logger.info(f"[Celery Task] Initiating background analysis for {domain} (User ID: {user_id})")
+    start_time = time.monotonic()
 
     async def run_analysis():
         async with AsyncSessionLocal() as db:
-            return await analyze_domain_pipeline(domain, force_refresh, db)
+            result = await analyze_domain_pipeline(domain, force_refresh, db)
+            enriched = _enrich_snapshots_with_ai(result)
+
+            # Record the scan for admin history
+            duration_ms = int((time.monotonic() - start_time) * 1000)
+            try:
+                scan_rec = ScanRecord(
+                    domain_name=domain,
+                    user_id=user_id,
+                    status="completed",
+                    risk_score=enriched.get("risk_score"),
+                    risk_level=enriched.get("risk_level"),
+                    duration_ms=duration_ms,
+                    source=ScanSource.manual if user_id else ScanSource.anonymous,
+                    wayback_status="fetched" if enriched.get("snapshots") else "no_data",
+                )
+                db.add(scan_rec)
+                await db.commit()
+            except Exception as scan_err:
+                logger.warning(f"Failed to record scan history in background task: {scan_err}")
+                await db.rollback()
+
+            return enriched
 
     return _run_async(run_analysis())
 

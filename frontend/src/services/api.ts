@@ -21,8 +21,27 @@ export const apiService = {
       domain,
       force_refresh: forceRefresh,
     };
-    const response = await apiClient.post<DomainAnalysisResponse>('/domains/analyze', body);
-    return response.data;
+    // 1. Submit the scan request to the background Celery task queue
+    const response = await apiClient.post<{ task_id: string; message: string }>('/domains/analyze', body);
+    const taskId = response.data.task_id;
+
+    // 2. Poll the status of the task until completed
+    const maxAttempts = 180; // 360 seconds (6 minutes) total polling window
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // wait 2 seconds between polls
+      const statusRes = await apiClient.get<any>(`/analysis/task/${taskId}`);
+      
+      if (statusRes.data.status === 'SUCCESS') {
+        // Return the full DomainAnalysisResponse result payload
+        return statusRes.data.result;
+      }
+      
+      if (statusRes.data.status === 'FAILURE' || statusRes.data.status === 'REVOKED') {
+        const errorMsg = statusRes.data.error || 'The background scan task failed.';
+        throw new Error(errorMsg);
+      }
+    }
+    throw new Error('Scanning timed out. The request took longer than 6 minutes.');
   },
 
   /**

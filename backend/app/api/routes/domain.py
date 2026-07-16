@@ -7,7 +7,7 @@ import json
 
 from backend.app.core.database import get_db
 from backend.app.core.dependencies import get_optional_user
-from backend.app.schemas.domain_schema import DomainRequest, DomainAnalysisResponse
+from backend.app.schemas.domain_schema import DomainRequest, DomainAnalysisResponse, DomainAnalysisSubmitResponse
 from backend.app.schemas.response_schema import BulkAnalysisRequest, BulkAnalysisResponse
 from backend.app.services.pipeline import analyze_domain_pipeline
 from backend.app.models.domain import Domain
@@ -105,55 +105,31 @@ async def proxy_snapshot(timestamp: str, url: str):
         return HTMLResponse(content=error_html, status_code=200)
 
 
-@router.post("/analyze", response_model=DomainAnalysisResponse)
+@router.post("/analyze", response_model=DomainAnalysisSubmitResponse)
 async def analyze_domain(
     request: DomainRequest,
-    db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
-    Analyzes a domain by fetching historical snapshots, scoring content, 
-    and persisting results to cache and database.
-    Optionally links the scan to an authenticated user for admin history tracking.
+    Submits a domain scan job to Celery for background analysis.
+    Returns the celery task ID immediately.
     """
-    start_time = time.monotonic()
     try:
-        logger.info(f"Received analysis request for: {request.domain}")
-        result = await analyze_domain_pipeline(
-            domain=request.domain, 
-            force_refresh=request.force_refresh, 
-            db=db
+        logger.info(f"Received background analysis request for: {request.domain}")
+        task = analyze_domain_task.delay(
+            request.domain, 
+            request.force_refresh, 
+            current_user.id if current_user else None
         )
-        enriched = _enrich_snapshots_with_ai(result)
-
-        # Record the scan for admin history
-        duration_ms = int((time.monotonic() - start_time) * 1000)
-        try:
-            scan_rec = ScanRecord(
-                domain_name=request.domain,
-                user_id=current_user.id if current_user else None,
-                status="completed",
-                risk_score=enriched.get("risk_score"),
-                risk_level=enriched.get("risk_level"),
-                duration_ms=duration_ms,
-                source=ScanSource.manual if current_user else ScanSource.anonymous,
-                wayback_status="fetched" if enriched.get("snapshots") else "no_data",
-            )
-            db.add(scan_rec)
-            await db.flush()
-        except Exception as scan_err:
-            logger.warning(f"Failed to record scan history: {scan_err}")
-
-        return enriched
+        return DomainAnalysisSubmitResponse(
+            task_id=task.id,
+            message="Analysis successfully queued in the background."
+        )
     except Exception as e:
-        logger.error(f"Error during domain analysis for {request.domain}: {e}", exc_info=True)
-        err_msg = str(e)
-        status_code = 500
-        if "Wayback Machine" in err_msg or "CDX API" in err_msg or "unreachable" in err_msg:
-            status_code = 503
+        logger.error(f"Failed to queue background domain analysis for {request.domain}: {e}")
         raise HTTPException(
-            status_code=status_code, 
-            detail=f"An error occurred while analyzing domain: {err_msg}"
+            status_code=500,
+            detail=f"Failed to queue background job: {str(e)}"
         )
 
 
