@@ -34,12 +34,14 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(256), nullable=False)
 
     # Role & Status
-    role: Mapped[str] = mapped_column(
+
+       role: Mapped[str] = mapped_column(
         SAEnum(UserRole, name="user_role", create_type=False),
         default=UserRole.user,
         nullable=False,
         index=True
     )
+
     status: Mapped[str] = mapped_column(
         SAEnum(UserStatus, name="user_status", create_type=False),
         default=UserStatus.active,
