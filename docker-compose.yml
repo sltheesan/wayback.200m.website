@@ -139,8 +139,9 @@ services:
 
 volumes:
   postgres_data:
-    name: chronosentinelai_postgres_data
+    name: chronosentinel-ai_postgres_data
     external: true
+
   redis_data:
-    name: chronosentinelai_redis_data
+    name: chronosentinel-ai_redis_data
     external: true
