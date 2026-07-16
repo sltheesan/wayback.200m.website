@@ -53,14 +53,17 @@ def is_free_proxy(proxy: Optional[str]) -> bool:
 # Proxy Sources
 # ---------------------------------------------------------------------------
 
-PROXY_SOURCES = [
-    # ProxyScrape — HTTP anonymous SSL proxies
-    "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=yes&anonymity=anonymous",
-    # ProxyScrape — SOCKS5 proxies
-    "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=5000&country=all",
-    # Proxy-list.download
-    "https://www.proxy-list.download/api/v1/get?type=http&anon=elite",
-]
+def get_proxy_sources() -> list[str]:
+    """Generates the list of proxy scraping API endpoints, using the configured countries."""
+    countries = getattr(settings, "PROXY_COUNTRIES", "all").strip().lower()
+    sources = [
+        f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country={countries}&ssl=yes&anonymity=anonymous",
+        f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=5000&country={countries}",
+    ]
+    # Only scrape proxy-list.download if countries is "all", as it doesn't support country filtering
+    if countries == "all":
+        sources.append("https://www.proxy-list.download/api/v1/get?type=http&anon=elite")
+    return sources
 
 
 async def _fetch_from_source(session: aiohttp.ClientSession, url: str) -> list[str]:
@@ -101,7 +104,7 @@ async def refresh_free_proxies() -> None:
 
     try:
         async with aiohttp.ClientSession() as session:
-            tasks = [_fetch_from_source(session, src) for src in PROXY_SOURCES]
+            tasks = [_fetch_from_source(session, src) for src in get_proxy_sources()]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for result in results:
                 if isinstance(result, list):

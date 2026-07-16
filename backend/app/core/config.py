@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     # Comma-separated list of proxy URLs to rotate through on failure.
     # Example: "http://1.2.3.4:8080,http://user:pass@5.6.7.8:3128,socks5://9.10.11.12:1080"
     HTTP_PROXY_LIST: str = ""
+    # Comma-separated list of geographical country codes to scrape proxies from (e.g. "US,CA,DE" or "all")
+    PROXY_COUNTRIES: str = "all"
 
     def get_proxy_rotation_list(self) -> list[str]:
         """Returns ordered list of proxies to try: primary first, then rotation list."""

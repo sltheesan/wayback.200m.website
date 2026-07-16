@@ -22,7 +22,7 @@ class WaybackProvider(ArchiveProvider):
         self.client = client
 
     async def _query_cdx_raw(self, target_url: str) -> List[List[str]]:
-        query_url = f"{settings.WAYBACK_CDX_URL}?url={target_url}&output=json&limit=500"
+        query_url = f"{settings.WAYBACK_CDX_URL}?url={target_url}&output=json&limit=100"
         res_text = await self.client.get(query_url)
         if not res_text.strip():
             return []
