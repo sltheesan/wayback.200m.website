@@ -317,10 +317,22 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             "evidence_url": evidence_url,
         }
 
-    # Fetch and analyze sequentially (Phase 2 chronological)
-    logger.info(f"Fetching and analyzing {len(unique_snapshots_to_fetch)} unique snapshots sequentially for {domain_clean}...")
+    # Fetch HTML contents in parallel to prevent Cloudflare/proxy timeouts
+    logger.info(f"Fetching {len(unique_snapshots_to_fetch)} unique snapshots in parallel for {domain_clean}...")
+    async def fetch_html_only(s: dict) -> dict:
+        t = s["timestamp"]
+        orig = s["original"]
+        html = s.get("html_content")
+        if html is None:
+            html = await fetch_snapshot_html(t, orig, domain_clean)
+        return {**s, "html_content": html}
+
+    fetched_snapshots = await asyncio.gather(*[fetch_html_only(snap) for snap in unique_snapshots_to_fetch])
+
+    # Analyze sequentially (Phase 2 chronological)
+    logger.info(f"Analyzing {len(fetched_snapshots)} unique snapshots sequentially for {domain_clean}...")
     unique_results = []
-    for snap in unique_snapshots_to_fetch:
+    for snap in fetched_snapshots:
         res = await fetch_and_analyze(snap)
         unique_results.append(res)
 

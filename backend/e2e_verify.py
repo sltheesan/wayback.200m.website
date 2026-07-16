@@ -1,7 +1,7 @@
 """Full end-to-end pipeline test: scans a domain, confirms all snapshots are processed."""
 import asyncio
 import json
-from backend.app.core.database import async_engine, AsyncSessionLocal
+from backend.app.core.database import AsyncSessionLocal
 from backend.app.services.pipeline import analyze_domain_pipeline
 from backend.app.core.http_client import HttpClient
 

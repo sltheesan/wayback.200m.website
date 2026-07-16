@@ -49,7 +49,7 @@ async def fetch_live_domain_html(domain: str) -> tuple[str, str | None]:
     from backend.app.core.http_client import http_client
     from backend.app.core.proxy_utils import is_socks_proxy
 
-    proxy_list = await get_proxy_rotation_list()
+    proxy_list = settings.get_proxy_rotation_list()
     for proxy in proxy_list:
         label = proxy_label(proxy)
         session = http_client.get_session_for_proxy(proxy)
