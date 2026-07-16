@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: domain_risk
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: Dinusha07
     ports:
       - "5432:5432"
     volumes:
@@ -46,8 +46,8 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/domain_risk
-      - SYNC_DATABASE_URL=postgresql://postgres:postgres@db:5432/domain_risk
+      - DATABASE_URL=postgresql+asyncpg://postgres:Dinusha07@db:5432/domain_risk
+      - SYNC_DATABASE_URL=postgresql://postgres:Dinusha07@db:5432/domain_risk
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
@@ -82,8 +82,8 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/domain_risk
-      - SYNC_DATABASE_URL=postgresql://postgres:postgres@db:5432/domain_risk
+      - DATABASE_URL=postgresql+asyncpg://postgres:Dinusha07@db:5432/domain_risk
+      - SYNC_DATABASE_URL=postgresql://postgres:Dinusha07@db:5432/domain_risk
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
@@ -108,8 +108,8 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/domain_risk
-      - SYNC_DATABASE_URL=postgresql://postgres:postgres@db:5432/domain_risk
+      - DATABASE_URL=postgresql+asyncpg://postgres:Dinusha07@db:5432/domain_risk
+      - SYNC_DATABASE_URL=postgresql://postgres:Dinusha07@db:5432/domain_risk
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
@@ -139,6 +139,8 @@ services:
 
 volumes:
   postgres_data:
-    name: dhrintelligencesystem_postgres_data
+    name: chronosentinelai_postgres_data
     external: true
   redis_data:
+    name: chronosentinelai_redis_data
+    external: true
