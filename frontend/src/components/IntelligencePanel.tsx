@@ -37,6 +37,44 @@ const highlightKeyword = (text: string | null | undefined, keyword: string) => {
   );
 };
 
+const formatLocationLabel = (rawElement: string | null | undefined): string => {
+  if (!rawElement) return "Page Contents";
+  
+  const clean = rawElement.toLowerCase().trim();
+  
+  if (clean.includes("meta")) {
+    const nameMatch = clean.match(/name="([^"]+)"/) || clean.match(/property="([^"]+)"/);
+    if (nameMatch && nameMatch[1]) {
+      return `HTML Meta Tag (${nameMatch[1]})`;
+    }
+    return "HTML Meta Tag (Head Metadata)";
+  }
+  
+  if (clean === "<title>") {
+    return "HTML Document Title (<title>)";
+  }
+  if (clean === "<a>") {
+    return "HTML Anchor / Link (<a>)";
+  }
+  if (clean.match(/^<h[1-6]>$/)) {
+    return `HTML Heading (${clean.toUpperCase()})`;
+  }
+  if (clean === "<p>") {
+    return "HTML Body Paragraph (<p>)";
+  }
+  if (clean === "<div>") {
+    return "HTML Content Div (<div>)";
+  }
+  if (clean === "<span>") {
+    return "HTML Inline Text (<span>)";
+  }
+  if (clean === "<li>") {
+    return "HTML List Item (<li>)";
+  }
+  
+  return `HTML Element (${rawElement})`;
+};
+
 export default function IntelligencePanel({ snapshot }: IntelligencePanelProps) {
   const ai = snapshot.ai_intelligence;
   
@@ -129,7 +167,9 @@ export default function IntelligencePanel({ snapshot }: IntelligencePanelProps) 
                       {flag.element && (
                         <div className="flex items-center space-x-1 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
                           <span>📍 Location:</span>
-                          <code className="text-violet-400 font-mono font-semibold lowercase bg-slate-950 px-1 rounded">{flag.element}</code>
+                          <span className="text-violet-400 font-semibold bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono text-[10px]">
+                            {formatLocationLabel(flag.element)}
+                          </span>
                         </div>
                       )}
                       {flag.snippet && (
