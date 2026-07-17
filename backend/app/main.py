@@ -38,10 +38,16 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             # Drop tables if they exist to start fresh, or keep them persistent.
-            # Keeping persistent is better for Docker container restarts, so just create.
             logger.info("Initializing PostgreSQL database schemas...")
             await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database tables initialized successfully.")
+            
+            # Apply schema upgrades safely for evidence details
+            await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS element VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS matched_text VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS snippet VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS position INTEGER NULL"))
+            
+            logger.info("Database tables initialized and migrated successfully.")
     except Exception as e:
         logger.critical(f"Database initialization failed: {e}")
         # Don't raise, try to continue, but log heavily

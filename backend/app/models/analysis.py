@@ -15,6 +15,12 @@ class AnalysisFlag(Base):
     keyword: Mapped[str] = mapped_column(String, nullable=False)
     weight: Mapped[int] = mapped_column(Integer, nullable=False)
     match_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    
+    # Evidence details
+    element: Mapped[str] = mapped_column(String, nullable=True)
+    matched_text: Mapped[str] = mapped_column(String, nullable=True)
+    snippet: Mapped[str] = mapped_column(String, nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=True)
 
     # Relationships
     snapshot: Mapped["Snapshot"] = relationship("Snapshot", back_populates="flags")

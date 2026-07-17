@@ -3,6 +3,10 @@ export interface AnalysisFlag {
   keyword: string;
   weight: number;
   match_count: number;
+  element?: string | null;
+  matched_text?: string | null;
+  snippet?: string | null;
+  position?: number | null;
 }
 
 export interface DetectorResult {

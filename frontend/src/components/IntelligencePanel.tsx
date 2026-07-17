@@ -14,6 +14,29 @@ const CATEGORY_STYLES: Record<string, { label: string; bar: string; text: string
   safe: { label: 'Safe / Benign', bar: 'bg-emerald-500', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
 };
 
+const highlightKeyword = (text: string | null | undefined, keyword: string) => {
+  if (!text) return null;
+  if (!keyword) return <span>{text}</span>;
+  
+  const escapedKeyword = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <span>
+      {parts.map((part, i) => 
+        regex.test(part) ? (
+          <mark key={i} className="bg-amber-500/30 text-amber-300 px-1 py-0.5 rounded font-extrabold font-mono border border-amber-500/20">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+};
+
 export default function IntelligencePanel({ snapshot }: IntelligencePanelProps) {
   const ai = snapshot.ai_intelligence;
   
@@ -75,20 +98,48 @@ export default function IntelligencePanel({ snapshot }: IntelligencePanelProps) 
           Evidence Log ({snapshot.flags.length} items)
         </h4>
         {snapshot.flags.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 gap-2.5 max-h-72 overflow-y-auto pr-1">
             {snapshot.flags.map((flag, idx) => {
               return (
-                <div key={idx} className="flex justify-between items-center p-2 rounded-lg bg-slate-900/25 border border-slate-800/80 text-xs">
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-white font-mono">"{flag.keyword}"</span>
-                    <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider">
-                      {flag.category.replace(/_/g, ' ')}
-                    </span>
+                <div key={idx} className="flex flex-col p-3 rounded-lg bg-slate-900/20 border border-slate-800/80 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-extrabold text-white font-mono text-[12px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                          "{flag.keyword}"
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                          {flag.category.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right flex items-center space-x-2">
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {flag.match_count} match{flag.match_count > 1 ? 'es' : ''}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/25 font-bold font-mono text-[10px]">
+                        +{flag.weight} pts
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-extrabold text-rose-400 block font-mono">+{flag.weight}</span>
-                    <span className="text-[9px] text-slate-500 block">{flag.match_count} matches</span>
-                  </div>
+                  
+                  {/* Expanded evidence details */}
+                  {(flag.element || flag.snippet) && (
+                    <div className="pt-1.5 border-t border-slate-850 space-y-1">
+                      {flag.element && (
+                        <div className="flex items-center space-x-1 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                          <span>📍 Location:</span>
+                          <code className="text-violet-400 font-mono font-semibold lowercase bg-slate-950 px-1 rounded">{flag.element}</code>
+                        </div>
+                      )}
+                      {flag.snippet && (
+                        <div className="p-2 bg-slate-950/60 rounded-md border border-slate-900 font-mono text-[10px] text-slate-400 leading-relaxed overflow-x-auto whitespace-pre-wrap break-all max-w-full">
+                          <span className="text-slate-600 mr-1 select-none">Snippet:</span>
+                          {highlightKeyword(flag.snippet, flag.keyword)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

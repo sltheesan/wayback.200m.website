@@ -11,6 +11,10 @@ class AnalysisFlagSchema(BaseModel):
     keyword: str
     weight: int
     match_count: int
+    element: Optional[str] = None
+    matched_text: Optional[str] = None
+    snippet: Optional[str] = None
+    position: Optional[int] = None
 
     class Config:
         from_attributes = True

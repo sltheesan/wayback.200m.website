@@ -477,6 +477,10 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                 keyword=flag_res["keyword"],
                 weight=flag_res["weight"],
                 match_count=flag_res["match_count"],
+                element=flag_res.get("element"),
+                matched_text=flag_res.get("matched_text"),
+                snippet=flag_res.get("snippet"),
+                position=flag_res.get("position"),
             ))
 
     # Timeline rows

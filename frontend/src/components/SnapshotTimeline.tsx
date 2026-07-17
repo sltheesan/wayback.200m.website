@@ -81,6 +81,29 @@ const getPulseColor = (score: number, category?: string | null) => {
   return 'bg-amber-500';
 };
 
+const highlightKeyword = (text: string | null | undefined, keyword: string) => {
+  if (!text) return null;
+  if (!keyword) return <span>{text}</span>;
+  
+  const escapedKeyword = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+  const parts = text.split(regex);
+  
+  return (
+    <span>
+      {parts.map((part, i) => 
+        regex.test(part) ? (
+          <mark key={i} className="bg-amber-500/30 text-amber-300 px-1 py-0.5 rounded font-extrabold font-mono border border-amber-500/20">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
+};
+
 function SnapshotCard({ s, onSelect, isActive }: SnapshotCardProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -215,25 +238,53 @@ function SnapshotCard({ s, onSelect, isActive }: SnapshotCardProps) {
           </div>
 
           {s.flags.length > 0 ? (
-            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
               {s.flags.map((f, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/30 border border-slate-800/40">
-                  <div className="space-y-0.5">
-                    <span className="font-bold text-white font-mono text-[11px]">{f.keyword}</span>
-                    <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider">
-                      Category: {f.category.replace('_', ' ')}
-                    </span>
+                <div key={idx} className="flex flex-col p-3 rounded-lg bg-slate-900/40 border border-slate-800/80 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-extrabold text-white font-mono text-[12px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                          "{f.keyword}"
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                          {f.category.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right flex items-center space-x-2">
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {f.match_count} match{f.match_count > 1 ? 'es' : ''}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/25 font-bold font-mono text-[10px]">
+                        +{f.weight} pts
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-extrabold text-rose-400 block font-mono">+{f.weight}</span>
-                    <span className="text-[9px] text-slate-500 block">{f.match_count} matches</span>
-                  </div>
+                  
+                  {/* Expanded evidence details */}
+                  {(f.element || f.snippet) && (
+                    <div className="pt-1.5 border-t border-slate-850 space-y-1">
+                      {f.element && (
+                        <div className="flex items-center space-x-1 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                          <span>📍 Location:</span>
+                          <code className="text-violet-400 font-mono font-semibold lowercase bg-slate-950 px-1 rounded">{f.element}</code>
+                        </div>
+                      )}
+                      {f.snippet && (
+                        <div className="p-2 bg-slate-950/60 rounded-md border border-slate-900 font-mono text-[10px] text-slate-400 leading-relaxed overflow-x-auto whitespace-pre-wrap break-all max-w-full">
+                          <span className="text-slate-600 mr-1 select-none">Snippet:</span>
+                          {highlightKeyword(f.snippet, f.keyword)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-4 border border-dashed border-slate-900 rounded-lg text-slate-500 text-xs">
-              No risk flags triggered. Content is completely clean.
+              No risk flags triggered. Content matches clean baseline signatures.
             </div>
           )}
         </div>
