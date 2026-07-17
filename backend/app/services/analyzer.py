@@ -226,6 +226,14 @@ def get_language(text: str) -> str:
         # Require enough text to accurately detect language
         if len(text.strip()) > 20:
             lang = detect(text)
+            # Normalize language codes (e.g. zh-cn -> zh, ja-jp -> ja)
+            if lang.startswith("zh"):
+                lang = "zh"
+            elif lang.startswith("ja"):
+                lang = "ja"
+            elif lang.startswith("ko"):
+                lang = "ko"
+                
             if lang in LANGUAGE_KEYWORDS:
                 return lang
     except Exception:
