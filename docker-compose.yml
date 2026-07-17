@@ -131,7 +131,7 @@ services:
         # Baked into the JS bundle at build time — browser calls this URL directly
         VITE_API_URL: /api/v1
     ports:
-      - "80:80"
+      - "3000:80"
     restart: unless-stopped
     depends_on:
       backend:
