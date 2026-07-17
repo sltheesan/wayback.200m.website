@@ -156,3 +156,31 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         postgres=postgres_status,
         redis=redis_status
     )
+
+
+# ── Serve React Frontend static files directly from FastAPI ─────────────────
+import os
+from fastapi.responses import FileResponse
+
+frontend_dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+if os.path.exists(frontend_dist_dir):
+    @app.get("/{catchall:path}", include_in_schema=False)
+    async def serve_spa(catchall: str):
+        # Prevent intercepting API routes, Docs, Redoc, Metrics
+        if catchall.startswith(("api/", "docs", "redoc", "openapi.json", "metrics")):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404)
+        
+        # Check if the requested file exists (e.g. assets, favicon, etc.)
+        file_path = os.path.join(frontend_dist_dir, catchall)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+            
+        # Fallback to index.html for Single Page Application (SPA) routing
+        index_file = os.path.join(frontend_dist_dir, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+            
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404)
+
