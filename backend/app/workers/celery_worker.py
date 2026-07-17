@@ -29,5 +29,9 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.cleanup_old_domains",
         "schedule": crontab(hour=0, minute=0),  # Run daily at midnight UTC
     },
+    "refresh-working-proxies-10m": {
+        "task": "tasks.update_working_proxies",
+        "schedule": 600.0,  # Run every 10 minutes (600 seconds)
+    },
 }
 

@@ -217,10 +217,6 @@ def report_proxy_failure(proxy: str) -> None:
             pass
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
 async def get_proxy_rotation_list() -> list[str | None]:
     """
     Build the full rotation list in priority order:
@@ -228,25 +224,54 @@ async def get_proxy_rotation_list() -> list[str | None]:
       2. HTTP_PROXY_LIST  (comma-separated configured proxies)
       3. Verified free proxies (if ENABLE_PROXY_SCRAPER=True)
       4. Direct connection  (always last)
+    Only returns a maximum of 3 free proxies per request to keep failures fast.
     """
     proxies: list[str | None] = []
 
     # --- Tier 1: Explicitly configured proxies (highest priority) ---
     configured = settings.get_proxy_rotation_list()
-    # get_proxy_rotation_list() already appends None at the end — remove it for now
     tier1 = [p for p in configured if p is not None]
     if tier1:
         proxies.extend(tier1)
-        logger.debug(f"[Proxy] Tier-1 configured proxies: {tier1}")
 
     # --- Tier 2: Verified free proxies (if scraper enabled) ---
+    free_candidates: list[str] = []
     if getattr(settings, "ENABLE_PROXY_SCRAPER", False):
-        working = await find_working_proxies()
-        for p in working:
+        # 1. Check Redis for verified proxies (Fast, non-blocking)
+        try:
+            from backend.app.core.redis import redis_manager
+            cached_working = await redis_manager.get("scraped_working_proxies")
+            if cached_working and isinstance(cached_working, list):
+                free_candidates = [p for p in cached_working if p not in tier1]
+        except Exception as e:
+            logger.warning(f"[Proxy] Failed to fetch working proxies from Redis: {e}")
+
+        # 2. Fall back to local memory cache if Redis is empty/failed
+        if not free_candidates:
+            global _working_proxies
+            free_candidates = [p for p in _working_proxies if p not in tier1]
+
+        # 3. If everything is empty, trigger a background refresh task, but DO NOT block the request
+        if not free_candidates:
+            async def _bg_run():
+                try:
+                    w = await find_working_proxies()
+                    from backend.app.core.redis import redis_manager
+                    await redis_manager.set("scraped_working_proxies", w, expire_seconds=3600)
+                except Exception:
+                    pass
+            asyncio.create_task(_bg_run())
+
+    # Limit to at most 3 free proxies per request to keep rotation fast
+    if free_candidates:
+        # Sample randomly or take the first 3
+        selected_free = free_candidates[:3]
+        for p in selected_free:
             if p not in proxies:
                 proxies.append(p)
 
-    # --- Tier 3: Direct connection (always present as final fallback) ---
+    # --- Tier 3: Direct connection (always final fallback) ---
     proxies.append(None)
 
     return proxies
+

@@ -224,3 +224,23 @@ def cleanup_old_domains_task() -> int:
     logger.info(f"[Celery Task] Database cleanup complete. Deleted {deleted_count} domain records.")
     return deleted_count
 
+@celery_app.task(name="tasks.update_working_proxies")
+def update_working_proxies_task() -> list[str]:
+    """
+    Celery task that scrapes and tests free proxies, storing the verified working
+    ones in Redis so that actual analysis pipelines can fetch them instantly.
+    """
+    logger.info("[Celery Task] Scraped proxy auto-refresh and validation task started...")
+
+    async def run_update():
+        from backend.app.core.proxy_utils import find_working_proxies
+        from backend.app.core.redis import redis_manager
+
+        working = await find_working_proxies()
+        await redis_manager.set("scraped_working_proxies", working, expire_seconds=86400)  # cache for 1 day
+        logger.info(f"[Celery Task] Scraped working proxy pool updated: {len(working)} verified proxies cached in Redis.")
+        return working
+
+    return _run_async(run_update())
+
+

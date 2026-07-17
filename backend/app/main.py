@@ -67,9 +67,11 @@ async def lifespan(app: FastAPI):
         async def _prewarm_proxies():
             try:
                 from backend.app.core.proxy_utils import find_working_proxies
+                from backend.app.core.redis import redis_manager
                 logger.info("[Proxy] Pre-warming proxy pool in background...")
                 working = await find_working_proxies()
-                logger.info(f"[Proxy] Pre-warm complete: {len(working)} working proxies cached.")
+                await redis_manager.set("scraped_working_proxies", working, expire_seconds=86400)
+                logger.info(f"[Proxy] Pre-warm complete: {len(working)} working proxies cached in Redis.")
             except Exception as exc:
                 logger.warning(f"[Proxy] Pre-warm failed (non-fatal): {exc}")
         import asyncio as _asyncio
