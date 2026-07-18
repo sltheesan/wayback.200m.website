@@ -152,6 +152,7 @@ function ScanApp() {
         
         {/* Render Tab Contents */}
         {activeTab === 'scan' && (
+          <div className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
             {/* Main Content Area */}
             <div className="lg:col-span-2 space-y-8">
@@ -213,10 +214,6 @@ function ScanApp() {
                       <ArrowUpRight size={18} className="text-brand-400 group-hover:text-white transition-colors" />
                     </button>
                   </div>
-
-                  {activeData.risk_narrative && (
-                    <ExplainabilityCard data={activeData} />
-                  )}
 
                   <SnapshotTimeline 
                     snapshots={activeData.snapshots} 
@@ -359,6 +356,12 @@ function ScanApp() {
               </div>
             </div>
           </div>
+
+          {/* AI Risk Explanation — full-width below the 3-col grid */}
+          {activeData && !loading && activeData.risk_narrative && (
+            <ExplainabilityCard data={activeData} />
+          )}
+          </div>
         )}
 
 
@@ -487,7 +490,9 @@ function ScanApp() {
                   <RiskSummary data={activeData} />
                   
                   {activeData.risk_narrative && (
-                    <ExplainabilityCard data={activeData} />
+                    <div className="-mx-0">
+                      <ExplainabilityCard data={activeData} />
+                    </div>
                   )}
 
                   <SnapshotTimeline 
