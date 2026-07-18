@@ -308,95 +308,110 @@ interface SnapshotTabProps {
 function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   const pal = getRiskPalette(s.risk_score, s.content_category);
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
+  const catLabel = (s.content_category || 'safe').replace(/_/g, ' ');
 
   return (
     <button
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        padding: '12px 14px',
-        borderRadius: 12,
+        padding: '16px 18px',
+        borderRadius: 14,
         background: isSelected
-          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(15,23,42,0.6) 100%)`
-          : 'rgba(15,23,42,0.4)',
-        border: isSelected ? `1.5px solid ${pal.border}` : '1.5px solid rgba(255,255,255,0.05)',
+          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(15,23,42,0.75) 100%)`
+          : 'rgba(15,23,42,0.45)',
+        border: isSelected ? `1.5px solid ${pal.border}` : '1.5px solid rgba(255,255,255,0.06)',
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'all 0.18s ease',
         boxShadow: isSelected ? pal.glow : 'none',
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        transform: isSelected ? 'translateX(2px)' : 'none',
+        gap: 14,
+        transform: isSelected ? 'translateX(3px)' : 'none',
         position: 'relative',
         overflow: 'hidden',
       }}
+      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(15,23,42,0.65)'; }}
+      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(15,23,42,0.45)'; }}
     >
       {/* Active accent bar */}
       {isSelected && (
         <span style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
           background: `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}88)`,
-          borderRadius: '0 2px 2px 0',
+          borderRadius: '0 3px 3px 0',
         }} />
       )}
 
       {/* Index number */}
       <span style={{
-        width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+        width: 26, height: 26, borderRadius: 7, flexShrink: 0,
         background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.06)'}`,
+        border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 9, fontWeight: 800, color: isSelected ? pal.text : '#475569',
-        fontFamily: 'monospace',
+        fontSize: 10, fontWeight: 800, color: isSelected ? pal.text : '#475569',
+        fontFamily: 'monospace', letterSpacing: '0.04em',
       }}>
         {String(index + 1).padStart(2, '0')}
       </span>
 
       {/* Score ring */}
       <span style={{
-        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-        background: isSelected ? pal.dim : 'rgba(0,0,0,0.3)',
-        border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.06)'}`,
+        width: 52, height: 52, borderRadius: 13, flexShrink: 0,
+        background: isSelected ? pal.dim : 'rgba(0,0,0,0.35)',
+        border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 1,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>{s.risk_score}</span>
-        <span style={{ fontSize: 7, color: '#475569', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>risk</span>
+        <span style={{ fontSize: 17, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>{s.risk_score}</span>
+        <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>risk</span>
       </span>
 
-      {/* Date + category */}
+      {/* Date + category + meta */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 11, fontWeight: 700,
+          fontSize: 13, fontWeight: 700,
           color: isSelected ? '#f1f5f9' : '#94a3b8',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          marginBottom: 5,
         }}>
           {formatDate(s.timestamp)}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
-          <span style={{ fontSize: 9 }}>{catIcon}</span>
+        {/* Category pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{
-            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-            color: isSelected ? pal.text : '#475569',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 7, fontSize: 10, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+            background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
+            color: isSelected ? pal.text : '#64748b',
           }}>
-            {(s.content_category || 'safe').replace(/_/g, ' ')}
+            <span style={{ fontSize: 11 }}>{catIcon}</span>
+            {catLabel}
           </span>
           {s.flags.length > 0 && (
             <span style={{
-              marginLeft: 'auto', padding: '1px 5px', borderRadius: 4, fontSize: 8, fontWeight: 700,
-              background: 'rgba(244,63,94,0.15)', color: '#f87171', border: '1px solid rgba(244,63,94,0.2)',
-              flexShrink: 0,
-            }}>{s.flags.length}⚑</span>
+              padding: '3px 7px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+              background: 'rgba(244,63,94,0.13)', color: '#f87171',
+              border: '1px solid rgba(244,63,94,0.22)',
+            }}>⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}</span>
           )}
+        </div>
+        {/* HTTP status + lang */}
+        <div style={{ marginTop: 5, display: 'flex', gap: 10, fontSize: 10, fontFamily: 'monospace', color: '#475569' }}>
+          <span>HTTP <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{s.status_code ?? 200}</span></span>
+          <span>·</span>
+          <span>Lang <span style={{ color: '#c4b5fd', fontWeight: 700 }}>{(s.detected_language || 'en').toUpperCase()}</span></span>
         </div>
       </div>
 
       {/* Arrow */}
       <ChevronRight
-        size={14}
+        size={16}
         color={isSelected ? pal.text : '#334155'}
-        style={{ flexShrink: 0, transition: 'transform 0.2s', transform: isSelected ? 'translateX(2px)' : 'none' }}
+        style={{ flexShrink: 0, transition: 'transform 0.2s', transform: isSelected ? 'translateX(3px)' : 'none' }}
       />
     </button>
   );
@@ -509,18 +524,18 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(240px, 320px) 1fr',
-          gap: 16,
+          gridTemplateColumns: 'minmax(280px, 360px) 1fr',
+          gap: 18,
           alignItems: 'start',
         }}>
           {/* LEFT: Snapshot selector tabs */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 6,
-            maxHeight: 480,
+            gap: 8,
+            maxHeight: 560,
             overflowY: 'auto',
-            paddingRight: 4,
+            paddingRight: 6,
           }}>
             {/* Legend strip */}
             <div style={{
@@ -544,7 +559,7 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           </div>
 
           {/* RIGHT: Detail panel */}
-          <div style={{ minHeight: 480, position: 'sticky', top: 20 }}>
+          <div style={{ minHeight: 560, position: 'sticky', top: 20 }}>
             {selected ? (
               <SnapshotDetailPanel s={selected} />
             ) : (
