@@ -323,11 +323,11 @@ function ScanApp() {
               </div>
 
               {/* Domain Catalog Panel */}
-              <div className="glass-panel p-6 space-y-4">
+              <div className="glass-panel p-6 space-y-4 h-[550px] flex flex-col">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
                   Database Domains
                 </h3>
-                <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                <div className="space-y-2.5 overflow-y-auto pr-1 flex-1">
                   {stats.recent_domains && stats.recent_domains.length > 0 ? (
                     stats.recent_domains.map((d, index) => (
                       <button

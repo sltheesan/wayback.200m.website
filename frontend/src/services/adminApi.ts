@@ -215,6 +215,24 @@ async function changePassword(currentPassword: string, newPassword: string, conf
   });
 }
 
+// ── System Logs ───────────────────────────────────────────────────────────
+async function getSystemLogs(params: { level?: string; search?: string; limit?: number }): Promise<{ logs: any[] }> {
+  const { data } = await _http.get<{ logs: any[] }>('/admin/system-logs', {
+    params: buildParams(params as unknown as QueryParams),
+  });
+  return data;
+}
+
+async function downloadSystemLogs(): Promise<void> {
+  const res = await _http.get('/admin/system-logs/download', { responseType: 'blob' });
+  const url = URL.createObjectURL(res.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `system_logs_${new Date().toISOString().split('T')[0]}.log`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export const adminApi = {
   getDashboardStats,
   getUsers, createUser, getUser, updateUser, deleteUser,
@@ -226,4 +244,6 @@ export const adminApi = {
   getSettings, updateSettings,
   exportCSV,
   changePassword,
+  getSystemLogs,
+  downloadSystemLogs,
 };

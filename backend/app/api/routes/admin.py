@@ -31,7 +31,7 @@ from backend.app.schemas.admin_schema import (
     NotificationResponse,
     SystemSettingResponse, BulkSystemSettingsUpdate,
 )
-from backend.app.utils.logger import logger
+from backend.app.utils.logger import logger, LOG_FILE_PATH
 
 router = APIRouter()
 _UTC = timezone.utc
@@ -452,4 +452,109 @@ async def export_csv(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /admin/system-logs
+# ---------------------------------------------------------------------------
+@router.get("/system-logs")
+async def get_system_logs(
+    level: Optional[str] = Query(None, description="Filter by log level (INFO, WARNING, ERROR, CRITICAL)"),
+    search: Optional[str] = Query(None, description="Search term in log messages"),
+    limit: int = Query(200, ge=1, le=1000, description="Max number of log lines to return"),
+    _: User = Depends(require_admin),
+):
+    import os
+    if not os.path.exists(LOG_FILE_PATH):
+        return {"logs": []}
+
+    try:
+        with open(LOG_FILE_PATH, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        
+        parsed_logs = []
+        current_log = None
+
+        for line in lines:
+            line_str = line.rstrip("\n")
+            if not line_str:
+                continue
+            
+            parts = line_str.split(" | ", 2)
+            is_new_log = False
+            if len(parts) >= 3 and len(parts[0]) == 19:
+                try:
+                    datetime.strptime(parts[0], "%Y-%m-%d %H:%M:%S")
+                    is_new_log = True
+                except ValueError:
+                    pass
+
+            if is_new_log:
+                if current_log:
+                    parsed_logs.append(current_log)
+                
+                # Split parts[2] into location and message by " - "
+                msg_parts = parts[2].split(" - ", 1)
+                location = msg_parts[0].strip() if len(msg_parts) > 1 else ""
+                message = msg_parts[1].strip() if len(msg_parts) > 1 else parts[2].strip()
+
+                current_log = {
+                    "timestamp": parts[0].strip(),
+                    "level": parts[1].strip(),
+                    "location": location,
+                    "message": message
+                }
+            else:
+                if current_log:
+                    current_log["message"] += "\n" + line_str
+                else:
+                    parsed_logs.append({
+                        "timestamp": "",
+                        "level": "INFO",
+                        "location": "",
+                        "message": line_str
+                    })
+
+        if current_log:
+            parsed_logs.append(current_log)
+
+        logs = []
+        for log in reversed(parsed_logs):
+            lvl = log["level"]
+            message = log["message"]
+            location = log["location"]
+            
+            if level and lvl != level:
+                continue
+            if search and search.lower() not in message.lower() and search.lower() not in location.lower():
+                continue
+                
+            logs.append(log)
+            if len(logs) >= limit:
+                break
+    except Exception as e:
+        logger.error(f"Failed to read log file: {e}")
+        raise HTTPException(status_code=500, detail=f"Could not read system logs: {e}")
+
+    return {"logs": logs}
+
+
+# ---------------------------------------------------------------------------
+# GET /admin/system-logs/download
+# ---------------------------------------------------------------------------
+@router.get("/system-logs/download")
+async def download_system_logs(
+    _: User = Depends(require_admin),
+):
+    import os
+    from fastapi.responses import FileResponse
+
+    if not os.path.exists(LOG_FILE_PATH):
+        raise HTTPException(status_code=404, detail="Log file not found.")
+
+    return FileResponse(
+        LOG_FILE_PATH,
+        media_type="text/plain",
+        filename=f"system_logs_{date.today().isoformat()}.log"
     )

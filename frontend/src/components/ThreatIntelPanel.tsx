@@ -107,7 +107,7 @@ export default function ThreatIntelPanel({ threatIntel }: ThreatIntelPanelProps)
           return (
             <div
               key={index}
-              className={`p-5 rounded-2xl border flex flex-col justify-between space-y-4 hover:border-slate-700/50 transition-all duration-200 ${status.border}`}
+              className={`p-5 rounded-2xl border flex flex-col justify-between space-y-4 hover:border-slate-700/50 transition-all duration-200 h-full ${status.border}`}
             >
               <div className="space-y-2">
                 <div className="flex justify-between items-start">
