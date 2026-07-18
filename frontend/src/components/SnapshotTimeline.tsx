@@ -3,11 +3,13 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { ExternalLink, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { ExternalLink, Calendar, Shield, AlertTriangle, CheckCircle, ChevronRight, Layers, Hash, Eye, Flag } from 'lucide-react';
 import { Snapshot } from '../types';
 
 interface SnapshotTimelineProps {
   snapshots: Snapshot[];
+  activeSnapshot?: Snapshot | null;
+  onSelectSnapshot?: (s: Snapshot) => void;
 }
 
 interface ChartDataPoint {
@@ -20,300 +22,255 @@ interface ChartDataPoint {
   fullDate: string;
 }
 
-const getScoreColor = (score: number, category?: string | null): string => {
-  if (!category || category === 'safe') return 'text-emerald-400';
-  if (score > 70) return 'text-rose-400';
-  return 'text-amber-400';
+/* ─── Colour helpers ──────────────────────────────────────────── */
+const getRiskPalette = (score: number, category?: string | null) => {
+  const isSafe = !category || category === 'safe';
+  const isHigh = score >= 70;
+  if (isSafe) return { accent: '#10b981', dim: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', text: '#10b981', glow: '0 0 16px rgba(16,185,129,0.2)' };
+  if (isHigh) return { accent: '#f43f5e', dim: 'rgba(244,63,94,0.12)', border: 'rgba(244,63,94,0.25)', text: '#f43f5e', glow: '0 0 16px rgba(244,63,94,0.2)' };
+  return { accent: '#f59e0b', dim: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', text: '#f59e0b', glow: '0 0 16px rgba(245,158,11,0.2)' };
 };
-
-const getScoreBg = (score: number, category?: string | null): string => {
-  if (!category || category === 'safe') return 'bg-emerald-500/10 border-emerald-500/20';
-  if (score > 70) return 'bg-rose-500/10 border-rose-500/20';
-  return 'bg-amber-500/10 border-amber-500/20';
-};
-
-const getCardStyles = (score: number, category: string | null | undefined, isActive: boolean): string => {
-  if (!category || category === 'safe') {
-    return isActive
-      ? 'border-l-4 border-l-emerald-500 border-emerald-500/50 bg-gradient-to-r from-emerald-950/20 to-slate-900/10 shadow-[0_0_15px_rgba(16,185,129,0.25)] scale-[1.01]'
-      : 'border-l-4 border-l-emerald-500/60 border-emerald-950/40 bg-emerald-950/5 hover:border-emerald-500/40 hover:bg-emerald-950/10';
-  }
-  if (score > 70) {
-    return isActive
-      ? 'border-l-4 border-l-rose-500 border-rose-500/50 bg-gradient-to-r from-rose-950/20 to-slate-900/10 shadow-[0_0_15px_rgba(244,63,94,0.25)] scale-[1.01]'
-      : 'border-l-4 border-l-rose-500/60 border-rose-950/40 bg-rose-950/5 hover:border-rose-500/40 hover:bg-rose-950/10';
-  }
-  return isActive
-    ? 'border-l-4 border-l-amber-500 border-amber-500/50 bg-gradient-to-r from-amber-950/20 to-slate-900/10 shadow-[0_0_15px_rgba(245,158,11,0.25)] scale-[1.01]'
-    : 'border-l-4 border-l-amber-500/60 border-amber-950/40 bg-amber-950/5 hover:border-amber-500/40 hover:bg-amber-950/10';
-};
-
-const getCategoryTagStyle = (score: number, category?: string | null): string => {
-  if (!category || category === 'safe') return 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20';
-  if (score > 70) return 'bg-rose-500/10 text-rose-300 border border-rose-500/20';
-  return 'bg-amber-500/10 text-amber-300 border border-amber-500/20';
-};
-
-interface SnapshotCardProps {
-  s: Snapshot;
-  onSelect?: (s: Snapshot) => void;
-  isActive: boolean;
-}
 
 const CATEGORY_ICONS: Record<string, string> = {
-  gambling: '🎰',
-  adult: '🔞',
-  phishing_scam: '🎣',
-  malware_hacking: '💀',
-  illegal_pharmaceuticals: '💊',
-  safe: '✅',
+  gambling: '🎰', adult: '🔞', phishing_scam: '🎣',
+  malware_hacking: '💀', illegal_pharmaceuticals: '💊', safe: '✅',
 };
 
-const getPanelColors = (score: number, category?: string | null) => {
-  if (!category || category === 'safe') return 'border-emerald-500/20 bg-emerald-500/5 text-emerald-300';
-  if (score >= 70) return 'border-rose-500/20 bg-rose-500/5 text-rose-300';
-  return 'border-amber-500/20 bg-amber-500/5 text-amber-300';
-};
+const formatDate = (timestamp: string) =>
+  new Date(`${timestamp.slice(0,4)}-${timestamp.slice(4,6)}-${timestamp.slice(6,8)}`).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
 
-const getPulseColor = (score: number, category?: string | null) => {
-  if (!category || category === 'safe') return 'bg-emerald-500';
-  if (score >= 70) return 'bg-rose-500';
-  return 'bg-amber-500';
+const formatLocationLabel = (rawElement: string | null | undefined): string => {
+  if (!rawElement) return 'Page Contents';
+  const clean = rawElement.toLowerCase().trim();
+  if (clean.includes('meta')) {
+    const m = clean.match(/name="([^"]+)"/) || clean.match(/property="([^"]+)"/);
+    if (m?.[1]) return `HTML Meta Tag (${m[1]})`;
+    return 'HTML Meta Tag (Head Metadata)';
+  }
+  if (clean === '<title>') return 'HTML Document Title (<title>)';
+  if (clean === '<a>') return 'HTML Anchor / Link (<a>)';
+  if (clean.match(/^<h[1-6]>$/)) return `HTML Heading (${clean.toUpperCase()})`;
+  if (clean === '<p>') return 'HTML Body Paragraph (<p>)';
+  if (clean === '<div>') return 'HTML Content Div (<div>)';
+  if (clean === '<span>') return 'HTML Inline Text (<span>)';
+  if (clean === '<li>') return 'HTML List Item (<li>)';
+  return `HTML Element (${rawElement})`;
 };
 
 const highlightKeyword = (text: string | null | undefined, keyword: string) => {
   if (!text) return null;
   if (!keyword) return <span>{text}</span>;
-  
-  const escapedKeyword = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-  const regex = new RegExp(`(${escapedKeyword})`, 'gi');
+  const escaped = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
   const parts = text.split(regex);
-  
   return (
     <span>
-      {parts.map((part, i) => 
+      {parts.map((part, i) =>
         regex.test(part) ? (
-          <mark key={i} className="bg-amber-500/30 text-amber-300 px-1 py-0.5 rounded font-extrabold font-mono border border-amber-500/20">
+          <mark key={i} style={{ background: 'rgba(245,158,11,0.3)', color: '#fcd34d', padding: '0 3px', borderRadius: 3, fontWeight: 700, fontFamily: 'monospace', border: '1px solid rgba(245,158,11,0.25)' }}>
             {part}
           </mark>
-        ) : (
-          part
-        )
+        ) : part
       )}
     </span>
   );
 };
 
-const formatLocationLabel = (rawElement: string | null | undefined): string => {
-  if (!rawElement) return "Page Contents";
-  
-  const clean = rawElement.toLowerCase().trim();
-  
-  if (clean.includes("meta")) {
-    const nameMatch = clean.match(/name="([^"]+)"/) || clean.match(/property="([^"]+)"/);
-    if (nameMatch && nameMatch[1]) {
-      return `HTML Meta Tag (${nameMatch[1]})`;
-    }
-    return "HTML Meta Tag (Head Metadata)";
-  }
-  
-  if (clean === "<title>") {
-    return "HTML Document Title (<title>)";
-  }
-  if (clean === "<a>") {
-    return "HTML Anchor / Link (<a>)";
-  }
-  if (clean.match(/^<h[1-6]>$/)) {
-    return `HTML Heading (${clean.toUpperCase()})`;
-  }
-  if (clean === "<p>") {
-    return "HTML Body Paragraph (<p>)";
-  }
-  if (clean === "<div>") {
-    return "HTML Content Div (<div>)";
-  }
-  if (clean === "<span>") {
-    return "HTML Inline Text (<span>)";
-  }
-  if (clean === "<li>") {
-    return "HTML List Item (<li>)";
-  }
-  
-  return `HTML Element (${rawElement})`;
-};
-
-function SnapshotCard({ s, onSelect, isActive }: SnapshotCardProps) {
-  const [expanded, setExpanded] = useState(false);
-
-  const year = s.timestamp.substring(0, 4);
-  const month = s.timestamp.substring(4, 6);
-  const day = s.timestamp.substring(6, 8);
-  const dateStr = new Date(`${year}-${month}-${day}`).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-  
-  const directWaybackUrl = `https://web.archive.org/web/${s.timestamp}/${s.original_url}`;
+/* ─── Right panel: full snapshot detail ───────────────────────── */
+function SnapshotDetailPanel({ s }: { s: Snapshot }) {
+  const pal = getRiskPalette(s.risk_score, s.content_category);
   const apiBase = (import.meta.env.VITE_API_URL as string) || '/api/v1';
   const proxyUrl = `${apiBase}/domains/proxy-snapshot?timestamp=${s.timestamp}&url=${encodeURIComponent(s.original_url)}`;
+  const directUrl = `https://web.archive.org/web/${s.timestamp}/${s.original_url}`;
+  const catLabel = (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
+  const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
 
   const getLanguageLabel = (lang: string | null) => {
     if (!lang) return '🇺🇸 EN';
     const l = lang.toLowerCase();
-    if (l === 'id') return '🇮🇩 ID';
-    if (l === 'nl') return '🇳🇱 NL';
-    if (l === 'de') return '🇩🇪 DE';
-    if (l === 'fr') return '🇫🇷 FR';
+    if (l === 'id') return '🇮🇩 ID'; if (l === 'nl') return '🇳🇱 NL';
+    if (l === 'de') return '🇩🇪 DE'; if (l === 'fr') return '🇫🇷 FR';
     if (l === 'es') return '🇪🇸 ES';
     return `🌐 ${l.toUpperCase()}`;
   };
 
-  const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
-  const catLabel = (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
-
   return (
-    <div
-      onClick={() => onSelect?.(s)}
-      className={`border rounded-xl overflow-hidden transition-all duration-200 cursor-pointer ${getCardStyles(s.risk_score, s.content_category, isActive)}`}
-    >
-      {/* Card Header (clickable) */}
-      <div
-        className="flex flex-wrap items-center justify-between gap-2 p-3 sm:p-3.5 select-none"
-      >
-        <div className="flex items-center space-x-3">
-          <div className={`p-2.5 rounded-lg border text-center min-w-[50px] ${getScoreBg(s.risk_score, s.content_category)}`}>
-            <span className={`text-sm font-extrabold block ${getScoreColor(s.risk_score, s.content_category)}`}>
-              {s.risk_score}
-            </span>
-            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">Score</span>
+    <div style={{
+      background: 'rgba(10,14,26,0.85)',
+      border: `1px solid ${pal.border}`,
+      borderRadius: 18,
+      overflow: 'hidden',
+      boxShadow: pal.glow,
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Panel Header */}
+      <div style={{
+        padding: '18px 22px 14px',
+        background: `linear-gradient(135deg, ${pal.dim} 0%, rgba(10,14,26,0) 60%)`,
+        borderBottom: `1px solid ${pal.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Risk score badge */}
+          <div style={{
+            width: 56, height: 56, borderRadius: 14,
+            background: pal.dim, border: `2px solid ${pal.border}`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <span style={{ color: pal.accent, fontWeight: 800, fontSize: 20, lineHeight: 1 }}>{s.risk_score}</span>
+            <span style={{ color: 'rgba(148,163,184,0.7)', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 2 }}>score</span>
           </div>
           <div>
-            <div className="flex items-center space-x-2 text-xs font-semibold text-white">
-              <Calendar size={13} className="text-slate-500" />
-              <span>{dateStr}</span>
-              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${getCategoryTagStyle(s.risk_score, s.content_category)}`}>
-                {catIcon} {catLabel}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Calendar size={12} color="#64748b" />
+              <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 14 }}>{formatDate(s.timestamp)}</span>
+              <span style={{
+                padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                background: pal.dim, border: `1px solid ${pal.border}`, color: pal.text,
+              }}>{catIcon} {catLabel}</span>
             </div>
-            <div className="flex items-center space-x-1.5 text-[10px] text-slate-400 font-mono mt-0.5">
-              <span>Status: {s.status_code ?? 200}</span>
-              <span>•</span>
-              <span>Lang: <span className="text-violet-400 font-bold">{getLanguageLabel(s.detected_language)}</span></span>
+            <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
+              <span>HTTP <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{s.status_code ?? 200}</span></span>
+              <span>·</span>
+              <span>Lang <span style={{ color: '#c4b5fd', fontWeight: 700 }}>{getLanguageLabel(s.detected_language)}</span></span>
+              <span>·</span>
+              <span><span style={{ color: '#f87171', fontWeight: 700 }}>{s.flags.length}</span> flags</span>
             </div>
           </div>
         </div>
-
-        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-          <a
-            href={proxyUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="p-1.5 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 rounded-md bg-slate-900/40 transition-colors"
-            title="Open in Proxy Snapshot View (Works offline/locally)"
-          >
-            <ExternalLink size={14} />
+        {/* Quick links */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <a href={proxyUrl} target="_blank" rel="noreferrer" style={{
+            display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
+            borderRadius: 8, background: pal.dim, border: `1px solid ${pal.border}`,
+            color: pal.text, fontSize: 11, fontWeight: 700, textDecoration: 'none',
+          }}>
+            <Eye size={12} /> Proxy View
           </a>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="p-1.5 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 rounded-md bg-slate-900/40 transition-colors"
-          >
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+          <a href={directUrl} target="_blank" rel="noreferrer" style={{
+            display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
+            borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            color: '#94a3b8', fontSize: 11, fontWeight: 700, textDecoration: 'none',
+          }}>
+            <ExternalLink size={12} /> Wayback
+          </a>
         </div>
       </div>
 
-      {/* Accordion content */}
-      {expanded && (
-        <div className="bg-slate-950/50 border-t border-slate-900/60 p-4 space-y-3 text-xs" onClick={e => e.stopPropagation()}>
-          {s.timestamp && s.original_url && (
-            <div className={`space-y-2 rounded-lg border p-3 ${getPanelColors(s.risk_score, s.content_category)}`}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                  <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${getPulseColor(s.risk_score, s.content_category)}`} />
-                  Visual Evidence Preview (Proxied)
-                </span>
-                <div className="flex items-center space-x-2">
-                  <a
-                    href={proxyUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[10px] font-bold hover:text-white font-semibold"
-                  >
-                    Open Proxied <ExternalLink size={11} />
-                  </a>
-                  <span className="text-slate-700">|</span>
-                  <a
-                    href={directWaybackUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-white"
-                    title="Requires VPN if your network blocks archive.org"
-                  >
-                    Open Direct <ExternalLink size={11} />
-                  </a>
-                </div>
-              </div>
-              <div className="h-48 overflow-hidden rounded-md border border-slate-800 bg-slate-950">
-                <iframe
-                  src={proxyUrl}
-                  title={`Evidence preview for ${s.original_url}`}
-                  className="h-full w-full bg-white"
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </div>
-          )}
+      {/* Scrollable body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {s.content_summary && (
-            <div className="p-2 border border-slate-900 bg-slate-950/80 rounded-lg text-[10px] text-slate-300 font-medium">
-              ℹ️ {s.content_summary}
-            </div>
-          )}
+        {/* Preview iframe */}
+        <div style={{
+          borderRadius: 12, border: `1px solid ${pal.border}`,
+          background: 'rgba(0,0,0,0.3)', overflow: 'hidden',
+        }}>
+          <div style={{
+            padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderBottom: `1px solid rgba(255,255,255,0.04)`, background: 'rgba(255,255,255,0.02)',
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: pal.text }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pal.accent, display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
+              Visual Evidence Preview
+            </span>
+          </div>
+          <div style={{ height: 200, background: '#fff' }}>
+            <iframe
+              src={proxyUrl}
+              title={`Preview: ${s.original_url}`}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
 
-          <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-extrabold text-slate-500">
-            <span>Snapshot Scan Log</span>
-            <span>{s.flags.length} Flagged Terms</span>
+        {/* Content summary */}
+        {s.content_summary && (
+          <div style={{
+            padding: '10px 14px', borderRadius: 10,
+            background: 'rgba(148,163,184,0.04)', border: '1px solid rgba(148,163,184,0.1)',
+            fontSize: 12, color: '#94a3b8', lineHeight: 1.6,
+          }}>
+            <span style={{ color: '#64748b', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>ℹ️ Content Summary</span>
+            {s.content_summary}
+          </div>
+        )}
+
+        {/* Flags section */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b' }}>
+              <Flag size={11} /> Snapshot Scan Log
+            </span>
+            <span style={{
+              padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+              background: s.flags.length > 0 ? 'rgba(244,63,94,0.12)' : 'rgba(16,185,129,0.12)',
+              color: s.flags.length > 0 ? '#f87171' : '#34d399',
+              border: `1px solid ${s.flags.length > 0 ? 'rgba(244,63,94,0.25)' : 'rgba(16,185,129,0.25)'}`,
+            }}>
+              {s.flags.length} Flagged Terms
+            </span>
           </div>
 
           {s.flags.length > 0 ? (
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {s.flags.map((f, idx) => (
-                <div key={idx} className="flex flex-col p-3 rounded-lg bg-slate-900/40 border border-slate-800/80 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center space-x-1.5">
-                        <span className="font-extrabold text-white font-mono text-[12px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
-                          "{f.keyword}"
-                        </span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
-                          {f.category.replace(/_/g, ' ')}
-                        </span>
-                      </div>
+                <div key={idx} style={{
+                  padding: '12px 14px', borderRadius: 10,
+                  background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)',
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <code style={{
+                        fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#f1f5f9',
+                        background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: 5,
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}>"{f.keyword}"</code>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                        background: 'rgba(0,0,0,0.3)', color: '#94a3b8',
+                        padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.06)',
+                      }}>{f.category.replace(/_/g, ' ')}</span>
                     </div>
-                    <div className="text-right flex items-center space-x-2">
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        {f.match_count} match{f.match_count > 1 ? 'es' : ''}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/25 font-bold font-mono text-[10px]">
-                        +{f.weight} pts
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: '#64748b' }}>{f.match_count} match{f.match_count > 1 ? 'es' : ''}</span>
+                      <span style={{
+                        padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 700, fontFamily: 'monospace',
+                        background: 'rgba(244,63,94,0.12)', color: '#f87171', border: '1px solid rgba(244,63,94,0.25)',
+                      }}>+{f.weight} pts</span>
                     </div>
                   </div>
-                  
-                  {/* Expanded evidence details */}
                   {(f.element || f.snippet) && (
-                    <div className="pt-1.5 border-t border-slate-850 space-y-1">
+                    <div style={{ paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {f.element && (
-                        <div className="flex items-center space-x-1 text-[9px] text-slate-500 font-bold uppercase tracking-wider">
-                          <span>📍 Location:</span>
-                          <span className="text-violet-400 font-semibold bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 font-mono text-[10px]">
-                            {formatLocationLabel(f.element)}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+                          <span style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Location:</span>
+                          <span style={{
+                            color: '#a78bfa', fontWeight: 600, fontFamily: 'monospace',
+                            background: 'rgba(0,0,0,0.3)', padding: '1px 7px', borderRadius: 4,
+                            border: '1px solid rgba(139,92,246,0.2)', fontSize: 10,
+                          }}>{formatLocationLabel(f.element)}</span>
                         </div>
                       )}
                       {f.snippet && (
-                        <div className="p-2 bg-slate-950/60 rounded-md border border-slate-900 font-mono text-[10px] text-slate-400 leading-relaxed overflow-x-auto whitespace-pre-wrap break-all max-w-full">
-                          <span className="text-slate-600 mr-1 select-none">Snippet:</span>
+                        <div style={{
+                          padding: '8px 10px', background: 'rgba(0,0,0,0.35)', borderRadius: 7,
+                          border: '1px solid rgba(255,255,255,0.05)', fontFamily: 'monospace',
+                          fontSize: 10, color: '#94a3b8', lineHeight: 1.6, overflowX: 'auto',
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                        }}>
+                          <span style={{ color: '#475569', marginRight: 6, userSelect: 'none' }}>Snippet:</span>
                           {highlightKeyword(f.snippet, f.keyword)}
                         </div>
                       )}
@@ -323,60 +280,174 @@ function SnapshotCard({ s, onSelect, isActive }: SnapshotCardProps) {
               ))}
             </div>
           ) : (
-            <div className="text-center py-4 border border-dashed border-slate-900 rounded-lg text-slate-500 text-xs">
-              No risk flags triggered. Content matches clean baseline signatures.
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '28px 20px', borderRadius: 12,
+              border: '1px dashed rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.04)',
+              gap: 8,
+            }}>
+              <CheckCircle size={22} color="#10b981" />
+              <span style={{ fontSize: 12, color: '#34d399', fontWeight: 600 }}>No risk flags triggered</span>
+              <span style={{ fontSize: 11, color: '#64748b' }}>Content matches clean baseline signatures.</span>
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-interface SnapshotTimelineProps {
-  snapshots: Snapshot[];
-  activeSnapshot?: Snapshot | null;
-  onSelectSnapshot?: (s: Snapshot) => void;
+/* ─── Left panel: compact tab for one snapshot ────────────────── */
+interface SnapshotTabProps {
+  s: Snapshot;
+  index: number;
+  isSelected: boolean;
+  onSelect: (s: Snapshot) => void;
 }
 
+function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
+  const pal = getRiskPalette(s.risk_score, s.content_category);
+  const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
+
+  return (
+    <button
+      onClick={() => onSelect(s)}
+      style={{
+        width: '100%',
+        padding: '12px 14px',
+        borderRadius: 12,
+        background: isSelected
+          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(15,23,42,0.6) 100%)`
+          : 'rgba(15,23,42,0.4)',
+        border: isSelected ? `1.5px solid ${pal.border}` : '1.5px solid rgba(255,255,255,0.05)',
+        cursor: 'pointer',
+        textAlign: 'left',
+        transition: 'all 0.18s ease',
+        boxShadow: isSelected ? pal.glow : 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        transform: isSelected ? 'translateX(2px)' : 'none',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Active accent bar */}
+      {isSelected && (
+        <span style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+          background: `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}88)`,
+          borderRadius: '0 2px 2px 0',
+        }} />
+      )}
+
+      {/* Index number */}
+      <span style={{
+        width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+        background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.06)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 9, fontWeight: 800, color: isSelected ? pal.text : '#475569',
+        fontFamily: 'monospace',
+      }}>
+        {String(index + 1).padStart(2, '0')}
+      </span>
+
+      {/* Score ring */}
+      <span style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: isSelected ? pal.dim : 'rgba(0,0,0,0.3)',
+        border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.06)'}`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>{s.risk_score}</span>
+        <span style={{ fontSize: 7, color: '#475569', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>risk</span>
+      </span>
+
+      {/* Date + category */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 11, fontWeight: 700,
+          color: isSelected ? '#f1f5f9' : '#94a3b8',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {formatDate(s.timestamp)}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+          <span style={{ fontSize: 9 }}>{catIcon}</span>
+          <span style={{
+            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+            color: isSelected ? pal.text : '#475569',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {(s.content_category || 'safe').replace(/_/g, ' ')}
+          </span>
+          {s.flags.length > 0 && (
+            <span style={{
+              marginLeft: 'auto', padding: '1px 5px', borderRadius: 4, fontSize: 8, fontWeight: 700,
+              background: 'rgba(244,63,94,0.15)', color: '#f87171', border: '1px solid rgba(244,63,94,0.2)',
+              flexShrink: 0,
+            }}>{s.flags.length}⚑</span>
+          )}
+        </div>
+      </div>
+
+      {/* Arrow */}
+      <ChevronRight
+        size={14}
+        color={isSelected ? pal.text : '#334155'}
+        style={{ flexShrink: 0, transition: 'transform 0.2s', transform: isSelected ? 'translateX(2px)' : 'none' }}
+      />
+    </button>
+  );
+}
+
+/* ─── Main component ──────────────────────────────────────────── */
 export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSnapshot }: SnapshotTimelineProps) {
+  const [localSelected, setLocalSelected] = useState<Snapshot | null>(null);
+
   if (!snapshots || snapshots.length === 0) return null;
 
-  const chartData: ChartDataPoint[] = snapshots.map((s) => {
-    const year = s.timestamp.substring(0, 4);
-    const month = s.timestamp.substring(4, 6);
-    const day = s.timestamp.substring(6, 8);
+  // Use externally-controlled selection if provided, else local
+  const selected = activeSnapshot ?? localSelected ?? snapshots[0];
 
-    return {
-      name: `${year}-${month}-${day}`,
-      timestamp: s.timestamp,
-      score: s.risk_score,
-      url: s.original_url,
-      status: s.status_code,
-      flagsCount: s.flags.length,
-      fullDate: new Date(`${year}-${month}-${day}`).toLocaleDateString('en-US', {
-        year: 'numeric', month: 'short', day: 'numeric',
-      }),
-    };
-  });
+  const handleSelect = (s: Snapshot) => {
+    setLocalSelected(s);
+    onSelectSnapshot?.(s);
+  };
+
+  const chartData: ChartDataPoint[] = snapshots.map((s) => ({
+    name: `${s.timestamp.slice(0, 4)}-${s.timestamp.slice(4, 6)}-${s.timestamp.slice(6, 8)}`,
+    timestamp: s.timestamp,
+    score: s.risk_score,
+    url: s.original_url,
+    status: s.status_code,
+    flagsCount: s.flags.length,
+    fullDate: formatDate(s.timestamp),
+  }));
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: ChartDataPoint }> }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
+    if (active && payload?.length) {
+      const d = payload[0].payload;
+      const rp = getRiskPalette(d.score, undefined);
       return (
-        <div className="bg-slate-900 border border-slate-700/80 p-3 rounded-lg shadow-xl text-xs max-w-xs space-y-1.5 backdrop-blur-md">
-          <p className="font-bold text-slate-200">{data.fullDate}</p>
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Risk Score:</span>
-            <span className={`font-extrabold ${getScoreColor(data.score, undefined)}`}>{data.score}</span>
+        <div style={{
+          background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)',
+          padding: '12px 14px', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(8px)', fontSize: 12, minWidth: 160,
+        }}>
+          <p style={{ color: '#f1f5f9', fontWeight: 700, marginBottom: 8 }}>{d.fullDate}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+            <span style={{ color: '#64748b' }}>Risk Score</span>
+            <span style={{ color: rp.accent, fontWeight: 800 }}>{d.score}</span>
           </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Status:</span>
-            <span className="text-slate-200 font-mono">{data.status ?? 200}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
+            <span style={{ color: '#64748b' }}>HTTP Status</span>
+            <span style={{ color: '#a5b4fc', fontFamily: 'monospace', fontWeight: 700 }}>{d.status ?? 200}</span>
           </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Risk Flags:</span>
-            <span className="text-slate-200">{data.flagsCount} triggered</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+            <span style={{ color: '#64748b' }}>Risk Flags</span>
+            <span style={{ color: d.flagsCount > 0 ? '#f87171' : '#34d399', fontWeight: 700 }}>{d.flagsCount} triggered</span>
           </div>
         </div>
       );
@@ -385,57 +456,118 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
   };
 
   return (
-    <div className="glass-panel p-6 sm:p-8 space-y-6">
+    <div className="glass-panel" style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      {/* Header */}
       <div>
-        <h3 className="text-lg font-bold mb-1">Historical Snapshot Timeline</h3>
-        <p className="text-slate-400 text-sm">
-          Risk rating trend calculated from content scans of Wayback captures spanning{' '}
-          {chartData[0].name} to {chartData[chartData.length - 1].name}. Click on a card below to load its AI Content Scan details.
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 9, background: 'rgba(139,92,246,0.15)',
+            border: '1px solid rgba(139,92,246,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Layers size={15} color="#a78bfa" />
+          </div>
+          <h3 style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 17, margin: 0 }}>Historical Snapshot Timeline</h3>
+        </div>
+        <p style={{ color: '#475569', fontSize: 13, margin: 0, paddingLeft: 42 }}>
+          Risk trend across <span style={{ color: '#94a3b8', fontWeight: 600 }}>{snapshots.length}</span> Wayback captures —
+          from <span style={{ color: '#94a3b8' }}>{chartData[0].name}</span> to <span style={{ color: '#94a3b8' }}>{chartData[chartData.length - 1].name}</span>.
+          Select a snapshot to inspect its evidence.
         </p>
       </div>
 
-      {/* Recharts Area Chart */}
-      <div className="h-64 min-h-64 w-full min-w-0 overflow-hidden">
-        <ResponsiveContainer width="100%" height={256} minWidth={1} minHeight={1}>
+      {/* Chart */}
+      <div style={{ height: 220, width: '100%' }}>
+        <ResponsiveContainer width="100%" height={220} minWidth={1}>
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
-              <linearGradient id="scoreColor" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#7c3aed" stopOpacity={0.0} />
+              <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.45} />
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.5} />
-            <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
+            <XAxis dataKey="name" stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
+            <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
             <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="score"
-              stroke="#8b5cf6"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#scoreColor)"
-            />
+            <Area type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2.5} fillOpacity={1} fill="url(#scoreGradient)" dot={{ r: 3, fill: '#8b5cf6', strokeWidth: 0 }} activeDot={{ r: 5, fill: '#a78bfa', stroke: '#1e1b4b', strokeWidth: 2 }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Snapshot Cards List */}
-      <div className="space-y-3.5">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-          Analyzed Snapshot Details
-        </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-h-[340px] overflow-y-auto pr-1">
-          {snapshots.map((s, index) => (
-            <SnapshotCard
-              key={index}
-              s={s}
-              onSelect={onSelectSnapshot}
-              isActive={activeSnapshot?.timestamp === s.timestamp}
-            />
-          ))}
+      {/* Split Panel: Tabs | Detail */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Hash size={13} color="#475569" />
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#475569' }}>
+            Analyzed Snapshot Details
+          </span>
+          <span style={{
+            marginLeft: 4, padding: '1px 7px', borderRadius: 5, fontSize: 10, fontWeight: 700,
+            background: 'rgba(139,92,246,0.15)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)',
+          }}>{snapshots.length} captures</span>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(240px, 320px) 1fr',
+          gap: 16,
+          alignItems: 'start',
+        }}>
+          {/* LEFT: Snapshot selector tabs */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            maxHeight: 480,
+            overflowY: 'auto',
+            paddingRight: 4,
+          }}>
+            {/* Legend strip */}
+            <div style={{
+              padding: '6px 12px', borderRadius: 8,
+              background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.12)',
+              fontSize: 10, color: '#6366f1', fontWeight: 600,
+              display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4,
+            }}>
+              <Shield size={11} />
+              Click a snapshot to inspect its evidence →
+            </div>
+            {snapshots.map((s, i) => (
+              <SnapshotTab
+                key={s.timestamp}
+                s={s}
+                index={i}
+                isSelected={selected?.timestamp === s.timestamp}
+                onSelect={handleSelect}
+              />
+            ))}
+          </div>
+
+          {/* RIGHT: Detail panel */}
+          <div style={{ minHeight: 480, position: 'sticky', top: 20 }}>
+            {selected ? (
+              <SnapshotDetailPanel s={selected} />
+            ) : (
+              <div style={{
+                height: '100%', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 12,
+                border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 18,
+                color: '#334155', fontSize: 13,
+              }}>
+                <AlertTriangle size={28} color="#334155" />
+                <span>Select a snapshot from the left panel</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.8); }
+        }
+      `}</style>
     </div>
   );
 }
