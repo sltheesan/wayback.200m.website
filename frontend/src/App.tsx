@@ -323,7 +323,7 @@ function ScanApp() {
               </div>
 
               {/* Domain Catalog Panel */}
-              <div className="glass-panel p-6 space-y-4 h-[550px] flex flex-col">
+              <div className="glass-panel p-6 space-y-4 h-[440px] flex flex-col">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
                   Database Domains
                 </h3>
