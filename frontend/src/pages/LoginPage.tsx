@@ -69,10 +69,27 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username_or_email: resetUsername.trim() }),
       });
-      const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.detail || 'Failed to request password reset.');
+        let errorMessage = 'Failed to request password reset.';
+        try {
+          const err = await response.json();
+          errorMessage = err.detail ?? errorMessage;
+        } catch {
+          try {
+            const txt = await response.text();
+            if (txt && txt.length < 200) {
+              errorMessage = txt;
+            } else {
+              errorMessage = `Server error (${response.status}): ${response.statusText || 'Internal Server Error'}`;
+            }
+          } catch {
+            errorMessage = `Server error (${response.status})`;
+          }
+        }
+        throw new Error(errorMessage);
       }
+      
+      const data = await response.json();
       
       setSuccess(data.message || 'Reset token generated successfully.');
       if (data.reset_token) {
@@ -102,8 +119,23 @@ export default function LoginPage() {
         body: JSON.stringify({ token: resetToken.trim(), new_password: resetNewPassword }),
       });
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Failed to reset password.');
+        let errorMessage = 'Failed to reset password.';
+        try {
+          const err = await response.json();
+          errorMessage = err.detail ?? errorMessage;
+        } catch {
+          try {
+            const txt = await response.text();
+            if (txt && txt.length < 200) {
+              errorMessage = txt;
+            } else {
+              errorMessage = `Server error (${response.status}): ${response.statusText || 'Internal Server Error'}`;
+            }
+          } catch {
+            errorMessage = `Server error (${response.status})`;
+          }
+        }
+        throw new Error(errorMessage);
       }
       
       setResetSuccessMessage('Password reset successfully! You can now log in.');

@@ -89,8 +89,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ username, password, remember_me: rememberMe }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail ?? 'Login failed');
+        let errorMessage = 'Login failed';
+        try {
+          const err = await res.json();
+          errorMessage = err.detail ?? errorMessage;
+        } catch {
+          try {
+            const txt = await res.text();
+            if (txt && txt.length < 200) {
+              errorMessage = txt;
+            } else {
+              errorMessage = `Server error (${res.status}): ${res.statusText || 'Internal Server Error'}`;
+            }
+          } catch {
+            errorMessage = `Server error (${res.status})`;
+          }
+        }
+        throw new Error(errorMessage);
       }
       const tokens: AuthTokens = await res.json();
 

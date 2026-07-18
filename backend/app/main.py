@@ -1,6 +1,10 @@
 import logging
+import traceback
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -122,6 +126,45 @@ app.include_router(admin_routes.router, prefix=f"{settings.API_V1_STR}/admin", t
 
 # Instrument FastAPI for Prometheus metrics
 Instrumentator().instrument(app).expose(app)
+
+# ── Global Exception Handlers: always return JSON, never plain text ──────────
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Return all HTTP errors (4xx/5xx) as clean JSON."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail or "An error occurred."},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return Pydantic/request validation errors as clean JSON."""
+    errors = []
+    for error in exc.errors():
+        loc = " → ".join(str(l) for l in error.get("loc", []) if l != "body")
+        msg = error.get("msg", "Invalid value")
+        errors.append(f"{loc}: {msg}" if loc else msg)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "; ".join(errors) or "Request validation failed."},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catch-all for any unhandled server exceptions — always returns JSON, never plain text."""
+    logger.error(
+        f"[500] Unhandled exception on {request.method} {request.url.path}:\n"
+        + traceback.format_exc()
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again later."},
+    )
+
+
 
 @app.get("/health", response_model=SystemStatusResponse, tags=["system"])
 async def health_check(db: AsyncSession = Depends(get_db)):
