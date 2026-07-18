@@ -177,7 +177,7 @@ function ScanApp() {
                 </div>
               )}
 
-              {/* Active Result View — top section only: risk summary + nav cards */}
+              {/* Active Result View */}
               {activeData && !loading && (
                 <div className="space-y-8">
                   <RiskSummary data={activeData} />
@@ -214,6 +214,38 @@ function ScanApp() {
                       <ArrowUpRight size={18} className="text-brand-400 group-hover:text-white transition-colors" />
                     </button>
                   </div>
+
+                  <SnapshotTimeline 
+                    snapshots={activeData.snapshots} 
+                    activeSnapshot={activeSnapshot}
+                    onSelectSnapshot={handleSelectSnapshot}
+                  />
+
+                  {/* Active Snapshot Telemetry Panel */}
+                  {activeSnapshot && (
+                    <div id="snapshot-details-section" className="space-y-8 pt-4 scroll-mt-20">
+                      <div className="border-b border-slate-800 pb-3">
+                        <h4 className="text-sm font-bold text-white uppercase tracking-wider">
+                          Snapshot Telemetry: {activeSnapshot.timestamp.substring(0, 4)}-{activeSnapshot.timestamp.substring(4, 6)}-{activeSnapshot.timestamp.substring(6, 8)}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Scrutinizing metadata and structural elements for this Wayback Machine capture.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-8">
+                        <IntelligencePanel snapshot={activeSnapshot} />
+                        {activeSnapshot.ai_intelligence?.detectors && (
+                          <DetectorSummary
+                            detectors={activeSnapshot.ai_intelligence.detectors}
+                            detectorBoost={activeSnapshot.ai_intelligence.detector_boost}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <ReportsPanel data={activeData} />
                 </div>
               )}
 
@@ -325,45 +357,9 @@ function ScanApp() {
             </div>
           </div>
 
-          {/* AI Risk Explanation — full-width, above snapshot timeline */}
+          {/* AI Risk Explanation — full-width below the 3-col grid */}
           {activeData && !loading && activeData.risk_narrative && (
             <ExplainabilityCard data={activeData} />
-          )}
-
-          {/* Historical Snapshot Timeline — full-width */}
-          {activeData && !loading && (
-            <div className="space-y-8">
-              <SnapshotTimeline
-                snapshots={activeData.snapshots}
-                activeSnapshot={activeSnapshot}
-                onSelectSnapshot={handleSelectSnapshot}
-              />
-
-              {/* Active Snapshot Telemetry Panel */}
-              {activeSnapshot && (
-                <div id="snapshot-details-section" className="space-y-8 pt-4 scroll-mt-20">
-                  <div className="border-b border-slate-800 pb-3">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-                      Snapshot Telemetry: {activeSnapshot.timestamp.substring(0, 4)}-{activeSnapshot.timestamp.substring(4, 6)}-{activeSnapshot.timestamp.substring(6, 8)}
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Scrutinizing metadata and structural elements for this Wayback Machine capture.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-8">
-                    <IntelligencePanel snapshot={activeSnapshot} />
-                    {activeSnapshot.ai_intelligence?.detectors && (
-                      <DetectorSummary
-                        detectors={activeSnapshot.ai_intelligence.detectors}
-                        detectorBoost={activeSnapshot.ai_intelligence.detector_boost}
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <ReportsPanel data={activeData} />
-            </div>
           )}
           </div>
         )}
