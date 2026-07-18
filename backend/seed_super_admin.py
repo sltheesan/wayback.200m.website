@@ -67,7 +67,7 @@ async def seed(email: str, password: str, username: str, full_name: str) -> None
     SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
     async with engine.begin() as conn:
-        print("📦 Creating database tables (if not exist)...")
+        print("[DB] Creating database tables (if not exist)...")
         await conn.run_sync(Base.metadata.create_all)
 
     async with SessionLocal() as db:
@@ -76,7 +76,7 @@ async def seed(email: str, password: str, username: str, full_name: str) -> None
             select(User).where(User.role == UserRole.super_admin, User.is_deleted == False)
         )
         if existing.scalar_one_or_none():
-            print("⚠️  A Super Admin already exists. Skipping creation.")
+            print("[WARN] A Super Admin already exists. Skipping creation.")
         else:
             super_admin = User(
                 full_name=full_name,
@@ -90,10 +90,10 @@ async def seed(email: str, password: str, username: str, full_name: str) -> None
             )
             db.add(super_admin)
             await db.flush()
-            print(f"✅ Super Admin created: {username} ({email})")
+            print(f"[OK] Super Admin created: {username} ({email})")
 
         # Seed default system settings
-        print("⚙️  Seeding default system settings...")
+        print("[INFO] Seeding default system settings...")
         for s in DEFAULT_SETTINGS:
             existing_setting = await db.execute(
                 select(SystemSettings).where(SystemSettings.key == s["key"])
@@ -107,10 +107,10 @@ async def seed(email: str, password: str, username: str, full_name: str) -> None
                     updated_at=datetime.utcnow(),
                 ))
         await db.commit()
-        print("✅ Default system settings seeded.")
+        print("[OK] Default system settings seeded.")
 
     await engine.dispose()
-    print("\n🚀 Seed complete! You can now log in at /login")
+    print("\n[SUCCESS] Seed complete! You can now log in at /login")
 
 
 def main() -> None:
