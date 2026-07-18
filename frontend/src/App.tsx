@@ -152,7 +152,7 @@ function ScanApp() {
         
         {/* Render Tab Contents */}
         {activeTab === 'scan' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8 items-start">
             {/* Main Content Area */}
             <div className="lg:col-span-2 space-y-8">
               <DomainInput onScan={handleScanDomain} loading={loading} />
@@ -214,9 +214,7 @@ function ScanApp() {
                     </button>
                   </div>
 
-                  {activeData.risk_narrative && (
-                    <ExplainabilityCard data={activeData} />
-                  )}
+
 
                   <SnapshotTimeline 
                     snapshots={activeData.snapshots} 
@@ -268,6 +266,13 @@ function ScanApp() {
                 </div>
               )}
             </div>
+
+            {/* Full-width AI Risk Explanation — spans all 3 columns */}
+            {activeData && !loading && activeData.risk_narrative && (
+              <div className="lg:col-span-3">
+                <ExplainabilityCard data={activeData} />
+              </div>
+            )}
 
             {/* Sidebar */}
             <div className="space-y-8 lg:col-span-1">
@@ -485,10 +490,6 @@ function ScanApp() {
                   </div>
                   
                   <RiskSummary data={activeData} />
-                  
-                  {activeData.risk_narrative && (
-                    <ExplainabilityCard data={activeData} />
-                  )}
 
                   <SnapshotTimeline 
                     snapshots={activeData.snapshots} 
@@ -531,6 +532,13 @@ function ScanApp() {
                 </div>
               )}
             </div>
+
+            {/* Full-width AI Risk Explanation — spans all 5 columns of batch tab */}
+            {activeData && !loading && inspectedBatchDomain && activeData.domain.toLowerCase() === inspectedBatchDomain.toLowerCase() && activeData.risk_narrative && (
+              <div className="lg:col-span-5">
+                <ExplainabilityCard data={activeData} />
+              </div>
+            )}
           </div>
         )}
 
