@@ -167,11 +167,11 @@ export default function LoginPage() {
           className="absolute inset-0 h-full w-full object-cover opacity-60 mix-blend-luminosity scale-[1.02] filter blur-[0.5px]"
         />
         {/* Dark overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-950/80 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-tr from-slate-950 via-slate-950/80 to-transparent" />
         
         <div className="relative z-10 m-auto max-w-lg px-8 py-12 flex flex-col justify-between h-[85%] text-left">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl shadow-[0_0_30px_rgba(99,102,241,0.4)]">
+            <div className="p-3 bg-linear-to-r from-violet-600 to-indigo-600 rounded-xl shadow-[0_0_30px_rgba(99,102,241,0.4)]">
               <Shield size={28} className="text-white" />
             </div>
             <span className="text-lg font-black tracking-wider uppercase text-white font-mono">ChronoSentinel AI</span>
@@ -233,8 +233,8 @@ export default function LoginPage() {
         `}</style>
 
         {/* Glow Spheres */}
-        <div className="absolute top-10 right-10 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] animate-pulse-slow" />
-        <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-indigo-600/5 rounded-full blur-[100px]" />
+        <div className="absolute top-10 right-10 w-125 h-125 bg-violet-600/10 rounded-full blur-[120px] animate-pulse-slow" />
+        <div className="absolute bottom-10 left-10 w-100 h-100 bg-indigo-600/5 rounded-full blur-[100px]" />
 
         {/* Floating cyber indicators */}
         <div className="cyber-floating-accent top-[8%] left-[8%]" style={{ animationDelay: '0s' }}>
@@ -250,11 +250,11 @@ export default function LoginPage() {
           TLS_HANDSHAKE: OK
         </div>
 
-        <div className="w-full max-w-[440px] relative z-10 space-y-8">
+        <div className="w-full max-w-110 relative z-10 space-y-8">
           
           {/* Mobile Header (Hidden on Desktop) */}
           <div className="flex flex-col items-center text-center lg:hidden space-y-4">
-            <div className="p-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-lg shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+            <div className="p-2.5 bg-linear-to-r from-violet-600 to-indigo-600 rounded-lg shadow-[0_0_20px_rgba(99,102,241,0.3)]">
               <Shield size={22} className="text-white" />
             </div>
             <div>
@@ -297,7 +297,7 @@ export default function LoginPage() {
             `}</style>
 
             {/* Glowing Accent Top border */}
-            <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+            <div className="absolute top-0 inset-x-0 h-0.5 bg-linear-to-r from-transparent via-violet-500/40 to-transparent" />
             
             {/* Laser scanning effect */}
             <div className="laser-line" />
@@ -422,7 +422,7 @@ export default function LoginPage() {
                   id="login-submit"
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 text-xs font-bold text-white bg-gradient-to-r from-violet-600 via-fuchsia-600 to-indigo-600 hover:from-violet-500 hover:via-fuchsia-500 hover:to-indigo-500 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.25)] hover:shadow-[0_0_25px_rgba(139,92,246,0.45)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3 text-xs font-bold text-white bg-linear-to-r from-violet-600 via-fuchsia-600 to-indigo-600 hover:from-violet-500 hover:via-fuchsia-500 hover:to-indigo-500 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.25)] hover:shadow-[0_0_25px_rgba(139,92,246,0.45)] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isLoading ? (
                     <>
@@ -466,7 +466,7 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       disabled={resetLoading}
-                      className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl hover:from-violet-500 hover:to-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-2.5 text-xs font-bold text-white bg-linear-to-r from-violet-600 to-indigo-600 rounded-xl hover:from-violet-500 hover:to-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {resetLoading ? (
                         <>
@@ -516,7 +516,7 @@ export default function LoginPage() {
                     <button
                       type="submit"
                       disabled={resetLoading}
-                      className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl hover:from-violet-500 hover:to-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-2.5 text-xs font-bold text-white bg-linear-to-r from-violet-600 to-indigo-600 rounded-xl hover:from-violet-500 hover:to-indigo-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {resetLoading ? (
                         <>
@@ -549,7 +549,7 @@ export default function LoginPage() {
 
           {/* Footer Copyright */}
           <p className="text-center text-slate-600 text-[9px] uppercase font-bold tracking-widest font-mono select-none">
-            ChronoSentinel AI © {new Date().getFullYear()} — Secure Endpoint Access
+            ChronoSentinel AI (c) {new Date().getFullYear()} - Secure Endpoint Access
           </p>
 
         </div>
