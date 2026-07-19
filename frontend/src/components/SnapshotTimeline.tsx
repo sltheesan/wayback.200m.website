@@ -312,179 +312,149 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   const dateStr = formatDate(s.timestamp);
   const rawDate = `${s.timestamp.slice(0,4)}/${s.timestamp.slice(4,6)}/${s.timestamp.slice(6,8)}`;
 
+  // Human-readable risk level label
+  const riskLabel = s.content_category === 'safe' || !s.content_category
+    ? 'SAFE'
+    : s.risk_score >= 70 ? 'HIGH RISK' : 'MEDIUM RISK';
+
   return (
     <button
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        padding: 0,
-        borderRadius: 16,
-        background: isSelected
-          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(10,15,30,0.9) 100%)`
-          : 'rgba(15,23,42,0.55)',
-        border: isSelected ? `2px solid ${pal.border}` : '1.5px solid rgba(255,255,255,0.07)',
+        padding: '16px 16px 14px 16px',
+        borderRadius: 14,
+        background: isSelected ? `${pal.dim}` : 'rgba(15,23,42,0.6)',
+        border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.06)'}`,
         cursor: 'pointer',
         textAlign: 'left',
-        transition: 'all 0.2s ease',
-        boxShadow: isSelected ? `${pal.glow}, 0 4px 24px rgba(0,0,0,0.3)` : '0 2px 8px rgba(0,0,0,0.15)',
+        transition: 'all 0.18s ease',
+        boxShadow: isSelected ? pal.glow : 'none',
         display: 'flex',
         flexDirection: 'column',
-        transform: isSelected ? 'translateX(4px)' : 'none',
+        gap: 12,
+        transform: isSelected ? 'translateX(3px)' : 'none',
         position: 'relative',
         overflow: 'hidden',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(15,23,42,0.75)';
-          el.style.borderColor = 'rgba(255,255,255,0.13)';
+          el.style.background = 'rgba(30,41,59,0.8)';
+          el.style.borderColor = 'rgba(255,255,255,0.12)';
           el.style.transform = 'translateX(2px)';
         }
       }}
       onMouseLeave={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(15,23,42,0.55)';
-          el.style.borderColor = 'rgba(255,255,255,0.07)';
+          el.style.background = 'rgba(15,23,42,0.6)';
+          el.style.borderColor = 'rgba(255,255,255,0.06)';
           el.style.transform = 'none';
         }
       }}
     >
       {/* Left accent bar */}
       <span style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0,
-        width: isSelected ? 5 : 2,
-        background: isSelected
-          ? `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}55)`
-          : 'rgba(255,255,255,0.05)',
-        borderRadius: '16px 0 0 16px',
-        transition: 'all 0.2s ease',
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
+        background: `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}44)`,
+        borderRadius: '14px 0 0 14px',
       }} />
 
-      {/* Shimmer overlay when selected */}
-      {isSelected && (
-        <span style={{
-          position: 'absolute', inset: 0,
-          background: `radial-gradient(ellipse at 0% 0%, ${pal.dim} 0%, transparent 55%)`,
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
-        }} />
-      )}
+      {/* ROW 1 — Risk label + date + index + arrow */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Risk level badge — instant understanding */}
+          <span style={{
+            fontSize: 10, fontWeight: 800, letterSpacing: '0.08em',
+            color: pal.accent,
+            background: `${pal.dim}`,
+            border: `1px solid ${pal.border}`,
+            padding: '3px 8px', borderRadius: 6,
+            textTransform: 'uppercase' as const,
+          }}>{riskLabel}</span>
 
-      {/* ── TOP SECTION: score ring + date/meta ── */}
-      <div style={{ padding: '18px 18px 14px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
-
-        {/* Score ring */}
-        <div style={{
-          width: 70, height: 70, borderRadius: 18, flexShrink: 0,
-          background: isSelected
-            ? `radial-gradient(circle at 35% 35%, ${pal.dim}, rgba(0,0,0,0.6))`
-            : 'rgba(0,0,0,0.45)',
-          border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.08)'}`,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 2,
-          boxShadow: isSelected ? `0 0 0 4px ${pal.dim}` : 'none',
-          transition: 'all 0.25s',
-        }}>
-          <span style={{ fontSize: 24, fontWeight: 900, color: pal.accent, lineHeight: 1, letterSpacing: '-0.03em' }}>
-            {s.risk_score}
-          </span>
-          <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            RISK
+          {/* Snapshot number */}
+          <span style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', fontWeight: 600 }}>
+            #{String(index + 1).padStart(2, '0')}
           </span>
         </div>
 
-        {/* Date + meta */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Index + date */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{
-              fontSize: 9, fontWeight: 800, fontFamily: 'monospace',
-              color: isSelected ? pal.text : '#374151',
-              background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
-              padding: '2px 6px', borderRadius: 5, letterSpacing: '0.06em', flexShrink: 0,
-            }}>#{String(index + 1).padStart(2, '0')}</span>
-            <span style={{
-              fontSize: 14, fontWeight: 700,
-              color: isSelected ? '#f1f5f9' : '#94a3b8',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>{dateStr}</span>
-          </div>
-          {/* Raw timestamp */}
-          <div style={{ fontSize: 11, fontFamily: 'monospace', marginBottom: 5 }}>
-            <span style={{ color: '#334155' }}>Captured </span>
-            <span style={{ color: '#64748b', fontWeight: 600 }}>{rawDate}</span>
-          </div>
-          {/* HTTP + lang */}
-          <div style={{ display: 'flex', gap: 8, fontSize: 10, fontFamily: 'monospace' }}>
-            <span style={{ color: '#475569' }}>HTTP <span style={{ color: '#818cf8', fontWeight: 700 }}>{s.status_code ?? 200}</span></span>
-            <span style={{ color: '#1e2d40' }}>·</span>
-            <span style={{ color: '#475569' }}>Lang <span style={{ color: '#a78bfa', fontWeight: 700 }}>{(s.detected_language || 'en').toUpperCase()}</span></span>
-          </div>
+        {/* Date + arrow */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: isSelected ? '#cbd5e1' : '#64748b' }}>
+            {rawDate}
+          </span>
+          <ChevronRight size={14} color={isSelected ? pal.accent : '#334155'}
+            style={{ transition: 'transform 0.2s', transform: isSelected ? 'translateX(2px)' : 'none' }}
+          />
         </div>
-
-        {/* Arrow */}
-        <ChevronRight
-          size={18}
-          color={isSelected ? pal.accent : '#334155'}
-          style={{
-            flexShrink: 0,
-            transition: 'all 0.2s',
-            transform: isSelected ? 'translateX(3px)' : 'none',
-            opacity: isSelected ? 1 : 0.35,
-          }}
-        />
       </div>
 
-      {/* Divider */}
-      <div style={{ height: 1, margin: '0 18px', background: isSelected ? pal.border : 'rgba(255,255,255,0.04)' }} />
+      {/* ROW 2 — Score (big) + Category + Flags */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingLeft: 8 }}>
 
-      {/* ── BOTTOM SECTION: category + flags + bar ── */}
-      <div style={{ padding: '12px 18px 16px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Pills row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {/* Score — the hero number */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
           <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.04em',
-            background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
-            color: isSelected ? pal.text : '#64748b',
-          }}>
-            <span style={{ fontSize: 12 }}>{catIcon}</span>
-            {catLabel}
+            fontSize: 36, fontWeight: 900, lineHeight: 1,
+            color: pal.accent, letterSpacing: '-0.04em',
+          }}>{s.risk_score}</span>
+          <span style={{ fontSize: 9, color: '#475569', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
+            / 100
           </span>
-          {s.flags.length > 0 ? (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-              background: 'rgba(244,63,94,0.11)', color: '#f87171',
-              border: '1px solid rgba(244,63,94,0.22)',
-            }}>⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}</span>
-          ) : (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-              background: 'rgba(16,185,129,0.08)', color: '#34d399',
-              border: '1px solid rgba(16,185,129,0.2)',
-            }}>✓ Clean</span>
-          )}
         </div>
-        {/* Risk progress bar */}
-        <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+
+        {/* Vertical divider */}
+        <div style={{ width: 1, height: 44, background: isSelected ? pal.border : 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+
+        {/* Category + flags + date label */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {/* Full date */}
+          <span style={{
+            fontSize: 13, fontWeight: 700,
+            color: isSelected ? '#f1f5f9' : '#94a3b8',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{dateStr}</span>
+
+          {/* Category + flag chips in one row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const,
+              color: isSelected ? pal.text : '#64748b',
+            }}>
+              {catIcon} {catLabel}
+            </span>
+            <span style={{ color: '#1e293b', fontSize: 10 }}>·</span>
+            {s.flags.length > 0 ? (
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#f87171' }}>
+                ⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}
+              </span>
+            ) : (
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399' }}>✓ Clean</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 3 — Risk progress bar */}
+      <div style={{ paddingLeft: 8 }}>
+        <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
           <div style={{
             height: '100%',
             width: `${s.risk_score}%`,
             background: `linear-gradient(to right, ${pal.accent}55, ${pal.accent})`,
             borderRadius: 99,
-            transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)',
+            transition: 'width 0.6s ease',
           }} />
         </div>
       </div>
     </button>
   );
 }
+
+
 
 /* ─── Main component ──────────────────────────────────────────── */
 export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSnapshot }: SnapshotTimelineProps) {
