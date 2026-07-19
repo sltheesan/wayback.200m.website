@@ -15,12 +15,15 @@ _provider = WaybackProvider(_client)
 _cache = WaybackCache()
 
 # Instantiate the global service instance
+wayback_http_client = _client
 wayback_service = WaybackAccessService(_provider, _cache)
 
 __all__ = [
+    "wayback_http_client",
     "wayback_service",
     "WaybackServiceError",
     "SSRFValidationError",
     "ProviderError",
     "CacheError",
 ]
+
