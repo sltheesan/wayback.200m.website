@@ -11,6 +11,7 @@ const CATEGORY_STYLES: Record<string, { color: string; bg: string; icon: string 
   phishing_scam: { color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', icon: '🎣' },
   malware_hacking: { color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20',  icon: '💀' },
   illegal_pharmaceuticals: { color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20', icon: '💊' },
+  gaming: { color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20', icon: '🎮' },
   safe: { color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: '✅' },
 };
 
@@ -20,6 +21,7 @@ const CONTAINER_STYLES: Record<string, string> = {
   phishing_scam: 'border-l-4 border-l-amber-500 border-amber-500/20 bg-gradient-to-br from-amber-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(245,158,11,0.03)]',
   malware_hacking: 'border-l-4 border-l-rose-500 border-rose-500/20 bg-gradient-to-br from-rose-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(244,63,94,0.03)]',
   illegal_pharmaceuticals: 'border-l-4 border-l-violet-500 border-violet-500/20 bg-gradient-to-br from-violet-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(139,92,246,0.03)]',
+  gaming: 'border-l-4 border-l-cyan-500 border-cyan-500/20 bg-gradient-to-br from-cyan-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(6,182,212,0.03)]',
   safe: 'border-l-4 border-l-emerald-500 border-emerald-500/20 bg-gradient-to-br from-emerald-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(16,185,129,0.03)]',
 };
 

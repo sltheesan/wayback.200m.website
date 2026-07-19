@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { ExternalLink, Calendar, Shield, AlertTriangle, CheckCircle, ChevronRight, Layers, Hash, Eye, Flag } from 'lucide-react';
+import { ExternalLink, Calendar, Shield, AlertTriangle, CheckCircle, Layers, Hash, Eye, Flag } from 'lucide-react';
 import { Snapshot } from '../types';
 
 interface SnapshotTimelineProps {
@@ -25,15 +25,17 @@ interface ChartDataPoint {
 /* ─── Colour helpers ──────────────────────────────────────────── */
 const getRiskPalette = (score: number, category?: string | null) => {
   const isSafe = !category || category === 'safe';
-  const isHigh = score >= 70;
-  if (isSafe) return { accent: '#10b981', dim: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', text: '#10b981', glow: '0 0 16px rgba(16,185,129,0.2)' };
-  if (isHigh) return { accent: '#f43f5e', dim: 'rgba(244,63,94,0.12)', border: 'rgba(244,63,94,0.25)', text: '#f43f5e', glow: '0 0 16px rgba(244,63,94,0.2)' };
-  return { accent: '#f59e0b', dim: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', text: '#f59e0b', glow: '0 0 16px rgba(245,158,11,0.2)' };
+  if (isSafe && score < 70) {
+    return { accent: '#10b981', dim: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', text: '#10b981', glow: '0 0 16px rgba(16,185,129,0.2)' };
+  }
+  // For unsafe categories (gambling, adult, gaming, etc.) or high scores, show red (high risk color)
+  return { accent: '#f43f5e', dim: 'rgba(244,63,94,0.12)', border: 'rgba(244,63,94,0.25)', text: '#f43f5e', glow: '0 0 16px rgba(244,63,94,0.2)' };
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
   gambling: '🎰', adult: '🔞', phishing_scam: '🎣',
   malware_hacking: '💀', illegal_pharmaceuticals: '💊', safe: '✅',
+  gaming: '🎮',
 };
 
 const formatDate = (timestamp: string) =>
@@ -310,115 +312,113 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ');
   const dateStr = formatDate(s.timestamp);
-  const rawDate = `${s.timestamp.slice(0,4)}/${s.timestamp.slice(4,6)}/${s.timestamp.slice(6,8)}`;
+  const rawDate = `${s.timestamp.slice(0, 4)}/${s.timestamp.slice(4, 6)}/${s.timestamp.slice(6, 8)}`;
 
-  // Human-readable risk level label
-  const riskLabel = s.content_category === 'safe' || !s.content_category
-    ? 'SAFE'
-    : s.risk_score >= 70 ? 'HIGH RISK' : 'MEDIUM RISK';
+  // Human-readable risk level label indicating if it is unsafe (e.g. gambling, adult, gaming etc.)
+  const isUnsafe = !!s.content_category && s.content_category !== 'safe';
+  const riskLabel = isUnsafe && s.content_category
+    ? `UNSAFE: ${s.content_category.replace(/_/g, ' ').toUpperCase()}`
+    : s.risk_score >= 70 ? 'HIGH RISK' : 'SAFE';
 
   return (
     <button
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        padding: '16px 16px 14px 16px',
+        padding: '20px 16px 16px 16px',
         borderRadius: 14,
-        background: isSelected ? `${pal.dim}` : 'rgba(15,23,42,0.6)',
-        border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.06)'}`,
+        background: isSelected 
+          ? `${pal.dim}` 
+          : isUnsafe 
+            ? 'rgba(244,63,94,0.04)' 
+            : 'rgba(15,23,42,0.6)',
+        border: `2px solid ${isSelected ? pal.border : isUnsafe ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)'}`,
         cursor: 'pointer',
-        textAlign: 'left',
+        textAlign: 'center',
         transition: 'all 0.18s ease',
-        boxShadow: isSelected ? pal.glow : 'none',
+        boxShadow: isSelected ? pal.glow : isUnsafe ? '0 0 12px rgba(244,63,94,0.05)' : 'none',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         gap: 12,
-        transform: isSelected ? 'translateX(3px)' : 'none',
+        transform: isSelected ? 'scale(1.02)' : 'none',
         position: 'relative',
         overflow: 'hidden',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(30,41,59,0.8)';
-          el.style.borderColor = 'rgba(255,255,255,0.12)';
-          el.style.transform = 'translateX(2px)';
+          el.style.background = isUnsafe ? 'rgba(244,63,94,0.08)' : 'rgba(30,41,59,0.8)';
+          el.style.borderColor = isUnsafe ? 'rgba(244,63,94,0.3)' : 'rgba(255,255,255,0.12)';
+          el.style.transform = 'scale(1.01)';
         }
       }}
       onMouseLeave={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(15,23,42,0.6)';
-          el.style.borderColor = 'rgba(255,255,255,0.06)';
+          el.style.background = isUnsafe ? 'rgba(244,63,94,0.04)' : 'rgba(15,23,42,0.6)';
+          el.style.borderColor = isUnsafe ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)';
           el.style.transform = 'none';
         }
       }}
     >
-      {/* Left accent bar */}
+      {/* Top accent bar */}
       <span style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
-        background: `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}44)`,
-        borderRadius: '14px 0 0 14px',
+        position: 'absolute', left: 0, top: 0, right: 0, height: 4,
+        background: `linear-gradient(to right, ${pal.accent}, ${pal.accent}44)`,
       }} />
 
-      {/* ROW 1 — Risk label + date + index + arrow */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Risk level badge — instant understanding */}
-          <span style={{
-            fontSize: 10, fontWeight: 800, letterSpacing: '0.08em',
-            color: pal.accent,
-            background: `${pal.dim}`,
-            border: `1px solid ${pal.border}`,
-            padding: '3px 8px', borderRadius: 6,
-            textTransform: 'uppercase' as const,
-          }}>{riskLabel}</span>
-
+      {/* ROW 1 — Risk label + date + index */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
           {/* Snapshot number */}
           <span style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', fontWeight: 600 }}>
             #{String(index + 1).padStart(2, '0')}
           </span>
-        </div>
-
-        {/* Date + arrow */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: isSelected ? '#cbd5e1' : '#64748b' }}>
-            {rawDate}
+          {/* Risk level badge */}
+          <span style={{
+            fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
+            color: pal.accent,
+            background: `${pal.dim}`,
+            border: `1px solid ${pal.border}`,
+            padding: '2px 6px', borderRadius: 4,
+            textTransform: 'uppercase' as const,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            {isUnsafe && <span>⚠️</span>}
+            {riskLabel}
           </span>
-          <ChevronRight size={14} color={isSelected ? pal.accent : '#334155'}
-            style={{ transition: 'transform 0.2s', transform: isSelected ? 'translateX(2px)' : 'none' }}
-          />
         </div>
+        <span style={{ fontSize: 11, fontWeight: 600, color: isSelected ? '#cbd5e1' : '#64748b' }}>
+          {rawDate}
+        </span>
       </div>
 
       {/* ROW 2 — Score (big) + Category + Flags */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingLeft: 8 }}>
-
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: '100%' }}>
         {/* Score — the hero number */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <span style={{
-            fontSize: 36, fontWeight: 900, lineHeight: 1,
+            fontSize: 42, fontWeight: 900, lineHeight: 1,
             color: pal.accent, letterSpacing: '-0.04em',
           }}>{s.risk_score}</span>
-          <span style={{ fontSize: 9, color: '#475569', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
-            / 100
+          <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginTop: 4 }}>
+            Risk Score
           </span>
         </div>
 
-        {/* Vertical divider */}
-        <div style={{ width: 1, height: 44, background: isSelected ? pal.border : 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
-
         {/* Category + flags + date label */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           {/* Full date */}
           <span style={{
-            fontSize: 13, fontWeight: 700,
+            fontSize: 12, fontWeight: 700,
             color: isSelected ? '#f1f5f9' : '#94a3b8',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{dateStr}</span>
 
           {/* Category + flag chips in one row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, justifyContent: 'center' }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
               fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const,
@@ -439,7 +439,7 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
       </div>
 
       {/* ROW 3 — Risk progress bar */}
-      <div style={{ paddingLeft: 8 }}>
+      <div style={{ width: '100%', padding: '0 8px' }}>
         <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
           <div style={{
             height: '100%',

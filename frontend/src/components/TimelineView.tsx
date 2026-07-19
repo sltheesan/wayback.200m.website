@@ -14,6 +14,7 @@ const CATEGORY_STYLES: Record<string, { label: string; icon: string; bg: string;
   phishing_scam: { label: 'Phishing / Scam', icon: 'PH', bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400' },
   malware_hacking: { label: 'Malware / Hacking', icon: 'MW', bg: 'bg-rose-500/10', border: 'border-rose-500/30', text: 'text-rose-400' },
   illegal_pharmaceuticals: { label: 'Pharmaceuticals', icon: 'RX', bg: 'bg-violet-500/10', border: 'border-violet-500/30', text: 'text-violet-400' },
+  gaming: { label: 'Gaming / Betting Like', icon: 'GM', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', text: 'text-cyan-400' },
   safe: { label: 'Safe / Benign', icon: 'OK', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-400' },
 };
 
