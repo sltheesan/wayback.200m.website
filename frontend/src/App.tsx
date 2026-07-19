@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import DomainInput from './components/DomainInput';
@@ -134,17 +134,9 @@ function ScanApp() {
     return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
   };
 
-  const scrollToSnapshotIntelligence = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      const el = document.getElementById('snapshot-intelligence-section');
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, []);
-
-  // Helper to update the selected snapshot and jump to its intelligence card.
+  // Helper to update the selected snapshot detail card.
   const handleSelectSnapshot = (snap: Snapshot) => {
     setActiveSnapshot(snap);
-    scrollToSnapshotIntelligence();
   };
 
   return (
