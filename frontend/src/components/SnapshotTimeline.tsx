@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { ExternalLink, Calendar, Shield, AlertTriangle, CheckCircle, Layers, Hash, Eye, Flag } from 'lucide-react';
+import { ExternalLink, Calendar, Shield, AlertTriangle, CheckCircle, ChevronRight, Layers, Hash, Eye, Flag } from 'lucide-react';
 import { Snapshot } from '../types';
 
 interface SnapshotTimelineProps {
@@ -310,143 +310,112 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ');
 
-  const riskLabel = s.risk_score >= 70 ? 'HIGH' : s.risk_score >= 40 ? 'MEDIUM' : 'SAFE';
-
   return (
     <button
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        padding: '20px 20px 18px 22px',
-        borderRadius: 16,
+        padding: '16px 18px',
+        borderRadius: 14,
         background: isSelected
-          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(10,14,26,0.9) 100%)`
-          : 'rgba(15,23,42,0.5)',
-        border: isSelected ? `2px solid ${pal.border}` : '2px solid rgba(255,255,255,0.06)',
+          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(15,23,42,0.75) 100%)`
+          : 'rgba(15,23,42,0.45)',
+        border: isSelected ? `1.5px solid ${pal.border}` : '1.5px solid rgba(255,255,255,0.06)',
         cursor: 'pointer',
         textAlign: 'left',
-        transition: 'all 0.2s ease',
-        boxShadow: isSelected ? `${pal.glow}, inset 0 1px 0 rgba(255,255,255,0.05)` : 'none',
+        transition: 'all 0.18s ease',
+        boxShadow: isSelected ? pal.glow : 'none',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         gap: 14,
-        transform: isSelected ? 'translateX(4px)' : 'none',
+        transform: isSelected ? 'translateX(3px)' : 'none',
         position: 'relative',
         overflow: 'hidden',
       }}
-      onMouseEnter={e => { if (!isSelected) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(15,23,42,0.75)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}}
-      onMouseLeave={e => { if (!isSelected) { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(15,23,42,0.5)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.06)'; }}}
+      onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(15,23,42,0.65)'; }}
+      onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(15,23,42,0.45)'; }}
     >
       {/* Active accent bar */}
-      <span style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: isSelected ? 5 : 0,
-        background: `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}55)`,
-        borderRadius: '0 3px 3px 0',
-        transition: 'width 0.2s ease',
-      }} />
-
-      {/* Top row: index + score ring + date/category */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-
-        {/* Index */}
+      {isSelected && (
         <span style={{
-          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-          background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
-          border: `1.5px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.08)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 800, color: isSelected ? pal.text : '#475569',
-          fontFamily: 'monospace', letterSpacing: '0.04em',
-        }}>
-          {String(index + 1).padStart(2, '0')}
-        </span>
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
+          background: `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}88)`,
+          borderRadius: '0 3px 3px 0',
+        }} />
+      )}
 
-        {/* Score ring */}
+      {/* Index number */}
+      <span style={{
+        width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+        background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 10, fontWeight: 800, color: isSelected ? pal.text : '#475569',
+        fontFamily: 'monospace', letterSpacing: '0.04em',
+      }}>
+        {String(index + 1).padStart(2, '0')}
+      </span>
+
+      {/* Score ring */}
+      <span style={{
+        width: 52, height: 52, borderRadius: 13, flexShrink: 0,
+        background: isSelected ? pal.dim : 'rgba(0,0,0,0.35)',
+        border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 1,
+      }}>
+        <span style={{ fontSize: 17, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>{s.risk_score}</span>
+        <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>risk</span>
+      </span>
+
+      {/* Date + category + meta */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          width: 64, height: 64, borderRadius: 16, flexShrink: 0,
-          background: isSelected
-            ? `radial-gradient(circle at 35% 35%, ${pal.dim}, rgba(0,0,0,0.5))`
-            : 'rgba(0,0,0,0.4)',
-          border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 2, boxShadow: isSelected ? pal.glow : 'none',
+          fontSize: 13, fontWeight: 700,
+          color: isSelected ? '#f1f5f9' : '#94a3b8',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          marginBottom: 5,
         }}>
-          <span style={{ fontSize: 22, fontWeight: 900, color: pal.accent, lineHeight: 1, letterSpacing: '-0.02em' }}>{s.risk_score}</span>
-          <span style={{ fontSize: 8.5, color: '#475569', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>/{riskLabel}</span>
+          {formatDate(s.timestamp)}
         </div>
-
-        {/* Date + category */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 14, fontWeight: 700, lineHeight: 1.3,
-            color: isSelected ? '#f1f5f9' : '#94a3b8',
-            marginBottom: 6,
-          }}>
-            {formatDate(s.timestamp)}
-          </div>
-          {/* Category pill */}
+        {/* Category pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.04em',
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 7, fontSize: 10, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
             background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.08)'}`,
+            border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
             color: isSelected ? pal.text : '#64748b',
-            marginBottom: 6,
           }}>
-            <span style={{ fontSize: 12 }}>{catIcon}</span>
+            <span style={{ fontSize: 11 }}>{catIcon}</span>
             {catLabel}
           </span>
-          {/* Navigate hint */}
-          {isSelected && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              fontSize: 10, color: pal.text, fontWeight: 600, opacity: 0.8,
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: pal.accent, animation: 'pulse-dot 2s ease-in-out infinite', display: 'inline-block' }} />
-              Scrolling to Intelligence Scan ↓
-            </div>
+          {s.flags.length > 0 && (
+            <span style={{
+              padding: '3px 7px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+              background: 'rgba(244,63,94,0.13)', color: '#f87171',
+              border: '1px solid rgba(244,63,94,0.22)',
+            }}>⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}</span>
           )}
+        </div>
+        {/* HTTP status + lang */}
+        <div style={{ marginTop: 5, display: 'flex', gap: 10, fontSize: 10, fontFamily: 'monospace', color: '#475569' }}>
+          <span>HTTP <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{s.status_code ?? 200}</span></span>
+          <span>·</span>
+          <span>Lang <span style={{ color: '#c4b5fd', fontWeight: 700 }}>{(s.detected_language || 'en').toUpperCase()}</span></span>
         </div>
       </div>
 
-      {/* Bottom row: meta chips */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-        paddingTop: 10, borderTop: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.05)'}`,
-      }}>
-        <span style={{
-          padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-          fontFamily: 'monospace',
-          background: 'rgba(165,180,252,0.08)', color: '#a5b4fc',
-          border: '1px solid rgba(165,180,252,0.15)',
-        }}>HTTP {s.status_code ?? 200}</span>
-
-        <span style={{
-          padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-          background: 'rgba(196,181,253,0.08)', color: '#c4b5fd',
-          border: '1px solid rgba(196,181,253,0.15)',
-        }}>🌐 {(s.detected_language || 'en').toUpperCase()}</span>
-
-        {s.flags.length > 0 ? (
-          <span style={{
-            padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-            background: 'rgba(244,63,94,0.1)', color: '#f87171',
-            border: '1px solid rgba(244,63,94,0.2)',
-            marginLeft: 'auto',
-          }}>⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}</span>
-        ) : (
-          <span style={{
-            padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700,
-            background: 'rgba(16,185,129,0.08)', color: '#34d399',
-            border: '1px solid rgba(16,185,129,0.15)',
-            marginLeft: 'auto',
-          }}>✓ Clean</span>
-        )}
-      </div>
+      {/* Arrow */}
+      <ChevronRight
+        size={16}
+        color={isSelected ? pal.text : '#334155'}
+        style={{ flexShrink: 0, transition: 'transform 0.2s', transform: isSelected ? 'translateX(3px)' : 'none' }}
+      />
     </button>
   );
 }
-
 
 /* ─── Main component ──────────────────────────────────────────── */
 export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSnapshot }: SnapshotTimelineProps) {
@@ -555,18 +524,18 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(320px, 400px) 1fr',
-          gap: 20,
+          gridTemplateColumns: 'minmax(280px, 360px) 1fr',
+          gap: 18,
           alignItems: 'start',
         }}>
           {/* LEFT: Snapshot selector tabs */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
-            maxHeight: 640,
+            gap: 8,
+            maxHeight: 560,
             overflowY: 'auto',
-            paddingRight: 8,
+            paddingRight: 6,
           }}>
             {/* Legend strip */}
             <div style={{
@@ -590,7 +559,7 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           </div>
 
           {/* RIGHT: Detail panel */}
-          <div style={{ minHeight: 640, position: 'sticky', top: 20 }}>
+          <div style={{ minHeight: 560, position: 'sticky', top: 20 }}>
             {selected ? (
               <SnapshotDetailPanel s={selected} />
             ) : (
