@@ -309,164 +309,178 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   const pal = getRiskPalette(s.risk_score, s.content_category);
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ');
+  const dateStr = formatDate(s.timestamp);
+  const rawDate = `${s.timestamp.slice(0,4)}/${s.timestamp.slice(4,6)}/${s.timestamp.slice(6,8)}`;
 
   return (
     <button
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        padding: '20px 22px 16px',
+        padding: 0,
         borderRadius: 16,
         background: isSelected
-          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(10,15,30,0.85) 100%)`
-          : 'rgba(15,23,42,0.5)',
+          ? `linear-gradient(135deg, ${pal.dim} 0%, rgba(10,15,30,0.9) 100%)`
+          : 'rgba(15,23,42,0.55)',
         border: isSelected ? `2px solid ${pal.border}` : '1.5px solid rgba(255,255,255,0.07)',
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'all 0.2s ease',
-        boxShadow: isSelected ? `${pal.glow}, 0 4px 24px rgba(0,0,0,0.3)` : '0 2px 8px rgba(0,0,0,0.2)',
+        boxShadow: isSelected ? `${pal.glow}, 0 4px 24px rgba(0,0,0,0.3)` : '0 2px 8px rgba(0,0,0,0.15)',
         display: 'flex',
         flexDirection: 'column',
-        gap: 0,
-        transform: isSelected ? 'translateX(4px) scale(1.01)' : 'scale(1)',
+        transform: isSelected ? 'translateX(4px)' : 'none',
         position: 'relative',
         overflow: 'hidden',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(15,23,42,0.7)';
-          el.style.borderColor = 'rgba(255,255,255,0.12)';
+          el.style.background = 'rgba(15,23,42,0.75)';
+          el.style.borderColor = 'rgba(255,255,255,0.13)';
           el.style.transform = 'translateX(2px)';
         }
       }}
       onMouseLeave={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(15,23,42,0.5)';
+          el.style.background = 'rgba(15,23,42,0.55)';
           el.style.borderColor = 'rgba(255,255,255,0.07)';
-          el.style.transform = 'scale(1)';
+          el.style.transform = 'none';
         }
       }}
     >
-      {/* Active accent bar */}
+      {/* Left accent bar */}
       <span style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: isSelected ? 5 : 0,
-        background: `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}66)`,
-        borderRadius: '0 4px 4px 0',
-        transition: 'width 0.2s ease',
+        position: 'absolute', left: 0, top: 0, bottom: 0,
+        width: isSelected ? 5 : 2,
+        background: isSelected
+          ? `linear-gradient(to bottom, ${pal.accent}, ${pal.accent}55)`
+          : 'rgba(255,255,255,0.05)',
+        borderRadius: '16px 0 0 16px',
+        transition: 'all 0.2s ease',
       }} />
 
-      {/* Subtle shimmer overlay when selected */}
+      {/* Shimmer overlay when selected */}
       {isSelected && (
         <span style={{
           position: 'absolute', inset: 0,
-          background: `radial-gradient(ellipse at top left, ${pal.dim} 0%, transparent 60%)`,
+          background: `radial-gradient(ellipse at 0% 0%, ${pal.dim} 0%, transparent 55%)`,
           pointerEvents: 'none',
+          borderRadius: 'inherit',
         }} />
       )}
 
-      {/* Top row: index + score ring + arrow */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+      {/* ── TOP SECTION: score ring + date/meta ── */}
+      <div style={{ padding: '18px 18px 14px 22px', display: 'flex', alignItems: 'center', gap: 16 }}>
 
-        {/* Index badge */}
-        <span style={{
-          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-          background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.08)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 800, color: isSelected ? pal.text : '#475569',
-          fontFamily: 'monospace', letterSpacing: '0.04em',
-        }}>
-          {String(index + 1).padStart(2, '0')}
-        </span>
-
-        {/* Score hero ring */}
-        <span style={{
-          width: 64, height: 64, borderRadius: 16, flexShrink: 0,
+        {/* Score ring */}
+        <div style={{
+          width: 70, height: 70, borderRadius: 18, flexShrink: 0,
           background: isSelected
-            ? `radial-gradient(circle at 40% 40%, ${pal.dim}, rgba(0,0,0,0.5))`
-            : 'rgba(0,0,0,0.4)',
-          border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
+            ? `radial-gradient(circle at 35% 35%, ${pal.dim}, rgba(0,0,0,0.6))`
+            : 'rgba(0,0,0,0.45)',
+          border: `2px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.08)'}`,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 2, boxShadow: isSelected ? `inset 0 0 20px ${pal.dim}` : 'none',
+          gap: 2,
+          boxShadow: isSelected ? `0 0 0 4px ${pal.dim}` : 'none',
+          transition: 'all 0.25s',
         }}>
-          <span style={{ fontSize: 22, fontWeight: 900, color: pal.accent, lineHeight: 1, letterSpacing: '-0.02em' }}>{s.risk_score}</span>
-          <span style={{ fontSize: 9, color: '#475569', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>/ 100</span>
-        </span>
+          <span style={{ fontSize: 24, fontWeight: 900, color: pal.accent, lineHeight: 1, letterSpacing: '-0.03em' }}>
+            {s.risk_score}
+          </span>
+          <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            RISK
+          </span>
+        </div>
 
-        {/* Date + meta info */}
-        <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
-          <div style={{
-            fontSize: 15, fontWeight: 700, lineHeight: 1.3,
-            color: isSelected ? '#f1f5f9' : '#94a3b8',
-            marginBottom: 6,
-          }}>
-            {formatDate(s.timestamp)}
+        {/* Date + meta */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Index + date */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{
+              fontSize: 9, fontWeight: 800, fontFamily: 'monospace',
+              color: isSelected ? pal.text : '#374151',
+              background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
+              padding: '2px 6px', borderRadius: 5, letterSpacing: '0.06em', flexShrink: 0,
+            }}>#{String(index + 1).padStart(2, '0')}</span>
+            <span style={{
+              fontSize: 14, fontWeight: 700,
+              color: isSelected ? '#f1f5f9' : '#94a3b8',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>{dateStr}</span>
           </div>
-          <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', marginBottom: 6 }}>
-            <span style={{ color: '#475569' }}>Captured </span>
-            <span style={{ color: '#7c8fa8', fontWeight: 600 }}>
-              {s.timestamp.slice(0,4)}/{s.timestamp.slice(4,6)}/{s.timestamp.slice(6,8)}
-            </span>
+          {/* Raw timestamp */}
+          <div style={{ fontSize: 11, fontFamily: 'monospace', marginBottom: 5 }}>
+            <span style={{ color: '#334155' }}>Captured </span>
+            <span style={{ color: '#64748b', fontWeight: 600 }}>{rawDate}</span>
           </div>
-          <div style={{ display: 'flex', gap: 8, fontSize: 10, fontFamily: 'monospace', color: '#475569' }}>
-            <span>HTTP <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{s.status_code ?? 200}</span></span>
-            <span style={{ color: '#1e293b' }}>|</span>
-            <span>Lang <span style={{ color: '#c4b5fd', fontWeight: 700 }}>{(s.detected_language || 'en').toUpperCase()}</span></span>
+          {/* HTTP + lang */}
+          <div style={{ display: 'flex', gap: 8, fontSize: 10, fontFamily: 'monospace' }}>
+            <span style={{ color: '#475569' }}>HTTP <span style={{ color: '#818cf8', fontWeight: 700 }}>{s.status_code ?? 200}</span></span>
+            <span style={{ color: '#1e2d40' }}>·</span>
+            <span style={{ color: '#475569' }}>Lang <span style={{ color: '#a78bfa', fontWeight: 700 }}>{(s.detected_language || 'en').toUpperCase()}</span></span>
           </div>
         </div>
 
-        {/* Arrow indicator */}
+        {/* Arrow */}
         <ChevronRight
           size={18}
-          color={isSelected ? pal.text : '#334155'}
-          style={{ flexShrink: 0, marginTop: 4, transition: 'all 0.2s', transform: isSelected ? 'translateX(4px)' : 'none', opacity: isSelected ? 1 : 0.5 }}
+          color={isSelected ? pal.accent : '#334155'}
+          style={{
+            flexShrink: 0,
+            transition: 'all 0.2s',
+            transform: isSelected ? 'translateX(3px)' : 'none',
+            opacity: isSelected ? 1 : 0.35,
+          }}
         />
       </div>
 
-      {/* Bottom row: category + flags */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.05em',
-          background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
-          color: isSelected ? pal.text : '#64748b',
-        }}>
-          <span style={{ fontSize: 13 }}>{catIcon}</span>
-          {catLabel}
-        </span>
-        {s.flags.length > 0 ? (
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-            background: 'rgba(244,63,94,0.12)', color: '#f87171',
-            border: '1px solid rgba(244,63,94,0.25)',
-          }}>⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}</span>
-        ) : (
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-            background: 'rgba(16,185,129,0.08)', color: '#34d399',
-            border: '1px solid rgba(16,185,129,0.2)',
-          }}>✓ Clean</span>
-        )}
-      </div>
+      {/* Divider */}
+      <div style={{ height: 1, margin: '0 18px', background: isSelected ? pal.border : 'rgba(255,255,255,0.04)' }} />
 
-      {/* Risk score progress bar */}
-      <div style={{
-        height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.06)',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          height: '100%',
-          width: `${s.risk_score}%`,
-          background: `linear-gradient(to right, ${pal.accent}88, ${pal.accent})`,
-          borderRadius: 4,
-          transition: 'width 0.6s ease',
-        }} />
+      {/* ── BOTTOM SECTION: category + flags + bar ── */}
+      <div style={{ padding: '12px 18px 16px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {/* Pills row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+            background: isSelected ? pal.dim : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${isSelected ? pal.border : 'rgba(255,255,255,0.07)'}`,
+            color: isSelected ? pal.text : '#64748b',
+          }}>
+            <span style={{ fontSize: 12 }}>{catIcon}</span>
+            {catLabel}
+          </span>
+          {s.flags.length > 0 ? (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+              background: 'rgba(244,63,94,0.11)', color: '#f87171',
+              border: '1px solid rgba(244,63,94,0.22)',
+            }}>⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}</span>
+          ) : (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+              background: 'rgba(16,185,129,0.08)', color: '#34d399',
+              border: '1px solid rgba(16,185,129,0.2)',
+            }}>✓ Clean</span>
+          )}
+        </div>
+        {/* Risk progress bar */}
+        <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${s.risk_score}%`,
+            background: `linear-gradient(to right, ${pal.accent}55, ${pal.accent})`,
+            borderRadius: 99,
+            transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)',
+          }} />
+        </div>
       </div>
     </button>
   );
