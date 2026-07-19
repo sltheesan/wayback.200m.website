@@ -315,242 +315,270 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   const dateStr = formatDate(s.timestamp);
   const rawDate = `${s.timestamp.slice(0, 4)}/${s.timestamp.slice(4, 6)}/${s.timestamp.slice(6, 8)}`;
 
-  // SVG Circular progress configurations
-  const radius = 22;
-  const strokeWidth = 3.5;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (s.risk_score / 100) * circumference;
+  // SVG Circular progress config
+  const R = 30;
+  const SW = 4;
+  const circ = 2 * Math.PI * R;
+  const offset = circ - (s.risk_score / 100) * circ;
 
-  // Let's get theme details for categories
-  const getCategoryStyles = (cat: string | null) => {
-    const c = cat || 'safe';
-    switch (c) {
+  const getCatStyle = (cat: string | null) => {
+    switch (cat || 'safe') {
       case 'adult':
-        return { bg: 'rgba(244, 63, 94, 0.12)', border: 'rgba(244, 63, 94, 0.25)', color: '#f87171' };
+        return { bg: 'rgba(244,63,94,0.15)', border: 'rgba(244,63,94,0.35)', color: '#f87171' };
       case 'gambling':
-        return { bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24' };
+        return { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.35)', color: '#fbbf24' };
       case 'gaming':
-        return { bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.25)', color: '#60a5fa' };
+        return { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.35)', color: '#60a5fa' };
       case 'phishing_scam':
       case 'malware_hacking':
       case 'illegal_pharmaceuticals':
-        return { bg: 'rgba(167, 139, 250, 0.12)', border: 'rgba(167, 139, 250, 0.25)', color: '#c084fc' };
+        return { bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.35)', color: '#c084fc' };
       default:
-        return { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.25)', color: '#34d399' };
+        return { bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.35)', color: '#34d399' };
     }
   };
 
-  const catStyles = getCategoryStyles(s.content_category);
+  const catStyle = getCatStyle(s.content_category);
+
+  const cardBg = isSelected
+    ? `linear-gradient(145deg, rgba(17,24,39,0.98) 0%, rgba(10,14,26,0.95) 100%)`
+    : `linear-gradient(145deg, rgba(15,23,42,0.75) 0%, rgba(10,14,26,0.6) 100%)`;
 
   return (
     <button
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        padding: '16px 18px',
+        padding: 0,
         borderRadius: 16,
-        background: isSelected 
-          ? 'rgba(17, 24, 39, 0.85)' 
-          : 'rgba(17, 24, 39, 0.45)',
-        border: `1px solid ${isSelected ? pal.accent : 'rgba(255, 255, 255, 0.06)'}`,
+        background: cardBg,
+        border: `1px solid ${isSelected ? pal.accent + '80' : 'rgba(255,255,255,0.07)'}`,
         cursor: 'pointer',
         textAlign: 'left',
-        transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: isSelected ? pal.glow : 'none',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: isSelected
+          ? `${pal.glow}, inset 0 1px 0 rgba(255,255,255,0.08)`
+          : '0 2px 8px rgba(0,0,0,0.3)',
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
-        transform: isSelected ? 'translateY(-2px)' : 'none',
         position: 'relative',
         overflow: 'hidden',
-        backdropFilter: 'blur(12px)',
+        transform: isSelected ? 'translateY(-3px)' : 'translateY(0)',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(17, 24, 39, 0.65)';
-          el.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-          el.style.transform = 'translateY(-1px)';
-          el.style.boxShadow = '0 8px 20px -8px rgba(0, 0, 0, 0.6)';
+          el.style.background = `linear-gradient(145deg, rgba(20,28,48,0.92) 0%, rgba(15,22,40,0.85) 100%)`;
+          el.style.borderColor = `${pal.accent}40`;
+          el.style.transform = 'translateY(-2px)';
+          el.style.boxShadow = `0 8px 24px rgba(0,0,0,0.5)`;
         }
       }}
       onMouseLeave={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = 'rgba(17, 24, 39, 0.45)';
-          el.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-          el.style.transform = 'none';
-          el.style.boxShadow = 'none';
+          el.style.background = cardBg;
+          el.style.borderColor = 'rgba(255,255,255,0.07)';
+          el.style.transform = 'translateY(0)';
+          el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
         }
       }}
     >
-      {/* Side visual safety stripe */}
+      {/* ── TOP BANNER: Safe / Unsafe ─────────────────────────────── */}
       <div style={{
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 4,
-        background: pal.accent,
-        opacity: isSelected ? 1 : 0.4,
-      }} />
-
-      {/* Row 1: Snapshot Number & Status Badge */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingLeft: 4 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ 
-            fontFamily: 'monospace', 
-            fontSize: 10, 
-            fontWeight: 700, 
-            color: 'rgba(241, 245, 249, 0.85)',
-            background: 'rgba(255, 255, 255, 0.06)',
-            padding: '2px 6px',
-            borderRadius: 5,
-            border: '1px solid rgba(255, 255, 255, 0.08)'
-          }}>
-            #{String(index + 1).padStart(2, '0')}
-          </span>
-          <span style={{ fontSize: 10, color: 'rgba(148, 163, 184, 0.4)' }}>•</span>
-          <span style={{ 
-            fontSize: 10, 
-            color: 'rgba(148, 163, 184, 0.6)', 
-            fontWeight: 600,
-            fontFamily: 'monospace'
-          }}>
-            {rawDate}
-          </span>
-        </div>
-
-        {/* Safe / Unsafe badge */}
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          padding: '2.5px 8px',
-          borderRadius: 20,
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          background: pal.dim,
-          color: pal.accent,
-          border: `1px solid ${pal.border}`,
-        }}>
-          {isUnsafe ? '⚠️ UNSAFE' : '🛡️ SAFE'}
-        </span>
-      </div>
-
-      {/* Row 2: Date Details & SVG Circular Progress Score */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, paddingLeft: 4 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Calendar size={13} color="rgba(148, 163, 184, 0.7)" />
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>
-              {dateStr}
-            </span>
-          </div>
-          <span style={{ fontSize: 11, color: 'rgba(148, 163, 184, 0.6)' }}>
-            Wayback Archival Capture
-          </span>
-        </div>
-
-        {/* Circular Progress Gauge */}
-        <div style={{ position: 'relative', width: 50, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <svg width={50} height={50} style={{ transform: 'rotate(-90deg)' }}>
-            {/* Background Track */}
-            <circle
-              cx={25}
-              cy={25}
-              r={radius}
-              fill="transparent"
-              stroke="rgba(255, 255, 255, 0.04)"
-              strokeWidth={strokeWidth}
-            />
-            {/* Colored Score Arc */}
-            <circle
-              cx={25}
-              cy={25}
-              r={radius}
-              fill="transparent"
-              stroke={pal.accent}
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }}
-            />
-          </svg>
-          <div style={{
-            position: 'absolute',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#f1f5f9', lineHeight: 1 }}>
-              {s.risk_score}
-            </span>
-            <span style={{ fontSize: 6.5, color: 'rgba(148, 163, 184, 0.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: 1 }}>
-              Score
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Category Flag and Triggered flags count */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        width: '100%',
-        paddingTop: 8,
-        paddingLeft: 4,
-        borderTop: '1px solid rgba(255, 255, 255, 0.04)'
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 14px 10px 14px',
+        background: isUnsafe
+          ? 'linear-gradient(90deg, rgba(244,63,94,0.18) 0%, rgba(244,63,94,0.04) 100%)'
+          : 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.03) 100%)',
+        borderBottom: `1px solid ${isUnsafe ? 'rgba(244,63,94,0.15)' : 'rgba(16,185,129,0.12)'}`,
       }}>
-        {/* Category tag */}
+        {/* Index badge */}
+        <span style={{
+          fontFamily: 'monospace',
+          fontSize: 11,
+          fontWeight: 700,
+          color: 'rgba(148,163,184,0.8)',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          padding: '2px 7px',
+          borderRadius: 5,
+        }}>
+          #{String(index + 1).padStart(2, '0')}
+        </span>
+
+        {/* Status Badge */}
         <span style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: 5,
-          padding: '3px 8px',
-          borderRadius: 6,
-          fontSize: 9.5,
-          fontWeight: 700,
+          padding: '3px 10px',
+          borderRadius: 20,
+          fontSize: 9,
+          fontWeight: 900,
+          letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          background: catStyles.bg,
-          color: catStyles.color,
-          border: `1px solid ${catStyles.border}`,
+          background: pal.dim,
+          color: pal.accent,
+          border: `1px solid ${pal.border}`,
+          boxShadow: isSelected ? `0 0 8px ${pal.accent}40` : 'none',
         }}>
-          <span style={{ fontSize: 11, lineHeight: 1 }}>{catIcon}</span>
-          <span>{catLabel}</span>
+          {isUnsafe ? '⚠' : '🛡'}
+          {isUnsafe ? ' UNSAFE' : ' SAFE'}
+        </span>
+      </div>
+
+      {/* ── BODY ─────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 14,
+        padding: '18px 16px 14px 16px',
+      }}>
+
+        {/* Score Ring */}
+        <div style={{ position: 'relative', width: 76, height: 76, flexShrink: 0 }}>
+          <svg width={76} height={76} style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
+            {/* Outer glow ring */}
+            <circle cx={38} cy={38} r={R + 4} fill="transparent" stroke={pal.accent} strokeWidth={1} opacity={isSelected ? 0.2 : 0.1} />
+            {/* Track */}
+            <circle cx={38} cy={38} r={R} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth={SW} />
+            {/* Progress */}
+            <circle
+              cx={38} cy={38} r={R}
+              fill="transparent"
+              stroke={pal.accent}
+              strokeWidth={SW}
+              strokeDasharray={circ}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)', filter: `drop-shadow(0 0 4px ${pal.accent}80)` }}
+            />
+          </svg>
+          {/* Center label */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{
+              fontSize: 20,
+              fontWeight: 900,
+              color: pal.accent,
+              lineHeight: 1,
+              fontFamily: 'monospace',
+              letterSpacing: '-0.02em',
+              textShadow: `0 0 12px ${pal.accent}80`,
+            }}>
+              {s.risk_score}
+            </span>
+            <span style={{
+              fontSize: 7,
+              fontWeight: 700,
+              color: 'rgba(148,163,184,0.6)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginTop: 2,
+            }}>
+              RISK SCORE
+            </span>
+          </div>
+        </div>
+
+        {/* Date with Calendar icon + raw timestamp below */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Calendar size={12} color="rgba(148,163,184,0.6)" />
+            <span style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: '#f1f5f9',
+              letterSpacing: '0.01em',
+            }}>
+              {dateStr}
+            </span>
+          </div>
+          <span style={{
+            fontFamily: 'monospace',
+            fontSize: 10,
+            color: 'rgba(100,116,139,0.8)',
+            letterSpacing: '0.04em',
+          }}>
+            {rawDate}
+          </span>
+        </div>
+      </div>
+
+      {/* ── FOOTER: Category + Flags ──────────────────────────────── */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '9px 14px',
+        borderTop: '1px solid rgba(255,255,255,0.05)',
+        background: 'rgba(0,0,0,0.2)',
+        gap: 8,
+        flexWrap: 'wrap',
+      }}>
+        {/* Category badge */}
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '3px 9px',
+          borderRadius: 6,
+          fontSize: 9,
+          fontWeight: 800,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          background: catStyle.bg,
+          color: catStyle.color,
+          border: `1px solid ${catStyle.border}`,
+          flexShrink: 0,
+        }}>
+          {catIcon} {catLabel}
         </span>
 
-        {/* Flag status */}
+        {/* Flags */}
         {s.flags.length > 0 ? (
-          <span style={{ 
-            fontSize: 10.5, 
-            fontWeight: 700, 
-            color: '#f87171',
-            display: 'flex',
+          <span style={{
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 5
+            gap: 4,
+            fontSize: 10,
+            fontWeight: 700,
+            color: '#fca5a5',
           }}>
-            <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />
-            {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', boxShadow: '0 0 4px #ef4444' }} />
+            ⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}
           </span>
         ) : (
-          <span style={{ 
-            fontSize: 10.5, 
-            fontWeight: 700, 
-            color: '#34d399',
-            display: 'flex',
+          <span style={{
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 5
+            gap: 4,
+            fontSize: 10,
+            fontWeight: 700,
+            color: '#6ee7b7',
           }}>
-            <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#10b981' }} />
-            Clean
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 4px #10b981' }} />
+            ✓ Clean
           </span>
         )}
+      </div>
+
+      {/* ── BOTTOM PROGRESS LINE ─────────────────────────────────── */}
+      <div style={{ height: 3, width: '100%', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${s.risk_score}%`,
+          background: `linear-gradient(90deg, ${pal.accent}66, ${pal.accent})`,
+          transition: 'width 0.9s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow: `0 0 6px ${pal.accent}80`,
+        }} />
       </div>
     </button>
   );
