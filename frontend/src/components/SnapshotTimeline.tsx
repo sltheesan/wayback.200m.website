@@ -22,7 +22,7 @@ interface ChartDataPoint {
   fullDate: string;
 }
 
-/* ─── Colour helpers ──────────────────────────────────────────── */
+/* Colour helpers */
 const getRiskPalette = (score: number, category?: string | null) => {
   const isSafe = !category || category === 'safe';
   if (isSafe && score < 70) {
@@ -33,9 +33,9 @@ const getRiskPalette = (score: number, category?: string | null) => {
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
-  gambling: '🎰', adult: '🔞', phishing_scam: '🎣',
-  malware_hacking: '💀', illegal_pharmaceuticals: '💊', safe: '✅',
-  gaming: '🎮',
+  gambling: 'GAMBLING', adult: 'ADULT', phishing_scam: 'PHISHING',
+  malware_hacking: 'MALWARE', illegal_pharmaceuticals: 'PHARMA', safe: 'SAFE',
+  gaming: 'GAMING',
 };
 
 const formatDate = (timestamp: string) =>
@@ -80,22 +80,22 @@ const highlightKeyword = (text: string | null | undefined, keyword: string) => {
   );
 };
 
-/* ─── Right panel: full snapshot detail ───────────────────────── */
+/* Right panel: full snapshot detail */
 function SnapshotDetailPanel({ s }: { s: Snapshot }) {
   const pal = getRiskPalette(s.risk_score, s.content_category);
   const apiBase = (import.meta.env.VITE_API_URL as string) || '/api/v1';
   const proxyUrl = `${apiBase}/domains/proxy-snapshot?timestamp=${s.timestamp}&url=${encodeURIComponent(s.original_url)}`;
   const directUrl = `https://web.archive.org/web/${s.timestamp}/${s.original_url}`;
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
-  const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
+  const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || 'UNKNOWN';
 
   const getLanguageLabel = (lang: string | null) => {
-    if (!lang) return '🇺🇸 EN';
+    if (!lang) return 'EN';
     const l = lang.toLowerCase();
-    if (l === 'id') return '🇮🇩 ID'; if (l === 'nl') return '🇳🇱 NL';
-    if (l === 'de') return '🇩🇪 DE'; if (l === 'fr') return '🇫🇷 FR';
-    if (l === 'es') return '🇪🇸 ES';
-    return `🌐 ${l.toUpperCase()}`;
+    if (l === 'id') return 'ID'; if (l === 'nl') return 'NL';
+    if (l === 'de') return 'DE'; if (l === 'fr') return 'FR';
+    if (l === 'es') return 'ES';
+    return l.toUpperCase();
   };
 
   return (
@@ -142,9 +142,9 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
             </div>
             <div style={{ display: 'flex', gap: 12, marginTop: 5, fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
               <span>HTTP <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{s.status_code ?? 200}</span></span>
-              <span>·</span>
+              <span>/</span>
               <span>Lang <span style={{ color: '#c4b5fd', fontWeight: 700 }}>{getLanguageLabel(s.detected_language)}</span></span>
-              <span>·</span>
+              <span>/</span>
               <span><span style={{ color: '#f87171', fontWeight: 700 }}>{s.flags.length}</span> flags</span>
             </div>
           </div>
@@ -203,7 +203,7 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
             background: 'rgba(148,163,184,0.04)', border: '1px solid rgba(148,163,184,0.1)',
             fontSize: 12, color: '#94a3b8', lineHeight: 1.6,
           }}>
-            <span style={{ color: '#64748b', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>ℹ️ Content Summary</span>
+            <span style={{ color: '#64748b', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Content Summary</span>
             {s.content_summary}
           </div>
         )}
@@ -257,7 +257,7 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
                     <div style={{ paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {f.element && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
-                          <span style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Location:</span>
+                          <span style={{ color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Location:</span>
                           <span style={{
                             color: '#a78bfa', fontWeight: 600, fontFamily: 'monospace',
                             background: 'rgba(0,0,0,0.3)', padding: '1px 7px', borderRadius: 4,
@@ -299,7 +299,7 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
   );
 }
 
-/* ─── Left panel: compact tab for one snapshot ────────────────── */
+/* Left panel: compact tab for one snapshot */
 interface SnapshotTabProps {
   s: Snapshot;
   index: number;
@@ -310,16 +310,9 @@ interface SnapshotTabProps {
 function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   const isUnsafe = (s.content_category && s.content_category !== 'safe') || s.risk_score >= 70;
   const pal = getRiskPalette(s.risk_score, s.content_category);
-  const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ');
   const dateStr = formatDate(s.timestamp);
   const rawDate = `${s.timestamp.slice(0, 4)}/${s.timestamp.slice(4, 6)}/${s.timestamp.slice(6, 8)}`;
-
-  // SVG Circular progress config
-  const R = 30;
-  const SW = 4;
-  const circ = 2 * Math.PI * R;
-  const offset = circ - (s.risk_score / 100) * circ;
 
   const getCatStyle = (cat: string | null) => {
     switch (cat || 'safe') {
@@ -339,78 +332,68 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
   };
 
   const catStyle = getCatStyle(s.content_category);
-
   const cardBg = isSelected
     ? `linear-gradient(145deg, rgba(17,24,39,0.98) 0%, rgba(10,14,26,0.95) 100%)`
     : `linear-gradient(145deg, rgba(15,23,42,0.75) 0%, rgba(10,14,26,0.6) 100%)`;
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={() => onSelect(s)}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelect(s); }}
       style={{
         width: '100%',
-        padding: 0,
-        borderRadius: 18,
+        minHeight: 112,
+        padding: '14px 16px',
+        borderRadius: 12,
         background: cardBg,
-        border: `2px solid ${isSelected ? pal.accent + 'cc' : 'rgba(255,255,255,0.08)'}`,
+        border: `1px solid ${isSelected ? pal.accent + 'cc' : 'rgba(255,255,255,0.08)'}`,
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: isSelected
-          ? `${pal.glow}, 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)`
+          ? `${pal.glow}, 0 8px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)`
           : '0 4px 16px rgba(0,0,0,0.35)',
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: 12,
         position: 'relative',
         overflow: 'hidden',
-        transform: isSelected ? 'translateY(-4px) scale(1.01)' : 'translateY(0) scale(1)',
+        transform: isSelected ? 'translateY(-2px)' : 'translateY(0)',
         userSelect: 'none',
         outline: 'none',
+        color: '#f1f5f9',
+        font: 'inherit',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
-          const el = e.currentTarget as HTMLDivElement;
+          const el = e.currentTarget as HTMLButtonElement;
           el.style.background = `linear-gradient(145deg, rgba(20,28,48,0.95) 0%, rgba(15,22,40,0.9) 100%)`;
           el.style.borderColor = `${pal.accent}60`;
-          el.style.transform = 'translateY(-3px) scale(1.005)';
+          el.style.transform = 'translateY(-2px)';
           el.style.boxShadow = `0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px ${pal.accent}20`;
         }
       }}
       onMouseLeave={e => {
         if (!isSelected) {
-          const el = e.currentTarget as HTMLDivElement;
+          const el = e.currentTarget as HTMLButtonElement;
           el.style.background = cardBg;
           el.style.borderColor = 'rgba(255,255,255,0.08)';
-          el.style.transform = 'translateY(0) scale(1)';
+          el.style.transform = 'translateY(0)';
           el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35)';
         }
       }}
     >
-      {/* ── SELECTED ACCENT LINE (left edge) ─────────────────────── */}
       {isSelected && (
         <div style={{
           position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
           background: `linear-gradient(180deg, ${pal.accent}, ${pal.accent}80)`,
           boxShadow: `0 0 12px ${pal.accent}`,
-          borderRadius: '18px 0 0 18px',
+          borderRadius: '12px 0 0 12px',
         }} />
       )}
 
-      {/* ── HEADER ─────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 16px 12px 18px',
-        background: isUnsafe
-          ? 'linear-gradient(90deg, rgba(244,63,94,0.18) 0%, rgba(244,63,94,0.04) 100%)'
-          : 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.03) 100%)',
-        borderBottom: `1px solid ${isUnsafe ? 'rgba(244,63,94,0.15)' : 'rgba(16,185,129,0.12)'}`,
-      }}>
-        {/* Index badge */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minWidth: 0 }}>
         <span style={{
           fontFamily: 'monospace',
           fontSize: 12,
@@ -425,118 +408,65 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
           #{String(index + 1).padStart(2, '0')}
         </span>
 
-        {/* Status Badge */}
         <span style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 6,
-          padding: '4px 12px',
-          borderRadius: 20,
+          gap: 5,
+          padding: '4px 10px',
+          borderRadius: 999,
           fontSize: 10,
           fontWeight: 900,
-          letterSpacing: '0.12em',
+          letterSpacing: '0.08em',
           textTransform: 'uppercase',
           background: pal.dim,
           color: pal.accent,
           border: `1px solid ${pal.border}`,
           boxShadow: isSelected ? `0 0 10px ${pal.accent}50` : 'none',
+          flexShrink: 0,
         }}>
-          <span style={{ fontSize: 13 }}>{isUnsafe ? '⚠' : '🛡'}</span>
+          {isUnsafe ? <AlertTriangle size={12} /> : <Shield size={12} />}
           {isUnsafe ? 'UNSAFE' : 'SAFE'}
         </span>
       </div>
 
-      {/* ── BODY: Horizontal layout ───────────────────────────────── */}
       <div style={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 18,
-        padding: '20px 18px 16px 20px',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        alignItems: 'end',
+        gap: 14,
+        minWidth: 0,
       }}>
-
-        {/* Score Ring */}
-        <div style={{ position: 'relative', width: 90, height: 90, flexShrink: 0 }}>
-          <svg width={90} height={90} style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
-            <circle cx={45} cy={45} r={R + 6} fill="transparent" stroke={pal.accent} strokeWidth={1} opacity={isSelected ? 0.25 : 0.1} />
-            <circle cx={45} cy={45} r={R} fill="transparent" stroke="rgba(255,255,255,0.07)" strokeWidth={SW + 1} />
-            <circle
-              cx={45} cy={45} r={R}
-              fill="transparent"
-              stroke={pal.accent}
-              strokeWidth={SW + 1}
-              strokeDasharray={circ}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)', filter: `drop-shadow(0 0 6px ${pal.accent}90)` }}
-            />
-          </svg>
-          {/* Center label */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <Calendar size={15} color={pal.accent} style={{ flexShrink: 0 }} />
             <span style={{
-              fontSize: 24,
-              fontWeight: 900,
-              color: pal.accent,
-              lineHeight: 1,
-              fontFamily: 'monospace',
-              letterSpacing: '-0.02em',
-              textShadow: `0 0 16px ${pal.accent}90`,
+              fontSize: 15,
+              fontWeight: 800,
+              color: '#f8fafc',
+              lineHeight: 1.25,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}>
-              {s.risk_score}
+              {dateStr}
             </span>
-            <span style={{
-              fontSize: 8,
-              fontWeight: 700,
-              color: 'rgba(148,163,184,0.55)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-              marginTop: 3,
-            }}>
-              RISK
-            </span>
-          </div>
-        </div>
-
-        {/* Right: Date + meta info */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-          {/* Date row */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <Calendar size={14} color={pal.accent} />
-              <span style={{
-                fontSize: 15,
-                fontWeight: 800,
-                color: '#f1f5f9',
-                letterSpacing: '0.01em',
-                lineHeight: 1.2,
-              }}>
-                {dateStr}
-              </span>
-            </div>
             <span style={{
               fontFamily: 'monospace',
               fontSize: 11,
-              color: 'rgba(100,116,139,0.85)',
-              letterSpacing: '0.05em',
-              paddingLeft: 21,
+              color: '#64748b',
+              letterSpacing: '0.04em',
+              flexShrink: 0,
             }}>
               {rawDate}
             </span>
           </div>
 
-          {/* Category + Flags row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {/* Category badge */}
             <span style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 5,
-              padding: '4px 10px',
-              borderRadius: 8,
+              padding: '4px 9px',
+              borderRadius: 7,
               fontSize: 10,
               fontWeight: 800,
               textTransform: 'uppercase',
@@ -546,80 +476,46 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
               border: `1px solid ${catStyle.border}`,
               flexShrink: 0,
             }}>
-              <span style={{ fontSize: 12 }}>{catIcon}</span> {catLabel}
+              {catLabel}
             </span>
 
-            {/* Flags */}
-            {s.flags.length > 0 ? (
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '4px 10px',
-                borderRadius: 8,
-                fontSize: 10,
-                fontWeight: 700,
-                color: '#fca5a5',
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.25)',
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', display: 'inline-block', boxShadow: '0 0 5px #ef4444' }} />
-                {s.flags.length} Flag{s.flags.length > 1 ? 's' : ''}
-              </span>
-            ) : (
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '4px 10px',
-                borderRadius: 8,
-                fontSize: 10,
-                fontWeight: 700,
-                color: '#6ee7b7',
-                background: 'rgba(16,185,129,0.1)',
-                border: '1px solid rgba(16,185,129,0.22)',
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 5px #10b981' }} />
-                Clean
-              </span>
-            )}
-          </div>
-
-          {/* Status code */}
-          {s.status_code && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              fontSize: 11, color: 'rgba(148,163,184,0.65)',
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 9px',
+              borderRadius: 7,
+              fontSize: 10,
+              fontWeight: 700,
+              color: s.flags.length > 0 ? '#fca5a5' : '#6ee7b7',
+              background: s.flags.length > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
+              border: s.flags.length > 0 ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(16,185,129,0.22)',
             }}>
-              <span style={{
-                fontFamily: 'monospace', fontWeight: 700,
-                color: s.status_code === 200 ? '#34d399' : s.status_code >= 400 ? '#f87171' : '#fbbf24',
-                fontSize: 12,
-              }}>HTTP {s.status_code}</span>
-              <span>·</span>
-              <span>Wayback Capture</span>
-            </div>
-          )}
+              {s.flags.length > 0 ? `${s.flags.length} Flag${s.flags.length > 1 ? 's' : ''}` : 'Clean'}
+            </span>
+
+            <span style={{
+              fontFamily: 'monospace',
+              fontWeight: 700,
+              color: s.status_code === 200 || !s.status_code ? '#34d399' : s.status_code >= 400 ? '#f87171' : '#fbbf24',
+              fontSize: 11,
+            }}>
+              HTTP {s.status_code ?? 200}
+            </span>
+          </div>
         </div>
 
-        {/* Arrow indicator */}
-        <div style={{
-          flexShrink: 0,
-          width: 28, height: 28,
-          borderRadius: '50%',
-          background: isSelected ? `${pal.accent}25` : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${isSelected ? pal.accent + '60' : 'rgba(255,255,255,0.1)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.25s',
-        }}>
-          <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
-            <path d="M4 2.5L8 6L4 9.5" stroke={isSelected ? pal.accent : 'rgba(148,163,184,0.5)'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+          <span style={{ fontSize: 24, lineHeight: 1, fontWeight: 900, fontFamily: 'monospace', color: pal.accent }}>
+            {s.risk_score}
+          </span>
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#64748b', textTransform: 'uppercase' }}>
+            risk
+          </span>
         </div>
       </div>
 
-      {/* ── BOTTOM PROGRESS BAR ──────────────────────────────────── */}
-      <div style={{ height: 4, width: '100%', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+      <div style={{ height: 5, width: '100%', background: 'rgba(255,255,255,0.05)', overflow: 'hidden', borderRadius: 999 }}>
         <div style={{
           height: '100%',
           width: `${s.risk_score}%`,
@@ -628,13 +524,12 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
           boxShadow: `0 0 8px ${pal.accent}90`,
         }} />
       </div>
-    </div>
+    </button>
   );
 }
 
 
-
-/* ─── Main component ──────────────────────────────────────────── */
+/* Main component */
 export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSnapshot }: SnapshotTimelineProps) {
   const [localSelected, setLocalSelected] = useState<Snapshot | null>(null);
 
@@ -701,7 +596,7 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           <h3 style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 17, margin: 0 }}>Historical Snapshot Timeline</h3>
         </div>
         <p style={{ color: '#475569', fontSize: 13, margin: 0, paddingLeft: 42 }}>
-          Risk trend across <span style={{ color: '#94a3b8', fontWeight: 600 }}>{snapshots.length}</span> Wayback captures —
+          Risk trend across <span style={{ color: '#94a3b8', fontWeight: 600 }}>{snapshots.length}</span> Wayback captures -
           from <span style={{ color: '#94a3b8' }}>{chartData[0].name}</span> to <span style={{ color: '#94a3b8' }}>{chartData[chartData.length - 1].name}</span>.
           Select a snapshot to inspect its evidence.
         </p>
@@ -739,9 +634,9 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           }}>{snapshots.length} captures</span>
         </div>
 
-        <div style={{
+        <div className="snapshot-details-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(380px, 460px) 1fr',
+          gridTemplateColumns: 'minmax(360px, 430px) minmax(0, 1fr)',
           gap: 24,
           alignItems: 'start',
         }}>
@@ -762,7 +657,7 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
               display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4,
             }}>
               <Shield size={11} />
-              Click a snapshot to inspect its evidence →
+              Click a snapshot to inspect its evidence
             </div>
             {snapshots.map((s, i) => (
               <SnapshotTab
@@ -776,7 +671,7 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           </div>
 
           {/* RIGHT: Detail panel */}
-          <div style={{ minHeight: 680, position: 'sticky', top: 20 }}>
+          <div className="snapshot-detail-pane" style={{ minHeight: 680, position: 'sticky', top: 20 }}>
             {selected ? (
               <SnapshotDetailPanel s={selected} />
             ) : (
@@ -795,6 +690,15 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
       </div>
 
       <style>{`
+        .snapshot-details-grid { width: 100%; }
+        @media (max-width: 1100px) {
+          .snapshot-details-grid { grid-template-columns: 1fr !important; }
+          .snapshot-detail-pane { position: static !important; min-height: 520px !important; }
+        }
+        @media (max-width: 640px) {
+          .glass-panel { padding: 20px 16px !important; }
+          .snapshot-detail-pane { min-height: 440px !important; }
+        }
         @keyframes pulse-dot {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(0.8); }
@@ -803,3 +707,4 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
     </div>
   );
 }
+
