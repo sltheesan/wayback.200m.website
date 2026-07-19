@@ -308,147 +308,249 @@ interface SnapshotTabProps {
 }
 
 function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
+  const isUnsafe = (s.content_category && s.content_category !== 'safe') || s.risk_score >= 70;
   const pal = getRiskPalette(s.risk_score, s.content_category);
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || '❓';
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ');
   const dateStr = formatDate(s.timestamp);
   const rawDate = `${s.timestamp.slice(0, 4)}/${s.timestamp.slice(4, 6)}/${s.timestamp.slice(6, 8)}`;
 
-  // Human-readable risk level label indicating if it is unsafe (e.g. gambling, adult, gaming etc.)
-  const isUnsafe = !!s.content_category && s.content_category !== 'safe';
-  const riskLabel = isUnsafe && s.content_category
-    ? `UNSAFE: ${s.content_category.replace(/_/g, ' ').toUpperCase()}`
-    : s.risk_score >= 70 ? 'HIGH RISK' : 'SAFE';
+  // SVG Circular progress configurations
+  const radius = 22;
+  const strokeWidth = 3.5;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (s.risk_score / 100) * circumference;
+
+  // Let's get theme details for categories
+  const getCategoryStyles = (cat: string | null) => {
+    const c = cat || 'safe';
+    switch (c) {
+      case 'adult':
+        return { bg: 'rgba(244, 63, 94, 0.12)', border: 'rgba(244, 63, 94, 0.25)', color: '#f87171' };
+      case 'gambling':
+        return { bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.25)', color: '#fbbf24' };
+      case 'gaming':
+        return { bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.25)', color: '#60a5fa' };
+      case 'phishing_scam':
+      case 'malware_hacking':
+      case 'illegal_pharmaceuticals':
+        return { bg: 'rgba(167, 139, 250, 0.12)', border: 'rgba(167, 139, 250, 0.25)', color: '#c084fc' };
+      default:
+        return { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.25)', color: '#34d399' };
+    }
+  };
+
+  const catStyles = getCategoryStyles(s.content_category);
 
   return (
     <button
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        padding: '20px 16px 16px 16px',
-        borderRadius: 14,
+        padding: '16px 18px',
+        borderRadius: 16,
         background: isSelected 
-          ? `${pal.dim}` 
-          : isUnsafe 
-            ? 'rgba(244,63,94,0.04)' 
-            : 'rgba(15,23,42,0.6)',
-        border: `2px solid ${isSelected ? pal.border : isUnsafe ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)'}`,
+          ? 'rgba(17, 24, 39, 0.85)' 
+          : 'rgba(17, 24, 39, 0.45)',
+        border: `1px solid ${isSelected ? pal.accent : 'rgba(255, 255, 255, 0.06)'}`,
         cursor: 'pointer',
-        textAlign: 'center',
-        transition: 'all 0.18s ease',
-        boxShadow: isSelected ? pal.glow : isUnsafe ? '0 0 12px rgba(244,63,94,0.05)' : 'none',
+        textAlign: 'left',
+        transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: isSelected ? pal.glow : 'none',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
         gap: 12,
-        transform: isSelected ? 'scale(1.02)' : 'none',
+        transform: isSelected ? 'translateY(-2px)' : 'none',
         position: 'relative',
         overflow: 'hidden',
+        backdropFilter: 'blur(12px)',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = isUnsafe ? 'rgba(244,63,94,0.08)' : 'rgba(30,41,59,0.8)';
-          el.style.borderColor = isUnsafe ? 'rgba(244,63,94,0.3)' : 'rgba(255,255,255,0.12)';
-          el.style.transform = 'scale(1.01)';
+          el.style.background = 'rgba(17, 24, 39, 0.65)';
+          el.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+          el.style.transform = 'translateY(-1px)';
+          el.style.boxShadow = '0 8px 20px -8px rgba(0, 0, 0, 0.6)';
         }
       }}
       onMouseLeave={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = isUnsafe ? 'rgba(244,63,94,0.04)' : 'rgba(15,23,42,0.6)';
-          el.style.borderColor = isUnsafe ? 'rgba(244,63,94,0.15)' : 'rgba(255,255,255,0.06)';
+          el.style.background = 'rgba(17, 24, 39, 0.45)';
+          el.style.borderColor = 'rgba(255, 255, 255, 0.06)';
           el.style.transform = 'none';
+          el.style.boxShadow = 'none';
         }
       }}
     >
-      {/* Top accent bar */}
-      <span style={{
-        position: 'absolute', left: 0, top: 0, right: 0, height: 4,
-        background: `linear-gradient(to right, ${pal.accent}, ${pal.accent}44)`,
+      {/* Side visual safety stripe */}
+      <div style={{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 4,
+        background: pal.accent,
+        opacity: isSelected ? 1 : 0.4,
       }} />
 
-      {/* ROW 1 — Risk label + date + index */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-          {/* Snapshot number */}
-          <span style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace', fontWeight: 600 }}>
+      {/* Row 1: Snapshot Number & Status Badge */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingLeft: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ 
+            fontFamily: 'monospace', 
+            fontSize: 10, 
+            fontWeight: 700, 
+            color: 'rgba(241, 245, 249, 0.85)',
+            background: 'rgba(255, 255, 255, 0.06)',
+            padding: '2px 6px',
+            borderRadius: 5,
+            border: '1px solid rgba(255, 255, 255, 0.08)'
+          }}>
             #{String(index + 1).padStart(2, '0')}
           </span>
-          {/* Risk level badge */}
-          <span style={{
-            fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
-            color: pal.accent,
-            background: `${pal.dim}`,
-            border: `1px solid ${pal.border}`,
-            padding: '2px 6px', borderRadius: 4,
-            textTransform: 'uppercase' as const,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4
+          <span style={{ fontSize: 10, color: 'rgba(148, 163, 184, 0.4)' }}>•</span>
+          <span style={{ 
+            fontSize: 10, 
+            color: 'rgba(148, 163, 184, 0.6)', 
+            fontWeight: 600,
+            fontFamily: 'monospace'
           }}>
-            {isUnsafe && <span>⚠️</span>}
-            {riskLabel}
+            {rawDate}
           </span>
         </div>
-        <span style={{ fontSize: 11, fontWeight: 600, color: isSelected ? '#cbd5e1' : '#64748b' }}>
-          {rawDate}
+
+        {/* Safe / Unsafe badge */}
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '2.5px 8px',
+          borderRadius: 20,
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          background: pal.dim,
+          color: pal.accent,
+          border: `1px solid ${pal.border}`,
+        }}>
+          {isUnsafe ? '⚠️ UNSAFE' : '🛡️ SAFE'}
         </span>
       </div>
 
-      {/* ROW 2 — Score (big) + Category + Flags */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: '100%' }}>
-        {/* Score — the hero number */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{
-            fontSize: 42, fontWeight: 900, lineHeight: 1,
-            color: pal.accent, letterSpacing: '-0.04em',
-          }}>{s.risk_score}</span>
-          <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginTop: 4 }}>
-            Risk Score
+      {/* Row 2: Date Details & SVG Circular Progress Score */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 12, paddingLeft: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Calendar size={13} color="rgba(148, 163, 184, 0.7)" />
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>
+              {dateStr}
+            </span>
+          </div>
+          <span style={{ fontSize: 11, color: 'rgba(148, 163, 184, 0.6)' }}>
+            Wayback Archival Capture
           </span>
         </div>
 
-        {/* Category + flags + date label */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          {/* Full date */}
-          <span style={{
-            fontSize: 12, fontWeight: 700,
-            color: isSelected ? '#f1f5f9' : '#94a3b8',
-          }}>{dateStr}</span>
-
-          {/* Category + flag chips in one row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, justifyContent: 'center' }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const,
-              color: isSelected ? pal.text : '#64748b',
-            }}>
-              {catIcon} {catLabel}
+        {/* Circular Progress Gauge */}
+        <div style={{ position: 'relative', width: 50, height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width={50} height={50} style={{ transform: 'rotate(-90deg)' }}>
+            {/* Background Track */}
+            <circle
+              cx={25}
+              cy={25}
+              r={radius}
+              fill="transparent"
+              stroke="rgba(255, 255, 255, 0.04)"
+              strokeWidth={strokeWidth}
+            />
+            {/* Colored Score Arc */}
+            <circle
+              cx={25}
+              cy={25}
+              r={radius}
+              fill="transparent"
+              stroke={pal.accent}
+              strokeWidth={strokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            />
+          </svg>
+          <div style={{
+            position: 'absolute',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#f1f5f9', lineHeight: 1 }}>
+              {s.risk_score}
             </span>
-            <span style={{ color: '#1e293b', fontSize: 10 }}>·</span>
-            {s.flags.length > 0 ? (
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#f87171' }}>
-                ⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}
-              </span>
-            ) : (
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#34d399' }}>✓ Clean</span>
-            )}
+            <span style={{ fontSize: 6.5, color: 'rgba(148, 163, 184, 0.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em', marginTop: 1 }}>
+              Score
+            </span>
           </div>
         </div>
       </div>
 
-      {/* ROW 3 — Risk progress bar */}
-      <div style={{ width: '100%', padding: '0 8px' }}>
-        <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-          <div style={{
-            height: '100%',
-            width: `${s.risk_score}%`,
-            background: `linear-gradient(to right, ${pal.accent}55, ${pal.accent})`,
-            borderRadius: 99,
-            transition: 'width 0.6s ease',
-          }} />
-        </div>
+      {/* Row 3: Category Flag and Triggered flags count */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        width: '100%',
+        paddingTop: 8,
+        paddingLeft: 4,
+        borderTop: '1px solid rgba(255, 255, 255, 0.04)'
+      }}>
+        {/* Category tag */}
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '3px 8px',
+          borderRadius: 6,
+          fontSize: 9.5,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          background: catStyles.bg,
+          color: catStyles.color,
+          border: `1px solid ${catStyles.border}`,
+        }}>
+          <span style={{ fontSize: 11, lineHeight: 1 }}>{catIcon}</span>
+          <span>{catLabel}</span>
+        </span>
+
+        {/* Flag status */}
+        {s.flags.length > 0 ? (
+          <span style={{ 
+            fontSize: 10.5, 
+            fontWeight: 700, 
+            color: '#f87171',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5
+          }}>
+            <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#ef4444' }} />
+            {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}
+          </span>
+        ) : (
+          <span style={{ 
+            fontSize: 10.5, 
+            fontWeight: 700, 
+            color: '#34d399',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5
+          }}>
+            <span style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: '#10b981' }} />
+            Clean
+          </span>
+        )}
       </div>
     </button>
   );
