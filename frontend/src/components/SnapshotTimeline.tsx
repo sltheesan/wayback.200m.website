@@ -350,46 +350,56 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
       style={{
         width: '100%',
         padding: 0,
-        borderRadius: 16,
+        borderRadius: 18,
         background: cardBg,
-        border: `1px solid ${isSelected ? pal.accent + '80' : 'rgba(255,255,255,0.07)'}`,
+        border: `2px solid ${isSelected ? pal.accent + 'cc' : 'rgba(255,255,255,0.08)'}`,
         cursor: 'pointer',
         textAlign: 'left',
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: isSelected
-          ? `${pal.glow}, inset 0 1px 0 rgba(255,255,255,0.08)`
-          : '0 2px 8px rgba(0,0,0,0.3)',
+          ? `${pal.glow}, 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)`
+          : '0 4px 16px rgba(0,0,0,0.35)',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        transform: isSelected ? 'translateY(-3px)' : 'translateY(0)',
+        transform: isSelected ? 'translateY(-4px) scale(1.01)' : 'translateY(0) scale(1)',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = `linear-gradient(145deg, rgba(20,28,48,0.92) 0%, rgba(15,22,40,0.85) 100%)`;
-          el.style.borderColor = `${pal.accent}40`;
-          el.style.transform = 'translateY(-2px)';
-          el.style.boxShadow = `0 8px 24px rgba(0,0,0,0.5)`;
+          el.style.background = `linear-gradient(145deg, rgba(20,28,48,0.95) 0%, rgba(15,22,40,0.9) 100%)`;
+          el.style.borderColor = `${pal.accent}60`;
+          el.style.transform = 'translateY(-3px) scale(1.005)';
+          el.style.boxShadow = `0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px ${pal.accent}20`;
         }
       }}
       onMouseLeave={e => {
         if (!isSelected) {
           const el = e.currentTarget as HTMLButtonElement;
           el.style.background = cardBg;
-          el.style.borderColor = 'rgba(255,255,255,0.07)';
-          el.style.transform = 'translateY(0)';
-          el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+          el.style.borderColor = 'rgba(255,255,255,0.08)';
+          el.style.transform = 'translateY(0) scale(1)';
+          el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35)';
         }
       }}
     >
-      {/* ── TOP BANNER: Safe / Unsafe ─────────────────────────────── */}
+      {/* ── SELECTED ACCENT LINE (left edge) ─────────────────────── */}
+      {isSelected && (
+        <div style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
+          background: `linear-gradient(180deg, ${pal.accent}, ${pal.accent}80)`,
+          boxShadow: `0 0 12px ${pal.accent}`,
+          borderRadius: '18px 0 0 18px',
+        }} />
+      )}
+
+      {/* ── HEADER ─────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '10px 14px 10px 14px',
+        padding: '12px 16px 12px 18px',
         background: isUnsafe
           ? 'linear-gradient(90deg, rgba(244,63,94,0.18) 0%, rgba(244,63,94,0.04) 100%)'
           : 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.03) 100%)',
@@ -398,13 +408,14 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
         {/* Index badge */}
         <span style={{
           fontFamily: 'monospace',
-          fontSize: 11,
-          fontWeight: 700,
-          color: 'rgba(148,163,184,0.8)',
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          padding: '2px 7px',
-          borderRadius: 5,
+          fontSize: 12,
+          fontWeight: 800,
+          color: 'rgba(148,163,184,0.9)',
+          background: 'rgba(255,255,255,0.07)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          padding: '3px 9px',
+          borderRadius: 7,
+          letterSpacing: '0.04em',
         }}>
           #{String(index + 1).padStart(2, '0')}
         </span>
@@ -413,49 +424,46 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
         <span style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 5,
-          padding: '3px 10px',
+          gap: 6,
+          padding: '4px 12px',
           borderRadius: 20,
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: 900,
-          letterSpacing: '0.1em',
+          letterSpacing: '0.12em',
           textTransform: 'uppercase',
           background: pal.dim,
           color: pal.accent,
           border: `1px solid ${pal.border}`,
-          boxShadow: isSelected ? `0 0 8px ${pal.accent}40` : 'none',
+          boxShadow: isSelected ? `0 0 10px ${pal.accent}50` : 'none',
         }}>
-          {isUnsafe ? '⚠' : '🛡'}
-          {isUnsafe ? ' UNSAFE' : ' SAFE'}
+          <span style={{ fontSize: 13 }}>{isUnsafe ? '⚠' : '🛡'}</span>
+          {isUnsafe ? 'UNSAFE' : 'SAFE'}
         </span>
       </div>
 
-      {/* ── BODY ─────────────────────────────────────────────────── */}
+      {/* ── BODY: Horizontal layout ───────────────────────────────── */}
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
-        padding: '18px 16px 14px 16px',
+        gap: 18,
+        padding: '20px 18px 16px 20px',
       }}>
 
         {/* Score Ring */}
-        <div style={{ position: 'relative', width: 76, height: 76, flexShrink: 0 }}>
-          <svg width={76} height={76} style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
-            {/* Outer glow ring */}
-            <circle cx={38} cy={38} r={R + 4} fill="transparent" stroke={pal.accent} strokeWidth={1} opacity={isSelected ? 0.2 : 0.1} />
-            {/* Track */}
-            <circle cx={38} cy={38} r={R} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth={SW} />
-            {/* Progress */}
+        <div style={{ position: 'relative', width: 90, height: 90, flexShrink: 0 }}>
+          <svg width={90} height={90} style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
+            <circle cx={45} cy={45} r={R + 6} fill="transparent" stroke={pal.accent} strokeWidth={1} opacity={isSelected ? 0.25 : 0.1} />
+            <circle cx={45} cy={45} r={R} fill="transparent" stroke="rgba(255,255,255,0.07)" strokeWidth={SW + 1} />
             <circle
-              cx={38} cy={38} r={R}
+              cx={45} cy={45} r={R}
               fill="transparent"
               stroke={pal.accent}
-              strokeWidth={SW}
+              strokeWidth={SW + 1}
               strokeDasharray={circ}
               strokeDashoffset={offset}
               strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)', filter: `drop-shadow(0 0 4px ${pal.accent}80)` }}
+              style={{ transition: 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)', filter: `drop-shadow(0 0 6px ${pal.accent}90)` }}
             />
           </svg>
           {/* Center label */}
@@ -465,119 +473,154 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
             alignItems: 'center', justifyContent: 'center',
           }}>
             <span style={{
-              fontSize: 20,
+              fontSize: 24,
               fontWeight: 900,
               color: pal.accent,
               lineHeight: 1,
               fontFamily: 'monospace',
               letterSpacing: '-0.02em',
-              textShadow: `0 0 12px ${pal.accent}80`,
+              textShadow: `0 0 16px ${pal.accent}90`,
             }}>
               {s.risk_score}
             </span>
             <span style={{
-              fontSize: 7,
+              fontSize: 8,
               fontWeight: 700,
-              color: 'rgba(148,163,184,0.6)',
+              color: 'rgba(148,163,184,0.55)',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginTop: 2,
+              letterSpacing: '0.07em',
+              marginTop: 3,
             }}>
-              RISK SCORE
+              RISK
             </span>
           </div>
         </div>
 
-        {/* Date with Calendar icon + raw timestamp below */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Calendar size={12} color="rgba(148,163,184,0.6)" />
+        {/* Right: Date + meta info */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+          {/* Date row */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Calendar size={14} color={pal.accent} />
+              <span style={{
+                fontSize: 15,
+                fontWeight: 800,
+                color: '#f1f5f9',
+                letterSpacing: '0.01em',
+                lineHeight: 1.2,
+              }}>
+                {dateStr}
+              </span>
+            </div>
             <span style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: '#f1f5f9',
-              letterSpacing: '0.01em',
+              fontFamily: 'monospace',
+              fontSize: 11,
+              color: 'rgba(100,116,139,0.85)',
+              letterSpacing: '0.05em',
+              paddingLeft: 21,
             }}>
-              {dateStr}
+              {rawDate}
             </span>
           </div>
-          <span style={{
-            fontFamily: 'monospace',
-            fontSize: 10,
-            color: 'rgba(100,116,139,0.8)',
-            letterSpacing: '0.04em',
-          }}>
-            {rawDate}
-          </span>
+
+          {/* Category + Flags row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* Category badge */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 8,
+              fontSize: 10,
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              background: catStyle.bg,
+              color: catStyle.color,
+              border: `1px solid ${catStyle.border}`,
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 12 }}>{catIcon}</span> {catLabel}
+            </span>
+
+            {/* Flags */}
+            {s.flags.length > 0 ? (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#fca5a5',
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.25)',
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', display: 'inline-block', boxShadow: '0 0 5px #ef4444' }} />
+                {s.flags.length} Flag{s.flags.length > 1 ? 's' : ''}
+              </span>
+            ) : (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#6ee7b7',
+                background: 'rgba(16,185,129,0.1)',
+                border: '1px solid rgba(16,185,129,0.22)',
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 5px #10b981' }} />
+                Clean
+              </span>
+            )}
+          </div>
+
+          {/* Status code */}
+          {s.status_code && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              fontSize: 11, color: 'rgba(148,163,184,0.65)',
+            }}>
+              <span style={{
+                fontFamily: 'monospace', fontWeight: 700,
+                color: s.status_code === 200 ? '#34d399' : s.status_code >= 400 ? '#f87171' : '#fbbf24',
+                fontSize: 12,
+              }}>HTTP {s.status_code}</span>
+              <span>·</span>
+              <span>Wayback Capture</span>
+            </div>
+          )}
+        </div>
+
+        {/* Arrow indicator */}
+        <div style={{
+          flexShrink: 0,
+          width: 28, height: 28,
+          borderRadius: '50%',
+          background: isSelected ? `${pal.accent}25` : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${isSelected ? pal.accent + '60' : 'rgba(255,255,255,0.1)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.25s',
+        }}>
+          <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+            <path d="M4 2.5L8 6L4 9.5" stroke={isSelected ? pal.accent : 'rgba(148,163,184,0.5)'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       </div>
 
-      {/* ── FOOTER: Category + Flags ──────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '9px 14px',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        background: 'rgba(0,0,0,0.2)',
-        gap: 8,
-        flexWrap: 'wrap',
-      }}>
-        {/* Category badge */}
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          padding: '3px 9px',
-          borderRadius: 6,
-          fontSize: 9,
-          fontWeight: 800,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          background: catStyle.bg,
-          color: catStyle.color,
-          border: `1px solid ${catStyle.border}`,
-          flexShrink: 0,
-        }}>
-          {catIcon} {catLabel}
-        </span>
-
-        {/* Flags */}
-        {s.flags.length > 0 ? (
-          <span style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 10,
-            fontWeight: 700,
-            color: '#fca5a5',
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', boxShadow: '0 0 4px #ef4444' }} />
-            ⚑ {s.flags.length} flag{s.flags.length > 1 ? 's' : ''}
-          </span>
-        ) : (
-          <span style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 10,
-            fontWeight: 700,
-            color: '#6ee7b7',
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 4px #10b981' }} />
-            ✓ Clean
-          </span>
-        )}
-      </div>
-
-      {/* ── BOTTOM PROGRESS LINE ─────────────────────────────────── */}
-      <div style={{ height: 3, width: '100%', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+      {/* ── BOTTOM PROGRESS BAR ──────────────────────────────────── */}
+      <div style={{ height: 4, width: '100%', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
         <div style={{
           height: '100%',
           width: `${s.risk_score}%`,
-          background: `linear-gradient(90deg, ${pal.accent}66, ${pal.accent})`,
+          background: `linear-gradient(90deg, ${pal.accent}55, ${pal.accent})`,
           transition: 'width 0.9s cubic-bezier(0.4,0,0.2,1)',
-          boxShadow: `0 0 6px ${pal.accent}80`,
+          boxShadow: `0 0 8px ${pal.accent}90`,
         }} />
       </div>
     </button>
@@ -693,18 +736,18 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(340px, 420px) 1fr',
-          gap: 20,
+          gridTemplateColumns: 'minmax(380px, 460px) 1fr',
+          gap: 24,
           alignItems: 'start',
         }}>
           {/* LEFT: Snapshot selector tabs */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
-            maxHeight: 680,
+            gap: 12,
+            maxHeight: 820,
             overflowY: 'auto',
-            paddingRight: 8,
+            paddingRight: 10,
           }}>
             {/* Legend strip */}
             <div style={{
