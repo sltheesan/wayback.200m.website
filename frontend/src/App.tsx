@@ -137,11 +137,13 @@ function ScanApp() {
   // Helper to change tab AND select snapshots
   const handleSelectSnapshot = (snap: Snapshot) => {
     setActiveSnapshot(snap);
-    // Smooth scroll down to details
-    const el = document.getElementById('snapshot-details-section');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+    // Defer scroll so React has time to render #snapshot-details-section before we look for it
+    setTimeout(() => {
+      const el = document.getElementById('snapshot-details-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 80);
   };
 
   return (
