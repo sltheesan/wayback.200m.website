@@ -345,8 +345,11 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
     : `linear-gradient(145deg, rgba(15,23,42,0.75) 0%, rgba(10,14,26,0.6) 100%)`;
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(s)}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelect(s); }}
       style={{
         width: '100%',
         padding: 0,
@@ -364,10 +367,12 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
         position: 'relative',
         overflow: 'hidden',
         transform: isSelected ? 'translateY(-4px) scale(1.01)' : 'translateY(0) scale(1)',
+        userSelect: 'none',
+        outline: 'none',
       }}
       onMouseEnter={e => {
         if (!isSelected) {
-          const el = e.currentTarget as HTMLButtonElement;
+          const el = e.currentTarget as HTMLDivElement;
           el.style.background = `linear-gradient(145deg, rgba(20,28,48,0.95) 0%, rgba(15,22,40,0.9) 100%)`;
           el.style.borderColor = `${pal.accent}60`;
           el.style.transform = 'translateY(-3px) scale(1.005)';
@@ -376,7 +381,7 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
       }}
       onMouseLeave={e => {
         if (!isSelected) {
-          const el = e.currentTarget as HTMLButtonElement;
+          const el = e.currentTarget as HTMLDivElement;
           el.style.background = cardBg;
           el.style.borderColor = 'rgba(255,255,255,0.08)';
           el.style.transform = 'translateY(0) scale(1)';
@@ -623,7 +628,7 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
           boxShadow: `0 0 8px ${pal.accent}90`,
         }} />
       </div>
-    </button>
+    </div>
   );
 }
 
