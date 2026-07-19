@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import DomainInput from './components/DomainInput';
@@ -134,14 +134,17 @@ function ScanApp() {
     return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
   };
 
-  // Helper to change tab AND select snapshots
+  const scrollToSnapshotIntelligence = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const el = document.getElementById('snapshot-intelligence-section');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
+  // Helper to update the selected snapshot and jump to its intelligence card.
   const handleSelectSnapshot = (snap: Snapshot) => {
     setActiveSnapshot(snap);
-    // Smooth scroll down to details
-    const el = document.getElementById('snapshot-details-section');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToSnapshotIntelligence();
   };
 
   return (
@@ -349,7 +352,7 @@ function ScanApp() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-8">
+                  <div id="snapshot-intelligence-section" className="grid grid-cols-1 gap-8 scroll-mt-24">
                     <IntelligencePanel snapshot={activeSnapshot} />
                     {activeSnapshot.ai_intelligence?.detectors && (
                       <DetectorSummary
@@ -513,7 +516,7 @@ function ScanApp() {
                         </h4>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-6">
+                      <div id="snapshot-intelligence-section" className="grid grid-cols-1 gap-6 scroll-mt-24">
                         <IntelligencePanel snapshot={activeSnapshot} />
                         {activeSnapshot.ai_intelligence?.detectors && (
                           <DetectorSummary
