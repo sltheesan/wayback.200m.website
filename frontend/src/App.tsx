@@ -127,6 +127,18 @@ function ScanApp() {
     }
   }, [timelineModalOpen, threatIntelModalOpen, activeData, autoLoadedDomain, loading, stats.recent_domains]);
 
+  // Smooth scroll to batch inspection dashboard when a target is loaded/selected
+  useEffect(() => {
+    if (activeTab === 'batch' && inspectedBatchDomain && activeData && activeData.domain.toLowerCase() === inspectedBatchDomain.toLowerCase()) {
+      const el = document.getElementById('batch-inspection-section');
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+  }, [inspectedBatchDomain, activeData, activeTab]);
+
   const getRiskColor = (level: string): string => {
     if (level === 'HIGH' || level === 'UNSAFE') return 'text-rose-400 border-rose-500/20 bg-rose-500/5';
     if (level === 'MEDIUM') return 'text-amber-400 border-amber-500/20 bg-amber-500/5';
@@ -143,7 +155,9 @@ function ScanApp() {
     <div className="min-h-screen pb-16 flex flex-col bg-slate-950">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+      <main className={`flex-1 w-full mx-auto px-3 sm:px-6 lg:px-8 pt-6 sm:pt-8 transition-all duration-300 ${
+        activeTab === 'batch' ? 'max-w-[1600px] lg:px-4' : 'max-w-7xl'
+      }`}>
         
         {/* Render Tab Contents */}
         {activeTab === 'scan' && (
@@ -376,85 +390,88 @@ function ScanApp() {
         )}
 
         {activeTab === 'batch' && (
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 sm:gap-8">
-            {/* Left side: Batch Scan History Column */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="glass-panel p-5 space-y-4 h-[620px] flex flex-col">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Scan History
-                  </h3>
-                  {batchHistory.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBatchHistory([]);
-                        localStorage.removeItem('dhr_batch_history');
-                        setSelectedBatchJob(null);
-                      }}
-                      className="text-[9px] font-bold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                {batchHistory.length > 0 ? (
-                  <div className="space-y-3 overflow-y-auto pr-1 flex-1">
-                    {batchHistory.map((run, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-3 bg-slate-900/30 hover:bg-slate-900/60 border rounded-xl transition-all cursor-pointer group flex flex-col justify-between gap-2.5 ${
-                          selectedBatchJob?.id === run.id ? 'border-brand-500 bg-brand-950/5' : 'border-slate-800/80 hover:border-slate-700'
-                        }`}
-                        onClick={() => setSelectedBatchJob(run)}
+          <div className="space-y-8 animate-fade-in">
+            {/* TOP ROW: Batch Control Dashboard Panel */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
+              {/* Left side: Batch Scan History Column */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="glass-panel p-5 space-y-4 h-[620px] flex flex-col">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Scan History
+                    </h3>
+                    {batchHistory.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBatchHistory([]);
+                          localStorage.removeItem('dhr_batch_history');
+                          setSelectedBatchJob(null);
+                        }}
+                        className="text-[9px] font-bold text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-mono text-[9px] font-bold text-white group-hover:text-brand-300 transition-colors">
-                              Job #{run.id.substring(0, 8)}
-                            </span>
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-extrabold border ${
-                              run.status === 'SUCCESS' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' : 'text-rose-400 border-rose-500/20 bg-rose-500/5'
-                            }`}>
-                              {run.status}
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {batchHistory.length > 0 ? (
+                    <div className="space-y-3 overflow-y-auto pr-1 flex-1">
+                      {batchHistory.map((run, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-3 bg-slate-900/30 hover:bg-slate-900/60 border rounded-xl transition-all cursor-pointer group flex flex-col justify-between gap-2.5 ${
+                            selectedBatchJob?.id === run.id ? 'border-brand-500 bg-brand-950/5' : 'border-slate-800/80 hover:border-slate-700'
+                          }`}
+                          onClick={() => setSelectedBatchJob(run)}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-[9px] font-bold text-white group-hover:text-brand-300 transition-colors">
+                                Job #{run.id.substring(0, 8)}
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-extrabold border ${
+                                run.status === 'SUCCESS' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' : 'text-rose-400 border-rose-500/20 bg-rose-500/5'
+                              }`}>
+                                {run.status}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 block">
+                              {new Date(run.timestamp).toLocaleDateString()} at {new Date(run.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <span className="text-[10px] text-slate-500 block">
-                            {new Date(run.timestamp).toLocaleDateString()} at {new Date(run.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-800/50">
+                            <span className="font-medium">{run.domains.length} target(s)</span>
+                            <span className="text-brand-400 group-hover:text-white font-bold flex items-center gap-1 transition-colors">
+                              Load <ArrowUpRight size={10} />
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-800/50">
-                          <span className="font-medium">{run.domains.length} target(s)</span>
-                          <span className="text-brand-400 group-hover:text-white font-bold flex items-center gap-1 transition-colors">
-                            Load <ArrowUpRight size={10} />
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs flex-1 flex items-center justify-center">
-                    No run history found
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs flex-1 flex items-center justify-center">
+                      No run history found
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right side: Batch Upload Form & Active Job */}
+              <div className="lg:col-span-3 space-y-6">
+                <BatchUpload 
+                  onScanDomain={(d) => {
+                    handleScanDomain(d, false, true);
+                  }} 
+                  loadedJob={selectedBatchJob}
+                  onJobCompleted={handleJobCompleted}
+                />
               </div>
             </div>
 
-            {/* Middle: Batch Upload Form & Active Job */}
-            <div className="lg:col-span-2 space-y-6">
-              <BatchUpload 
-                onScanDomain={(d) => {
-                  handleScanDomain(d, false, true);
-                }} 
-                loadedJob={selectedBatchJob}
-                onJobCompleted={handleJobCompleted}
-              />
-            </div>
-
-            {/* Right side: Deep Scan Inspection Dashboard */}
-            <div className="lg:col-span-3 space-y-8">
-              {loading ? (
+            {/* BOTTOM ROW: Full-Width Target Inspection Dashboard */}
+            {loading ? (
+              <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6 space-y-8">
                 <div className="glass-panel p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 animate-pulse min-h-[400px]">
                   <svg className="animate-spin h-8 w-8 text-brand-500" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -465,15 +482,17 @@ function ScanApp() {
                     <p className="text-slate-400 text-xs mt-1">Fetching archives and performing active intelligence audits</p>
                   </div>
                 </div>
-              ) : (activeData && inspectedBatchDomain && activeData.domain.toLowerCase() === inspectedBatchDomain.toLowerCase()) ? (
-                <div className="space-y-8 animate-fade-in">
+              </div>
+            ) : (activeData && inspectedBatchDomain && activeData.domain.toLowerCase() === inspectedBatchDomain.toLowerCase()) ? (
+              <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6 space-y-8">
+                <div className="space-y-8 animate-fade-in text-left">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div>
                       <h2 className="text-lg font-bold text-white flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
-                        <span>Inspection: {activeData.domain}</span>
+                        <span>Inspection Workspace: <span className="text-brand-400">{activeData.domain}</span></span>
                       </h2>
-                      <p className="text-xs text-slate-500 mt-0.5">Deep risk details loaded from bulk batch scan</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Deep risk details loaded from bulk batch scan results</p>
                     </div>
                     {/* Button to quickly go to the main scanner tab */}
                     <button
@@ -488,9 +507,7 @@ function ScanApp() {
                   <RiskSummary data={activeData} />
                   
                   {activeData.risk_narrative && (
-                    <div className="-mx-0">
-                      <ExplainabilityCard data={activeData} />
-                    </div>
+                    <ExplainabilityCard data={activeData} />
                   )}
 
                   <SnapshotTimeline 
@@ -520,20 +537,22 @@ function ScanApp() {
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="glass-panel p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 min-h-[400px]">
+              </div>
+            ) : (
+              <div className="pt-8 border-t border-slate-900">
+                <div className="glass-panel p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 min-h-[250px]">
                   <div className="p-4 bg-brand-500/5 border border-brand-500/10 text-brand-400 rounded-full">
                     <Eye size={32} className="opacity-80 animate-pulse" />
                   </div>
                   <div className="max-w-md">
-                    <h3 className="text-base font-bold text-white">Select Target to Inspect</h3>
+                    <h3 className="text-base font-bold text-white">Awaiting Target Selection</h3>
                     <p className="text-slate-400 text-xs mt-2 leading-relaxed">
-                      Click the <strong className="text-violet-400 font-bold">Deep Scan</strong> button next to any domain in your batch run or history list on the left. The full risk details will display in this workspace.
+                      Click the <strong className="text-violet-400 font-bold">Deep Scan</strong> button next to any domain in your batch run or history list above to inspect full analytics records.
                     </p>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
