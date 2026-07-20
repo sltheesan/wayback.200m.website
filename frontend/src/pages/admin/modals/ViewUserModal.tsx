@@ -146,7 +146,6 @@ export function ViewUserModal({ user, onClose }: Props) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                 <Badge color={ROLE_COLORS[user.role] ?? '#64748b'} label={user.role.replace(/_/g, ' ').toUpperCase()} />
                 <Badge color={STATUS_COLORS[user.status] ?? '#64748b'} label={user.status.toUpperCase()} />
-                <Badge color="#06b6d4" label={`${scanCount} Domains`} />
               </div>
             </div>
           </div>
@@ -211,13 +210,58 @@ export function ViewUserModal({ user, onClose }: Props) {
               {activeTab === 'activity' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20, animation: 'tab-fade-in 0.28s ease' }}>
 
-                  {/* ─ Domain Checks by Day Card ─ */}
-                  <div style={{ 
-                    background: 'rgba(6,182,212,0.03)', 
-                    border: '1px solid rgba(6,182,212,0.15)', 
-                    borderRadius: 18, 
+                  {/* ─── User Identity + Domain Scan Card ─── */}
+                  <div style={{
+                    background: 'rgba(99,102,241,0.03)',
+                    border: '1px solid rgba(99,102,241,0.15)',
+                    borderRadius: 18,
                     overflow: 'hidden'
                   }}>
+                    {/* Mini user identity card */}
+                    <div style={{
+                      padding: '14px 18px',
+                      borderBottom: '1px solid rgba(99,102,241,0.1)',
+                      background: 'linear-gradient(135deg, rgba(99,102,241,0.06) 0%, transparent 80%)',
+                      display: 'flex', alignItems: 'center', gap: 14
+                    }}>
+                      {/* Avatar */}
+                      <div style={{
+                        width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'white', fontSize: 18, fontWeight: 800,
+                        boxShadow: '0 4px 14px rgba(99,102,241,0.3)'
+                      }}>
+                        {user.full_name.charAt(0).toUpperCase()}
+                      </div>
+                      {/* User info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ color: '#f1f5f9', fontSize: 13, fontWeight: 700 }}>{user.full_name}</span>
+                          <span style={{ color: '#64748b', fontSize: 11 }}>@{user.username}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                          <Badge color={ROLE_COLORS[user.role] ?? '#64748b'} label={user.role.replace(/_/g, ' ').toUpperCase()} />
+                          <Badge color={STATUS_COLORS[user.status] ?? '#64748b'} label={user.status.toUpperCase()} />
+                        </div>
+                      </div>
+                      {/* Stats strip */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                        <div style={{
+                          padding: '4px 12px', borderRadius: 20,
+                          background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)',
+                          color: '#22d3ee', fontSize: 12, fontWeight: 800
+                        }}>
+                          {scanCount} domains
+                        </div>
+                        <span style={{ fontSize: 10, color: '#475569' }}>
+                          Since {new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                    </div>
+
+                  {/* ─ Domain Checks by Day — seamless sub-section ─ */}
+                  <div style={{ borderTop: '1px solid rgba(6,182,212,0.1)' }}>
                     {/* Card Header */}
                     <div style={{ 
                       padding: '14px 18px', 
@@ -347,6 +391,8 @@ export function ViewUserModal({ user, onClose }: Props) {
                         );
                       })}
                     </div>
+                  </div>
+                  {/* closing outer user+domain card */}
                   </div>
 
                   {/* ─ Admin Action Logs ─ */}
