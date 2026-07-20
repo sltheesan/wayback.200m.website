@@ -136,6 +136,7 @@ async def create_user(
     )
     db.add(notif)
 
+    # Log action for the admin creator
     await log_action(
         db,
         user_id=current_user.id,
@@ -146,6 +147,21 @@ async def create_user(
         object_id=new_user.id,
         object_label=new_user.username,
         new_value={"role": body.role, "email": body.email},
+        ip_address=get_client_ip(request),
+        user_agent_string=request.headers.get("User-Agent"),
+    )
+
+    # Log profile creation action for the new user's initial activity trail
+    await log_action(
+        db,
+        user_id=new_user.id,
+        username=new_user.username,
+        user_role=new_user.role,
+        action="PROFILE_CREATED",
+        object_type="User",
+        object_id=new_user.id,
+        object_label=new_user.username,
+        new_value={"message": "System profile auto-bootstrapped"},
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )

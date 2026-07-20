@@ -208,21 +208,34 @@ def analyze_multiple_domains_task(domains: list[str], force_refresh: bool = Fals
 @celery_app.task(name="tasks.cleanup_old_domains")
 def cleanup_old_domains_task() -> int:
     """
-    Celery task that deletes domains and all cascaded metrics/snapshots older than 30 days.
+    Celery task that deletes domains, activity logs, and login histories older than 30 days.
     """
     logger.info("[Celery Task] Initiating background database cleanup for records older than 30 days")
 
     async def run_cleanup():
         cutoff_date = datetime.utcnow() - timedelta(days=30)
         async with AsyncSessionLocal() as db:
+            # Prune old domains
             stmt = delete(Domain).where(Domain.last_analyzed_at < cutoff_date)
             result = await db.execute(stmt)
-            await db.commit()
-            return result.rowcount
+            dom_deleted = result.rowcount
 
-    deleted_count = _run_async(run_cleanup())
-    logger.info(f"[Celery Task] Database cleanup complete. Deleted {deleted_count} domain records.")
-    return deleted_count
+            # Prune old activity logs
+            act_stmt = delete(ActivityLog).where(ActivityLog.created_at < cutoff_date)
+            act_res = await db.execute(act_stmt)
+            act_deleted = act_res.rowcount
+
+            # Prune old login history
+            lh_stmt = delete(LoginHistory).where(LoginHistory.login_at < cutoff_date)
+            lh_res = await db.execute(lh_stmt)
+            lh_deleted = lh_res.rowcount
+
+            await db.commit()
+            return dom_deleted, act_deleted, lh_deleted
+
+    deleted_info = _run_async(run_cleanup())
+    logger.info(f"[Celery Task] Database cleanup complete. Deleted {deleted_info[0]} domains, {deleted_info[1]} activity logs, {deleted_info[2]} login history records.")
+    return deleted_info[0]
 
 @celery_app.task(name="tasks.update_working_proxies")
 def update_working_proxies_task() -> list[str]:
