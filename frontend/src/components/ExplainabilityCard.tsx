@@ -6,13 +6,13 @@ interface ExplainabilityCardProps {
 }
 
 const CATEGORY_STYLES: Record<string, { color: string; bg: string; icon: string }> = {
-  gambling:  { color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20',     icon: '🔞' },
-  adult:     { color: 'text-rose-400',   bg: 'bg-rose-500/10 border-rose-500/20',     icon: '🔞' },
-  phishing_scam: { color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', icon: '🎣' },
-  malware_hacking: { color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20',  icon: '💀' },
-  illegal_pharmaceuticals: { color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20', icon: '💊' },
-  gaming: { color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20', icon: '🎮' },
-  safe: { color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: '✅' },
+  gambling:  { color: '#fb7185', bg: 'bg-rose-500/10 border-rose-500/20',     icon: '🔞' },
+  adult:     { color: '#fb7185', bg: 'bg-rose-500/10 border-rose-500/20',     icon: '🔞' },
+  phishing_scam: { color: '#fbbf24', bg: 'bg-amber-500/10 border-amber-500/20', icon: '🎣' },
+  malware_hacking: { color: '#fb7185', bg: 'bg-rose-500/10 border-rose-500/20',  icon: '💀' },
+  illegal_pharmaceuticals: { color: '#a78bfa', bg: 'bg-violet-500/10 border-violet-500/20', icon: '💊' },
+  gaming: { color: '#22d3ee', bg: 'bg-cyan-500/10 border-cyan-500/20', icon: '🎮' },
+  safe: { color: '#34d399', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: '✅' },
 };
 
 const CONTAINER_STYLES: Record<string, string> = {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
@@ -532,6 +532,8 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
 /* Main component */
 export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSnapshot }: SnapshotTimelineProps) {
   const [localSelected, setLocalSelected] = useState<Snapshot | null>(null);
+  const [animKey, setAnimKey] = useState(0);
+  const prevTimestamp = useRef<string | null>(null);
 
   if (!snapshots || snapshots.length === 0) return null;
 
@@ -541,6 +543,11 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
   const handleSelect = (s: Snapshot) => {
     setLocalSelected(s);
     onSelectSnapshot?.(s);
+    // Bump animKey only when a different snapshot is chosen to re-trigger animation
+    if (prevTimestamp.current !== s.timestamp) {
+      prevTimestamp.current = s.timestamp;
+      setAnimKey(k => k + 1);
+    }
   };
 
   const chartData: ChartDataPoint[] = snapshots.map((s) => ({
@@ -673,7 +680,9 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           {/* RIGHT: Detail panel */}
           <div className="snapshot-detail-pane" style={{ minHeight: 680, position: 'sticky', top: 20 }}>
             {selected ? (
-              <SnapshotDetailPanel s={selected} />
+              <div key={animKey} className="snapshot-detail-animate">
+                <SnapshotDetailPanel s={selected} />
+              </div>
             ) : (
               <div style={{
                 height: '100%', display: 'flex', flexDirection: 'column',
@@ -702,6 +711,17 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
         @keyframes pulse-dot {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        @keyframes snapshot-card-in {
+          0%   { opacity: 0; transform: translateY(22px) scale(0.97); filter: blur(4px); }
+          60%  { opacity: 1; filter: blur(0); }
+          80%  { transform: translateY(-4px) scale(1.005); }
+          100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        .snapshot-detail-animate {
+          animation: snapshot-card-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+          transform-origin: top center;
+          will-change: transform, opacity;
         }
       `}</style>
     </div>
