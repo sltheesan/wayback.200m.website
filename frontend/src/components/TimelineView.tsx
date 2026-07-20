@@ -9,7 +9,7 @@ interface TimelineViewProps {
 }
 
 const CATEGORY_STYLES: Record<string, { label: string; icon: string; bg: string; border: string; text: string }> = {
-  gambling: { label: 'Gambling / Betting', icon: 'GB', bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', text: 'text-indigo-400' },
+  gambling: { label: 'Gambling / Betting', icon: 'AD', bg: 'bg-pink-500/10', border: 'border-pink-500/30', text: 'text-pink-400' },
   adult: { label: 'Adult Content', icon: 'AD', bg: 'bg-pink-500/10', border: 'border-pink-500/30', text: 'text-pink-400' },
   phishing_scam: { label: 'Phishing / Scam', icon: 'PH', bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400' },
   malware_hacking: { label: 'Malware / Hacking', icon: 'MW', bg: 'bg-rose-500/10', border: 'border-rose-500/30', text: 'text-rose-400' },

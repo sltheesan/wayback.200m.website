@@ -6,7 +6,7 @@ interface ExplainabilityCardProps {
 }
 
 const CATEGORY_STYLES: Record<string, { color: string; bg: string; icon: string }> = {
-  gambling:  { color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20', icon: '🎰' },
+  gambling:  { color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20',     icon: '🔞' },
   adult:     { color: 'text-rose-400',   bg: 'bg-rose-500/10 border-rose-500/20',     icon: '🔞' },
   phishing_scam: { color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', icon: '🎣' },
   malware_hacking: { color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20',  icon: '💀' },
@@ -16,7 +16,7 @@ const CATEGORY_STYLES: Record<string, { color: string; bg: string; icon: string 
 };
 
 const CONTAINER_STYLES: Record<string, string> = {
-  gambling: 'border-l-4 border-l-orange-500 border-orange-500/20 bg-gradient-to-br from-orange-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(249,115,22,0.03)]',
+  gambling: 'border-l-4 border-l-rose-500 border-rose-500/20 bg-gradient-to-br from-rose-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(244,63,94,0.03)]',
   adult: 'border-l-4 border-l-rose-500 border-rose-500/20 bg-gradient-to-br from-rose-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(244,63,94,0.03)]',
   phishing_scam: 'border-l-4 border-l-amber-500 border-amber-500/20 bg-gradient-to-br from-amber-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(245,158,11,0.03)]',
   malware_hacking: 'border-l-4 border-l-rose-500 border-rose-500/20 bg-gradient-to-br from-rose-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(244,63,94,0.03)]',

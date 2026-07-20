@@ -52,7 +52,7 @@ export default function FlagList({ snapshots }: FlagListProps) {
   const getCategoryStyles = (category: string): CategoryStyle => {
     switch (category) {
       case 'gambling':
-        return { badge: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20', dot: 'bg-indigo-400', label: 'Gambling Content' };
+        return { badge: 'text-pink-400 bg-pink-500/10 border-pink-500/20', dot: 'bg-pink-400', label: 'Gambling Content' };
       case 'adult':
         return { badge: 'text-pink-400 bg-pink-500/10 border-pink-500/20', dot: 'bg-pink-400', label: 'Adult Entertainment' };
       case 'phishing_scam':

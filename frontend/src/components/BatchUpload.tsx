@@ -206,7 +206,7 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
 
   const getCategoryColor = (cat: string): string => {
     const cleanCat = (cat || '').toLowerCase().replace(/_/g, ' ');
-    if (cleanCat.includes('gambling')) return 'text-amber-300 bg-amber-500/10 border-amber-500/20';
+    if (cleanCat.includes('gambling')) return 'text-pink-300 bg-pink-500/10 border-pink-500/20';
     if (cleanCat.includes('adult')) return 'text-pink-300 bg-pink-500/10 border-pink-500/20';
     if (cleanCat.includes('phishing') || cleanCat.includes('scam')) return 'text-rose-300 bg-rose-500/10 border-rose-500/20';
     if (cleanCat.includes('hacking') || cleanCat.includes('malware')) return 'text-red-300 bg-red-500/10 border-red-500/20';

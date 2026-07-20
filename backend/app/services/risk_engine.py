@@ -23,8 +23,14 @@ def compute_overall_risk(snapshot_results: List[Dict[str, Any]]) -> Tuple[int, s
     if not snapshot_results:
         return 0, "UNKNOWN", 0, 0
 
-    # Filter out unavailable or invalid snapshots
-    valid_snaps = [s for s in snapshot_results if s.get("content_category") not in ["unavailable", "invalid"]]
+    # Filter out unavailable or invalid snapshots, normalizing integers to dicts
+    valid_snaps = []
+    for s in snapshot_results:
+        if isinstance(s, (int, float)):
+            valid_snaps.append({"risk_score": int(s), "content_category": "safe"})
+        elif isinstance(s, dict):
+            if s.get("content_category") not in ["unavailable", "invalid"]:
+                valid_snaps.append(s)
     
     if not valid_snaps:
         # Every snapshot was unavailable or invalid
@@ -40,11 +46,11 @@ def compute_overall_risk(snapshot_results: List[Dict[str, Any]]) -> Tuple[int, s
 
     avg_score_rounded = int(round(avg_score))
 
-    # Classify as UNSAFE if one or more snapshots contain confirmed evidence of prohibited content
-    has_unsafe = any(s.get("risk_score", 0) > 30 or s.get("content_category", "safe") != "safe" for s in valid_snaps)
-    
-    if has_unsafe:
-        risk_level = "UNSAFE"
+    # Classify risk level based on final score
+    if final_score > 60:
+        risk_level = "HIGH"
+    elif final_score > 30:
+        risk_level = "MEDIUM"
     else:
         risk_level = "SAFE"
 

@@ -6,7 +6,7 @@ interface IntelligencePanelProps {
 }
 
 const CATEGORY_STYLES: Record<string, { label: string; bar: string; text: string; bg: string }> = {
-  gambling: { label: 'Gambling / Betting', bar: 'bg-indigo-500', text: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20' },
+  gambling: { label: 'Gambling / Betting', bar: 'bg-pink-500', text: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20' },
   adult: { label: 'Adult / Explicit Content', bar: 'bg-pink-500', text: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20' },
   phishing_scam: { label: 'Phishing / Scam', bar: 'bg-amber-500', text: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   malware_hacking: { label: 'Malware / Hacking', bar: 'bg-rose-500', text: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20' },
