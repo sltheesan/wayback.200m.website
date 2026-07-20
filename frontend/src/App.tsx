@@ -376,7 +376,7 @@ function ScanApp() {
         )}
 
         {activeTab === 'batch' && (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 sm:gap-8">
             {/* Left side: Batch Scan History Column */}
             <div className="lg:col-span-1 space-y-6">
               <div className="glass-panel p-5 space-y-4 h-[620px] flex flex-col">
@@ -453,7 +453,7 @@ function ScanApp() {
             </div>
 
             {/* Right side: Deep Scan Inspection Dashboard */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="lg:col-span-3 space-y-8">
               {loading ? (
                 <div className="glass-panel p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 animate-pulse min-h-[400px]">
                   <svg className="animate-spin h-8 w-8 text-brand-500" fill="none" viewBox="0 0 24 24">
