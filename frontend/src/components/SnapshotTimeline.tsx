@@ -82,6 +82,7 @@ const highlightKeyword = (text: string | null | undefined, keyword: string) => {
 
 /* Right panel: full snapshot detail */
 function SnapshotDetailPanel({ s }: { s: Snapshot }) {
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const pal = getRiskPalette(s.risk_score, s.content_category);
   const apiBase = (import.meta.env.VITE_API_URL as string) || '/api/v1';
   const proxyUrl = `${apiBase}/domains/proxy-snapshot?timestamp=${s.timestamp}&url=${encodeURIComponent(s.original_url)}`;
@@ -185,13 +186,50 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
               Visual Evidence Preview
             </span>
           </div>
-          <div style={{ height: 200, background: '#fff' }}>
+          <div style={{ height: 200, background: '#0a0e1a', position: 'relative', overflow: 'hidden' }}>
+            {/* Shimmer skeleton loader */}
+            {!iframeLoaded && (
+              <div style={{
+                position: 'absolute', inset: 0, zIndex: 10,
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+              }}>
+                {/* Shimmer strip rows */}
+                <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.6 }}>
+                  {[0.08, 0.22, 0.36, 0.5, 0.64, 0.78].map((top, i) => (
+                    <div key={i} style={{
+                      position: 'absolute', left: '5%',
+                      top: `${top * 100}%`, height: 10, borderRadius: 6,
+                      width: `${[75, 55, 85, 45, 65, 40][i]}%`,
+                      background: 'rgba(148,163,184,0.08)',
+                      overflow: 'hidden',
+                    }}>
+                      <div className="shimmer-bar" />
+                    </div>
+                  ))}
+                </div>
+                {/* Central spinner */}
+                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                  <div className="preview-spinner" style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    border: `3px solid ${pal.dim}`,
+                    borderTopColor: pal.accent,
+                  }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.05em' }}>Loading Preview…</span>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                    color: pal.text, opacity: 0.7,
+                  }}>Fetching Wayback Snapshot</span>
+                </div>
+              </div>
+            )}
             <iframe
               src={proxyUrl}
               title={`Preview: ${s.original_url}`}
-              style={{ width: '100%', height: '100%', border: 'none' }}
+              style={{ width: '100%', height: '100%', border: 'none', opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.4s ease' }}
               loading="lazy"
               referrerPolicy="no-referrer"
+              onLoad={() => setIframeLoaded(true)}
             />
           </div>
         </div>
@@ -722,6 +760,21 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           animation: snapshot-card-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
           transform-origin: top center;
           will-change: transform, opacity;
+        }
+        @keyframes shimmer-slide {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(250%); }
+        }
+        .shimmer-bar {
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(148,163,184,0.18) 50%, transparent 100%);
+          animation: shimmer-slide 1.6s ease-in-out infinite;
+        }
+        @keyframes preview-spin {
+          to { transform: rotate(360deg); }
+        }
+        .preview-spinner {
+          animation: preview-spin 0.85s linear infinite;
         }
       `}</style>
     </div>
