@@ -85,14 +85,30 @@ class Settings(BaseSettings):
         return self.USER_AGENT_LIST
 
     # CORS settings
-    ALLOWED_ORIGINS: list[str] = [
+    ALLOWED_ORIGINS: list[str] | str = [
+        "https://wayback.200m.website",
+        "http://wayback.200m.website",
         "http://localhost",
         "http://127.0.0.1",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        "*"
     ]
+
+    def get_allowed_origins(self) -> list[str]:
+        """Returns parsed list of allowed origins, handling comma-separated string or list from env."""
+        if isinstance(self.ALLOWED_ORIGINS, str):
+            try:
+                import json
+                parsed = json.loads(self.ALLOWED_ORIGINS)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
+            return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+        return self.ALLOWED_ORIGINS if isinstance(self.ALLOWED_ORIGINS, list) else ["*"]
 
     # ── Admin Dashboard Auth & Security ──────────────────────────────────
     JWT_SECRET_KEY: str = "changeme-replace-with-openssl-rand-hex-32"
