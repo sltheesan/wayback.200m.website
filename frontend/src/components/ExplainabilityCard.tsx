@@ -34,9 +34,10 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
   if (!risk_narrative) return null;
 
   const cat = primary_category || 'safe';
+  const isSafe = cat === 'safe' || risk_level === 'SAFE';
   const style = CATEGORY_STYLES[cat] || CATEGORY_STYLES['safe'];
   const containerStyle = CONTAINER_STYLES[cat] || CONTAINER_STYLES['safe'];
-  const confPct = ai_confidence != null ? Math.round(ai_confidence * 100) : null;
+  const confPct = ai_confidence != null ? Math.round(ai_confidence * 100) : (isSafe ? 100 : null);
 
   return (
     <div className={`glass-panel p-6 sm:p-8 space-y-6 transition-all duration-300 ${containerStyle}`}>
@@ -82,7 +83,7 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
             {confPct != null && (
               <div className="space-y-1.5 text-left">
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-slate-400">AI Classification Strength</span>
+                  <span className="text-slate-400">{isSafe ? 'AI Safety Confidence' : 'AI Risk Confidence'}</span>
                   <span style={{ color: style.color }}>{confPct}%</span>
                 </div>
                 <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-900">

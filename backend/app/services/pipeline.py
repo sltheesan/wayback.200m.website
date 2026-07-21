@@ -417,6 +417,9 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     top_confidence = max(
         (s.get("category_confidence") or 0.0 for s in snapshot_results), default=0.0
     )
+    if primary_category == "safe" and (top_confidence == 0.0 or top_confidence is None):
+        top_confidence = 1.0
+
     explanation = build_explanation(
         primary_category=primary_category,
         confidence=top_confidence,
@@ -661,8 +664,7 @@ def format_domain_response(
         "primary_category": domain.primary_category,
         "risk_narrative": domain.risk_narrative,
         "evidence_bullets": None,
-        "risk_period": None,
-        "ai_confidence": max(confidence_by_category.values(), default=None),
+        "ai_confidence": (1.0 if (domain.primary_category == "safe" or not domain.primary_category) and domain.risk_level == "SAFE" else max(confidence_by_category.values(), default=None)),
         "timeline": timeline,
         "threat_intel": threat_intel,
         "threat_overall": overall_threat_status(threat_intel) if threat_intel else None,

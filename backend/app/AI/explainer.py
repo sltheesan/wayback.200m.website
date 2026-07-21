@@ -178,6 +178,10 @@ def build_explanation(
     else:
         period_clause = "was found to have"
 
+    # If primary category is safe and confidence is 0, default confidence to 1.0 (100% safe confidence)
+    if primary_category == SAFE_LABEL and (confidence == 0.0 or confidence is None):
+        confidence = 1.0
+
     # ── Build narrative ───────────────────────────────────────────────────
     tpl = _NARRATIVES.get(primary_category, _NARRATIVES[SAFE_LABEL])
     try:
