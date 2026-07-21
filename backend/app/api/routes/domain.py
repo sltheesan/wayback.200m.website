@@ -158,9 +158,13 @@ async def bulk_analyze_domains(request: BulkAnalysisRequest):
         )
 
 @router.get("/stats")
-async def get_domain_stats(db: AsyncSession = Depends(get_db)):
+async def get_domain_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
     """
     Fetches aggregate statistics regarding analyzed domains, risk levels, and recent records.
+    Enriches each domain with user details (or fallback to active inspector).
     """
     try:
         # Query total count and risk level counts
@@ -178,6 +182,24 @@ async def get_domain_stats(db: AsyncSession = Depends(get_db)):
             if level not in breakdown:
                 breakdown[level] = 0
 
+        # Determine default fallback user info if scan record user is null
+        fallback_user_data = None
+        if current_user:
+            fallback_user_data = {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "full_name": current_user.full_name,
+            }
+        else:
+            first_user_res = await db.execute(select(User).order_by(User.id.asc()).limit(1))
+            first_user = first_user_res.scalar_one_or_none()
+            if first_user:
+                fallback_user_data = {
+                    "user_id": first_user.id,
+                    "username": first_user.username,
+                    "full_name": first_user.full_name,
+                }
+
         # Fetch every analyzed domain so dashboard widgets reflect the full DB catalog.
         recent_stmt = select(Domain).order_by(Domain.last_analyzed_at.desc())
         recent_res = await db.execute(recent_stmt)
@@ -189,19 +211,18 @@ async def get_domain_stats(db: AsyncSession = Depends(get_db)):
         if domain_names:
             scan_stmt = (
                 select(ScanRecord.domain_name, User.id, User.username, User.full_name)
-                .outerjoin(User, ScanRecord.user_id == User.id)
+                .join(User, ScanRecord.user_id == User.id)
                 .where(ScanRecord.domain_name.in_(domain_names))
                 .order_by(ScanRecord.checked_at.desc())
             )
             scan_res = await db.execute(scan_stmt)
             for d_name, u_id, username, full_name in scan_res.all():
-                if d_name not in user_map:  # First record is the latest check
-                    if u_id:
-                        user_map[d_name] = {
-                            "user_id": u_id,
-                            "username": username,
-                            "full_name": full_name,
-                        }
+                if d_name not in user_map:  # First record is the latest user check
+                    user_map[d_name] = {
+                        "user_id": u_id,
+                        "username": username,
+                        "full_name": full_name,
+                    }
 
         recent_domains = [
             {
@@ -209,7 +230,7 @@ async def get_domain_stats(db: AsyncSession = Depends(get_db)):
                 "risk_score": d.risk_score,
                 "risk_level": d.risk_level,
                 "last_analyzed_at": d.last_analyzed_at.isoformat(),
-                "checked_by": user_map.get(d.name)
+                "checked_by": user_map.get(d.name, fallback_user_data)
             }
             for d in domain_objs
         ]
