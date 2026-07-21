@@ -101,6 +101,11 @@ export interface RecentDomain {
   risk_score: number;
   risk_level: string;
   last_analyzed_at: string;
+  checked_by?: {
+    user_id?: number;
+    username?: string;
+    full_name?: string;
+  } | null;
 }
 
 export interface GlobalStats {

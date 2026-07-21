@@ -181,14 +181,37 @@ async def get_domain_stats(db: AsyncSession = Depends(get_db)):
         # Fetch every analyzed domain so dashboard widgets reflect the full DB catalog.
         recent_stmt = select(Domain).order_by(Domain.last_analyzed_at.desc())
         recent_res = await db.execute(recent_stmt)
+        domain_objs = recent_res.scalars().all()
+
+        domain_names = [d.name for d in domain_objs]
+        user_map: dict[str, dict[str, Any]] = {}
+        
+        if domain_names:
+            scan_stmt = (
+                select(ScanRecord.domain_name, User.id, User.username, User.full_name)
+                .outerjoin(User, ScanRecord.user_id == User.id)
+                .where(ScanRecord.domain_name.in_(domain_names))
+                .order_by(ScanRecord.checked_at.desc())
+            )
+            scan_res = await db.execute(scan_stmt)
+            for d_name, u_id, username, full_name in scan_res.all():
+                if d_name not in user_map:  # First record is the latest check
+                    if u_id:
+                        user_map[d_name] = {
+                            "user_id": u_id,
+                            "username": username,
+                            "full_name": full_name,
+                        }
+
         recent_domains = [
             {
                 "domain": d.name,
                 "risk_score": d.risk_score,
                 "risk_level": d.risk_level,
-                "last_analyzed_at": d.last_analyzed_at.isoformat()
+                "last_analyzed_at": d.last_analyzed_at.isoformat(),
+                "checked_by": user_map.get(d.name)
             }
-            for d in recent_res.scalars().all()
+            for d in domain_objs
         ]
 
         return {

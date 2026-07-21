@@ -30,7 +30,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 import { useAuth } from './contexts/AuthContext';
 import { apiService } from './services/api';
 import { DomainAnalysisResponse, GlobalStats, Snapshot } from './types';
-import { BarChart3, Database, ShieldAlert, ArrowUpRight, X, Eye } from 'lucide-react';
+import { BarChart3, Database, ShieldAlert, ArrowUpRight, X, Eye, User as UserIcon } from 'lucide-react';
 
 const DEFAULT_STATS: GlobalStats = {
   total_analyzed: 0,
@@ -310,13 +310,22 @@ function ScanApp() {
                         disabled={loading}
                         className="w-full flex items-center justify-between p-3 border border-slate-800 bg-slate-900/10 hover:bg-slate-900/35 hover:border-slate-700 rounded-xl transition-all text-left text-xs group"
                       >
-                        <div className="space-y-1">
-                          <span className="font-bold text-white group-hover:text-brand-300 transition-colors block">
+                        <div className="space-y-1 text-left min-w-0 flex-1 pr-2">
+                          <span className="font-bold text-white group-hover:text-brand-300 transition-colors block truncate">
                             {d.domain}
                           </span>
-                          <span className="text-[10px] text-slate-500 font-mono">Score: {d.risk_score}/100</span>
+                          <div className="flex items-center space-x-2 text-[10px] text-slate-500 font-mono">
+                            <span>Score: {d.risk_score}/100</span>
+                            <span>•</span>
+                            <span className="flex items-center text-slate-400 space-x-1" title={d.checked_by?.full_name || 'System / Anonymous'}>
+                              <UserIcon size={10} className="text-brand-400 shrink-0" />
+                              <span className="text-slate-300 truncate max-w-[110px]">
+                                {d.checked_by?.username || (d.checked_by?.full_name ? d.checked_by.full_name.split(' ')[0] : 'System')}
+                              </span>
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 shrink-0">
                           <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-extrabold border ${getRiskColor(d.risk_level)}`}>
                             {d.risk_level}
                           </span>

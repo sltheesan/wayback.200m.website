@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ShieldAlert, ShieldCheck, AlertTriangle, Layers, Search } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, AlertTriangle, Layers, Search, User } from 'lucide-react';
 import { GlobalStats } from '../types';
 
 interface AnalyticsDashboardProps {
@@ -176,12 +176,21 @@ export default function AnalyticsDashboard({ stats, onScanDomain, loading }: Ana
                   className="flex items-center justify-between gap-2 p-3 sm:p-3.5 border border-slate-800 bg-slate-950/20 rounded-xl hover:border-slate-700/50 hover:bg-slate-900/10 transition-all group"
                 >
                   <div className="min-w-0 flex-1 space-y-1">
-                    <span className="text-sm font-extrabold text-white block group-hover:text-violet-400 transition-colors truncate">
-                      {d.domain}
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      Logged: {new Date(d.last_analyzed_at).toLocaleDateString()} at {new Date(d.last_analyzed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-extrabold text-white block group-hover:text-violet-400 transition-colors truncate">
+                        {d.domain}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-slate-500 font-mono">
+                      <span>Logged: {new Date(d.last_analyzed_at).toLocaleDateString()} at {new Date(d.last_analyzed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>•</span>
+                      <span className="flex items-center text-slate-400 space-x-1" title={d.checked_by?.full_name || 'System / Anonymous'}>
+                        <User size={10} className="text-brand-400 shrink-0 inline" />
+                        <span className="text-slate-300 font-medium">
+                          {d.checked_by?.username || (d.checked_by?.full_name ? d.checked_by.full_name : 'System')}
+                        </span>
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center space-x-2 shrink-0">
