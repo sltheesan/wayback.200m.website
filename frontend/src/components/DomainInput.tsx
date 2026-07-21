@@ -7,7 +7,7 @@ interface DomainInputProps {
 }
 
 const THREAT_CATEGORIES = [
-  { label: 'Gambling / Betting', icon: '🔞', className: 'border-pink-500/20 bg-pink-500/5 text-pink-200 hover:border-pink-500/40 hover:bg-pink-500/10' },
+  { label: 'Gambling / Betting', icon: '🎰', className: 'border-purple-500/20 bg-purple-500/5 text-purple-200 hover:border-purple-500/40 hover:bg-purple-500/10' },
   { label: 'Adult / Explicit Content', icon: '🔞', className: 'border-pink-500/20 bg-pink-500/5 text-pink-200 hover:border-pink-500/40 hover:bg-pink-500/10' },
   { label: 'Phishing / Scam', icon: '🎣', className: 'border-amber-500/20 bg-amber-500/5 text-amber-200 hover:border-amber-500/40 hover:bg-amber-500/10' },
   { label: 'Malware / Hacking', icon: '💀', className: 'border-rose-500/20 bg-rose-500/5 text-rose-200 hover:border-rose-500/40 hover:bg-rose-500/10' },

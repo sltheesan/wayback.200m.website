@@ -162,7 +162,7 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                 {activeCategories.map(([cat, score]) => {
-                  const barColor = cat === 'gambling' ? 'bg-pink-500' :
+                  const barColor = cat === 'gambling' ? 'bg-purple-500' :
                                    cat === 'adult' ? 'bg-pink-500' :
                                    cat === 'phishing_scam' ? 'bg-amber-500' :
                                    cat === 'malware_hacking' ? 'bg-rose-500' : 
