@@ -86,7 +86,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     live_timestamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
 
     if raw_snapshots is None:
-        if db_domain:
+        if db_domain and not force_refresh:
             logger.warning(f"Wayback Machine CDX API is unreachable for {domain_clean}. Falling back to existing database record.")
             return format_domain_response(db_domain)
         if not live_html:
@@ -429,6 +429,14 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     threat_overall = overall_threat_status(threat_intel_results)
 
     # 7. Persist to PostgreSQL database
+    query_existing = select(Domain).options(
+        selectinload(Domain.snapshots),
+        selectinload(Domain.timeline),
+        selectinload(Domain.threat_intel),
+    ).where(Domain.name == domain_clean)
+    res_existing = await db.execute(query_existing)
+    db_domain = res_existing.scalar_one_or_none()
+
     if db_domain:
         db_domain.risk_score = overall_score
         db_domain.risk_level = overall_level
@@ -677,6 +685,8 @@ async def save_empty_domain(domain_name: str, db: AsyncSession) -> Domain:
     if db_domain:
         db_domain.risk_score = 0
         db_domain.risk_level = "UNKNOWN"
+        db_domain.primary_category = "unknown"
+        db_domain.risk_narrative = "Insufficient data. No historical archive snapshots exist, or all captures were inaccessible."
         db_domain.last_analyzed_at = datetime.datetime.utcnow()
         db_domain.snapshots.clear()
         db_domain.timeline.clear()
@@ -686,6 +696,8 @@ async def save_empty_domain(domain_name: str, db: AsyncSession) -> Domain:
             name=domain_name,
             risk_score=0,
             risk_level="UNKNOWN",
+            primary_category="unknown",
+            risk_narrative="Insufficient data. No historical archive snapshots exist, or all captures were inaccessible.",
             last_analyzed_at=datetime.datetime.utcnow(),
             snapshots=[],
             timeline=[],

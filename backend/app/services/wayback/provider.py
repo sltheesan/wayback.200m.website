@@ -61,13 +61,13 @@ class WaybackProvider(ArchiveProvider):
                 }
             ]
 
-        logger.info(f"WaybackProvider: Querying CDX wildcard for: {domain_clean}/*")
-        raw_data = await self._query_cdx_raw(f"{domain_clean}/*")
+        logger.info(f"WaybackProvider: Querying CDX for root domain: {domain_clean}")
+        raw_data = await self._query_cdx_raw(domain_clean)
         if not raw_data or len(raw_data) <= 1:
-            logger.info(f"WaybackProvider: CDX wildcard returned no data. Trying root query for: {domain_clean}")
-            root_data = await self._query_cdx_raw(domain_clean)
-            if root_data:
-                raw_data = root_data
+            logger.info(f"WaybackProvider: Root CDX query returned no data. Trying wildcard query for: {domain_clean}/*")
+            wildcard_data = await self._query_cdx_raw(f"{domain_clean}/*")
+            if wildcard_data:
+                raw_data = wildcard_data
 
         if not raw_data or len(raw_data) <= 1:
             return []

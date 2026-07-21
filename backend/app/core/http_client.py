@@ -24,17 +24,23 @@ class HttpClient:
         if proxy_key not in cls.proxy_sessions or cls.proxy_sessions[proxy_key].closed:
             if proxy and is_socks_proxy(proxy):
                 try:
-                    from aiohttp_socks import ProxyConnector
+                    import importlib
+                    aiohttp_socks = importlib.import_module("aiohttp_socks")
+                    ProxyConnector = getattr(aiohttp_socks, "ProxyConnector")
                     connector = ProxyConnector.from_url(proxy)
                     cls.proxy_sessions[proxy_key] = aiohttp.ClientSession(connector=connector)
                     logger.info(f"[HTTP] Created new SOCKS session for proxy: {proxy}")
-                except ImportError:
-                    logger.error("[HTTP] aiohttp-socks is not installed. SOCKS proxy is disabled, falling back to direct connection.")
-                    cls.proxy_sessions[proxy_key] = aiohttp.ClientSession()
+                except Exception:
+                    logger.error("[HTTP] aiohttp-socks is not installed or failed to load. Falling back to direct connection.")
+                    import socket
+                    connector = aiohttp.TCPConnector(family=socket.AF_INET, limit=100)
+                    cls.proxy_sessions[proxy_key] = aiohttp.ClientSession(connector=connector)
             else:
-                # Direct or HTTP/HTTPS proxy session
-                cls.proxy_sessions[proxy_key] = aiohttp.ClientSession()
-                logger.info(f"[HTTP] Created new standard session for proxy key: {proxy_key}")
+                # Direct or HTTP/HTTPS proxy session (force IPv4 to avoid Windows IPv6 connection timeouts)
+                import socket
+                connector = aiohttp.TCPConnector(family=socket.AF_INET, limit=100)
+                cls.proxy_sessions[proxy_key] = aiohttp.ClientSession(connector=connector)
+                logger.info(f"[HTTP] Created new standard IPv4 session for proxy key: {proxy_key}")
                 
         return cls.proxy_sessions[proxy_key]
 
