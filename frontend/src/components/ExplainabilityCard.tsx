@@ -92,23 +92,23 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
               </div>
             )}
 
-            {/* Meta chips row */}
-            <div className="flex flex-wrap gap-2">
-              {risk_period && risk_period !== 'recently' && (
-                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-                  <Clock size={12} className="text-slate-500" />
-                  <span className="font-semibold">Risk Period:</span>
-                  <span className="font-mono text-violet-400">{risk_period}</span>
+              {/* Meta chips row */}
+              <div className="flex flex-wrap gap-2">
+                {risk_period && risk_period !== 'recently' && (
+                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
+                    <Clock size={12} className="text-slate-500" />
+                    <span className="font-semibold">Risk Period:</span>
+                    <span className="font-mono text-violet-400">{risk_period}</span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold" style={{ backgroundColor: `${style.color}15`, borderColor: `${style.color}30`, color: style.color }}>
+                  <span>{isSafe && data.content_niche ? data.content_niche.icon : style.icon}</span>
+                  <span>{isSafe && data.content_niche ? data.content_niche.title : cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
                 </div>
-              )}
-              <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold" style={{ backgroundColor: `${style.color}15`, borderColor: `${style.color}30`, color: style.color }}>
-                <span>{style.icon}</span>
-                <span>{cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300 font-semibold uppercase tracking-wider">
+                  {risk_level}
+                </div>
               </div>
-              <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300 font-semibold uppercase tracking-wider">
-                {risk_level}
-              </div>
-            </div>
           </div>
         </div>
 

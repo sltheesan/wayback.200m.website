@@ -84,6 +84,7 @@ export interface DomainAnalysisResponse {
   evidence_bullets?: string[] | null;
   risk_period?: string | null;
   ai_confidence?: number | null;
+  content_niche?: { title: string; desc: string; icon: string } | null;
   timeline?: TimelineEntry[] | null;
   threat_intel?: ThreatIntel[] | null;
   threat_overall?: string | null;

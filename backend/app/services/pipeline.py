@@ -19,7 +19,7 @@ from backend.app.services.timeline_service import build_timeline, get_primary_ca
 from backend.app.services.threat_intel import query_all_providers, overall_threat_status
 from backend.app.AI.classifier import classify_content, result_to_metadata_json
 from backend.app.AI.detectors import run_all_detectors, high_signal_count
-from backend.app.AI.explainer import build_explanation
+from backend.app.AI.explainer import build_explanation, detect_benign_content_niche
 from backend.app.utils.logger import logger
 
 def build_snapshot_evidence_url(timestamp: str, original_url: str, risk_score: int, flags: list, source: str = "archive") -> str | None:
@@ -425,6 +425,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         confidence=top_confidence,
         risk_level=overall_level,
         snapshot_results=list(snapshot_results),
+        domain=domain_clean,
     )
 
     # 6d. Threat Intelligence
@@ -544,6 +545,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         "evidence_bullets": explanation.evidence_bullets,
         "risk_period": explanation.risk_period,
         "ai_confidence": explanation.confidence,
+        "content_niche": explanation.content_niche,
         "timeline": timeline_entries,
         "threat_intel": threat_intel_results,
         "threat_overall": threat_overall,
@@ -665,6 +667,7 @@ def format_domain_response(
         "risk_narrative": domain.risk_narrative,
         "evidence_bullets": None,
         "ai_confidence": (1.0 if (domain.primary_category == "safe" or not domain.primary_category) and domain.risk_level == "SAFE" else max(confidence_by_category.values(), default=None)),
+        "content_niche": detect_benign_content_niche(domain.name, domain.snapshots) if (domain.primary_category == "safe" or domain.risk_level == "SAFE") else None,
         "timeline": timeline,
         "threat_intel": threat_intel,
         "threat_overall": overall_threat_status(threat_intel) if threat_intel else None,

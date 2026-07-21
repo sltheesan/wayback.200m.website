@@ -84,6 +84,36 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     ? Object.entries(category_confidence).filter(([_, score]) => score > 0)
     : [];
 
+  // Primary category helper
+  const primaryCat = data.primary_category || (activeCategories.length > 0 ? activeCategories[0][0] : 'safe');
+
+  const getCategoryMeta = (cat: string) => {
+    switch (cat) {
+      case 'gambling':
+        return { label: 'Gambling & Betting', icon: '🎰', style: 'text-purple-300 border-purple-500/30 bg-purple-500/10' };
+      case 'adult':
+        return { label: 'Adult Content', icon: '🔞', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+      case 'phishing_scam':
+        return { label: 'Phishing & Scam', icon: '🎣', style: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
+      case 'malware_hacking':
+        return { label: 'Malware & Hacking', icon: '💀', style: 'text-rose-400 border-rose-500/30 bg-rose-500/10' };
+      case 'illegal_pharmaceuticals':
+        return { label: 'Illegal Pharmaceuticals', icon: '💊', style: 'text-violet-300 border-violet-500/30 bg-violet-500/10' };
+      case 'gaming':
+        return { label: 'Online Gaming', icon: '🎮', style: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10' };
+      case 'unknown':
+        return { label: 'Unknown / Insufficient Data', icon: '❓', style: 'text-slate-400 border-slate-500/30 bg-slate-500/10' };
+      default:
+        return { label: 'Safe / Legitimate Domain', icon: '✅', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
+    }
+  };
+
+  // Benign Niche Enrichment for Safe Domains
+  const niche = data.content_niche;
+  const catMeta = (niche && risk_level === 'SAFE')
+    ? { label: niche.title, icon: niche.icon, style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' }
+    : getCategoryMeta(primaryCat);
+
   return (
     <div className="glass-panel p-5 sm:p-8 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
       
@@ -142,11 +172,19 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
       {/* Domain Details */}
       <div className="flex-1 flex flex-col justify-between">
         <div>
-          <div className="flex flex-wrap items-center gap-3 mb-2">
+          <div className="flex flex-wrap items-center gap-2.5 mb-2">
             <h2 className="text-2xl font-black tracking-tight text-white">{domain}</h2>
+            
+            {/* Risk Level Badge */}
             <div className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider flex items-center space-x-1.5 ${details.color}`}>
               {details.icon}
               <span>{risk_level} RISK</span>
+            </div>
+
+            {/* Category Classification Badge */}
+            <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${catMeta.style}`}>
+              <span>{catMeta.icon}</span>
+              <span>Category: {catMeta.label}</span>
             </div>
           </div>
           
@@ -154,19 +192,20 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
             {details.desc}
           </p>
 
-          {/* Threat Category Confidence */}
-          {activeCategories.length > 0 && (
-            <div className="space-y-2.5 mb-6 pt-4 border-t border-slate-800/60">
-              <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">
-                Threat Category Confidence
-              </h4>
+          {/* Category Classification & Confidence */}
+          <div className="space-y-2.5 mb-6 pt-4 border-t border-slate-800/60">
+            <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 flex items-center gap-1.5">
+              <span>Category Classification & Content Summary</span>
+            </h4>
+
+            {activeCategories.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                 {activeCategories.map(([cat, score]) => {
                   const barColor = cat === 'gambling' ? 'bg-purple-500' :
-                                   cat === 'adult' ? 'bg-pink-500' :
+                                   cat === 'adult' ? 'bg-rose-500' :
                                    cat === 'phishing_scam' ? 'bg-amber-500' :
-                                   cat === 'malware_hacking' ? 'bg-rose-500' : 
-                                   cat === 'illegal_pharmaceuticals' ? 'bg-violet-500' : 'bg-red-500';
+                                   cat === 'malware_hacking' ? 'bg-rose-600' : 
+                                   cat === 'illegal_pharmaceuticals' ? 'bg-violet-500' : 'bg-cyan-500';
                   
                   const catLabel = cat.replace('_', ' ').replace('phishing scam', 'phishing / scam').toUpperCase();
                   
@@ -183,8 +222,27 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
                   );
                 })}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="grid grid-cols-1 gap-y-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold">
+                    <span className="text-emerald-400 font-extrabold uppercase">
+                      {niche ? `${niche.icon} ${niche.title}` : 'SAFE / LEGITIMATE CONTENT'}
+                    </span>
+                    <span className="text-slate-400 font-mono">100% Safety Confidence</span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/40">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '100%' }} />
+                  </div>
+                  {niche && (
+                    <p className="text-xs text-slate-300 font-medium pt-1">
+                      {niche.desc}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Info badges */}

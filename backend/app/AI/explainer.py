@@ -30,11 +30,121 @@ from backend.app.AI.classifier import CATEGORY_META, SAFE_LABEL
 class ExplainedRisk:
     narrative: str                      # Full English explanation paragraph
     evidence_bullets: List[str]         # Bullet-point evidence list
-    primary_category: str               # e.g. "gambling"
+    primary_category: str               # e.g. "gambling" or "safe"
     risk_period: str                    # e.g. "2014–2019" or "2022"
     confidence: float                   # 0.0–1.0 (from classifier)
     detector_highlights: List[str]      # High-signal structural findings
     risk_level: str                     # SAFE / MEDIUM / HIGH
+    content_niche: Optional[Dict[str, str]] = None  # Benign niche details for safe sites
+
+
+BENIGN_NICHE_PATTERNS = [
+    {
+        "title": "Gift Ordering & Specialty Present Shop",
+        "desc": "Online e-commerce platform offering gift ordering, specialty presents, and custom merchandise.",
+        "icon": "🎁",
+        "keywords": ["present", "presents", "gift", "gifts", "boutique", "shop", "order", "store", "cart", "craft", "flower", "lamour"]
+    },
+    {
+        "title": "University & Academic Economy Portal",
+        "desc": "Academic research and educational web portal specializing in economics, university faculty studies, and student resources.",
+        "icon": "🎓",
+        "keywords": ["economia", "ucn", "university", "academic", "faculty", "student", "research", "degree", "edu", "college"]
+    },
+    {
+        "title": "Economics, Finance & Commercial Business Hub",
+        "desc": "Information hub covering economics, financial analysis, commercial markets, and business affairs.",
+        "icon": "📈",
+        "keywords": ["economy", "economic", "finance", "business", "banking", "market", "invest", "accounting", "trade", "corp"]
+    },
+    {
+        "title": "News, Media & Editorial Portal",
+        "desc": "Digital journalism and news publication portal providing articles, current events, and media updates.",
+        "icon": "📰",
+        "keywords": ["news", "press", "journal", "magazine", "blog", "article", "publication", "media", "portal", "post", "times"]
+    },
+    {
+        "title": "Software Development & Tech Platform",
+        "desc": "Technology platform providing software solutions, digital services, developer tools, and web infrastructure.",
+        "icon": "💻",
+        "keywords": ["dev", "code", "tech", "software", "git", "digital", "app", "cloud", "system", "data", "api", "hub", "github", "stack"]
+    },
+    {
+        "title": "Online Encyclopedia & Educational Reference",
+        "desc": "Educational reference portal providing public encyclopedic articles, knowledge archives, and documentation.",
+        "icon": "📚",
+        "keywords": ["wiki", "pedia", "encyclopedia", "dictionary", "library", "reference", "archive", "knowledge"]
+    },
+    {
+        "title": "Healthcare & Medical Services Portal",
+        "desc": "Healthcare and medical services information portal for clinic details, patient care, and wellness resources.",
+        "icon": "🏥",
+        "keywords": ["health", "clinic", "medical", "hospital", "care", "doctor", "wellness", "therapy", "medicine", "dental"]
+    },
+    {
+        "title": "Travel, Tourism & Hospitality Guide",
+        "desc": "Travel and tourism guide providing vacation bookings, hotel accommodations, and destination information.",
+        "icon": "✈️",
+        "keywords": ["travel", "tour", "hotel", "resort", "vacation", "flight", "trip", "destination", "guide", "booking"]
+    },
+    {
+        "title": "Culinary, Food & Dining Service",
+        "desc": "Culinary website featuring restaurant menus, food ordering, recipes, and dining information.",
+        "icon": "🍽️",
+        "keywords": ["restaurant", "cafe", "food", "dining", "kitchen", "recipe", "bakery", "coffee", "pizza", "bistro"]
+    },
+    {
+        "title": "Corporate & Professional Services",
+        "desc": "Business corporate website providing professional services, enterprise solutions, and client consulting.",
+        "icon": "🏢",
+        "keywords": ["services", "consulting", "solutions", "group", "agency", "firm", "company", "global", "partner"]
+    }
+]
+
+
+def detect_benign_content_niche(domain: str, snapshot_results: Optional[List[Dict[str, Any]]] = None) -> Dict[str, str]:
+    """
+    Analyzes domain name and snapshot metadata to identify specific benign content niche.
+    Returns dict: {"title": ..., "desc": ..., "icon": ...}
+    """
+    domain_clean = domain.lower() if domain else ""
+    for tld in [".com", ".net", ".org", ".info", ".xyz", ".biz", ".co", ".io", ".cl", ".uk"]:
+        if domain_clean.endswith(tld):
+            domain_clean = domain_clean[:-len(tld)]
+
+    combined_text = domain_clean.replace("-", " ").replace(".", " ")
+    if snapshot_results:
+        for snap in snapshot_results[:3]:
+            meta_json = snap.get("extraction_metadata")
+            if meta_json:
+                try:
+                    meta = json.loads(meta_json) if isinstance(meta_json, str) else meta_json
+                    title = meta.get("title", "") or ""
+                    combined_text += f" {title.lower()}"
+                except Exception:
+                    pass
+
+    best_match = None
+    best_score = 0
+    for pattern in BENIGN_NICHE_PATTERNS:
+        match_count = sum(1 for kw in pattern["keywords"] if kw in combined_text)
+        if match_count > best_score:
+            best_score = match_count
+            best_match = pattern
+
+    if best_match:
+        return {
+            "title": best_match["title"],
+            "desc": best_match["desc"],
+            "icon": best_match["icon"]
+        }
+
+    formatted_name = domain_clean.replace("-", " ").replace(".", " ").title()
+    return {
+        "title": f"{formatted_name} Web Portal",
+        "desc": "Legitimate web portal providing general digital services, brand content, and informational resources.",
+        "icon": "🌐"
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -100,25 +210,10 @@ def build_explanation(
     confidence: float,
     risk_level: str,
     snapshot_results: List[Dict[str, Any]],
+    domain: str = "",
 ) -> ExplainedRisk:
     """
     Build a full risk explanation from the pipeline's snapshot results.
-
-    Parameters
-    ----------
-    primary_category : str
-        Dominant threat category (from classifier).
-    confidence : float
-        Classification confidence (0.0–1.0).
-    risk_level : str
-        'SAFE', 'MEDIUM', or 'HIGH'.
-    snapshot_results : list
-        List of snapshot dicts returned by the pipeline's fetch_and_analyze.
-
-    Returns
-    -------
-    ExplainedRisk
-        Structured explanation object.
     """
     snap_count = len(snapshot_results)
 
@@ -139,7 +234,7 @@ def build_explanation(
         meta_json = snap.get("extraction_metadata")
         if meta_json:
             try:
-                meta = json.loads(meta_json)
+                meta = json.loads(meta_json) if isinstance(meta_json, str) else meta_json
                 for det in meta.get("detectors", []):
                     if det.get("signal") == "high":
                         dname = det.get("detector", "")
@@ -179,39 +274,48 @@ def build_explanation(
         period_clause = "was found to have"
 
     # If primary category is safe and confidence is 0, default confidence to 1.0 (100% safe confidence)
-    if primary_category == SAFE_LABEL and (confidence == 0.0 or confidence is None):
+    if (primary_category == SAFE_LABEL or risk_level == "SAFE") and (confidence == 0.0 or confidence is None):
         confidence = 1.0
 
-    # ── Build narrative ───────────────────────────────────────────────────
-    tpl = _NARRATIVES.get(primary_category, _NARRATIVES[SAFE_LABEL])
-    try:
-        narrative = tpl.format(
-            period_clause=period_clause,
-            kw_count=kw_count,
-            kw_samples=kw_samples_str,
-            detector_clause=detector_clause,
-            confidence=confidence,
-            snap_count=snap_count,
-            plural="s" if snap_count != 1 else "",
+    niche_data = None
+    if primary_category == SAFE_LABEL or risk_level == "SAFE":
+        niche_data = detect_benign_content_niche(domain, snapshot_results)
+        plural_snap = "s" if snap_count != 1 else ""
+        narrative = (
+            f"No threat signals were detected across {snap_count} historical snapshot{plural_snap}. "
+            f"Content analysis identified this domain as a {niche_data['title']} ({niche_data['desc']}). "
+            f"Historical captures show safe category signatures with zero threat flags or structural anomalies."
         )
-    except KeyError:
-        narrative = f"Risk level: {risk_level}. Category: {primary_category}."
+        evidence_bullets = [
+            f"Classification: {niche_data['icon']} {niche_data['title']}",
+            f"Content Niche: {niche_data['desc']}",
+            f"Analysed {snap_count} historical snapshot(s) with 0 threat flags",
+        ]
+    else:
+        # ── Build threat narrative ───────────────────────────────────────────
+        tpl = _NARRATIVES.get(primary_category, _NARRATIVES[SAFE_LABEL])
+        try:
+            narrative = tpl.format(
+                period_clause=period_clause,
+                kw_count=kw_count,
+                kw_samples=kw_samples_str,
+                detector_clause=detector_clause,
+                confidence=confidence,
+                snap_count=snap_count,
+                plural="s" if snap_count != 1 else "",
+            )
+        except KeyError:
+            narrative = f"Risk level: {risk_level}. Category: {primary_category}."
 
-    # ── Evidence bullet list ──────────────────────────────────────────────
-    evidence_bullets: List[str] = []
-    if top_kws:
-        evidence_bullets.append(f"Keywords detected: {', '.join(top_kws)}")
-    if kw_count > len(top_kws):
-        evidence_bullets.append(f"{kw_count - len(top_kws)} additional unique keyword signals found")
-    evidence_bullets.extend(detector_bullets)
-    evidence_bullets.append(f"Analysed {snap_count} historical snapshot(s)")
-    if risky_years:
-        evidence_bullets.append(f"Risk period: {risk_period}")
-
-    # ── Category meta label ───────────────────────────────────────────────
-    meta = CATEGORY_META.get(primary_category, {})
-    icon = meta.get("icon", "⚠️")
-    cat_label = meta.get("label", primary_category.replace("_", " ").title())
+        evidence_bullets: List[str] = []
+        if top_kws:
+            evidence_bullets.append(f"Keywords detected: {', '.join(top_kws)}")
+        if kw_count > len(top_kws):
+            evidence_bullets.append(f"{kw_count - len(top_kws)} additional unique keyword signals found")
+        evidence_bullets.extend(detector_bullets)
+        evidence_bullets.append(f"Analysed {snap_count} historical snapshot(s)")
+        if risky_years:
+            evidence_bullets.append(f"Risk period: {risk_period}")
 
     return ExplainedRisk(
         narrative=narrative.strip(),
@@ -221,4 +325,5 @@ def build_explanation(
         confidence=confidence,
         detector_highlights=detector_bullets,
         risk_level=risk_level,
+        content_niche=niche_data,
     )
