@@ -10,10 +10,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # Database Settings
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/domain_risk"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:Dinusha07postgres@localhost:5432/domain_risk"
     
     # Sync Database URL for Celery or migrations if needed
-    SYNC_DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/domain_risk"
+    SYNC_DATABASE_URL: str = "postgresql://postgres:Dinusha07postgres@localhost:5432/domain_risk"
 
     # Cache & Queue Settings
     REDIS_URL: str = "redis://localhost:6379/0"
