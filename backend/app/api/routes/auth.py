@@ -13,7 +13,7 @@ from backend.app.core.security import (
     verify_password, hash_password, create_access_token, create_refresh_token,
     decode_token, validate_password_strength, generate_temp_password,
 )
-from backend.app.core.dependencies import get_current_user, get_client_ip, rate_limit_auth
+from backend.app.core.dependencies import get_current_user, get_optional_user, get_client_ip, rate_limit_auth
 from backend.app.core.redis import redis_manager
 from backend.app.core.config import settings
 from backend.app.core.audit import log_action
@@ -185,41 +185,40 @@ async def logout(
     request: Request,
     body: LogoutRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ):
     try:
-        payload = decode_token(body.refresh_token)
-        jti = payload.get("jti")
-        if jti:
-            await redis_manager.set(
-                f"blacklist:token:{jti}", "1",
-                expire_seconds=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
-            )
+        if body and body.refresh_token:
+            payload = decode_token(body.refresh_token)
+            jti = payload.get("jti")
+            if jti:
+                await redis_manager.set(
+                    f"blacklist:token:{jti}", "1",
+                    expire_seconds=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+                )
     except Exception:
         pass  # Already expired or invalid — treat as logged out
 
-    # Update logout time on latest login history entry
-    from sqlalchemy import update
-    await db.execute(
-        select(LoginHistory)
-        .where(
-            LoginHistory.user_id == current_user.id,
-            LoginHistory.success == True,
-            LoginHistory.logout_at == None,
+    if current_user:
+        # Update logout time on latest login history entry
+        await db.execute(
+            select(LoginHistory)
+            .where(
+                LoginHistory.user_id == current_user.id,
+                LoginHistory.success == True,
+                LoginHistory.logout_at == None,
+            )
+            .order_by(LoginHistory.login_at.desc())
+            .limit(1)
         )
-        .order_by(LoginHistory.login_at.desc())
-        .limit(1)
-    )
 
-    await log_action(
-        db,
-        user_id=current_user.id,
-        username=current_user.username,
-        user_role=current_user.role,
-        action="LOGOUT",
-        ip_address=get_client_ip(request),
-        user_agent_string=request.headers.get("User-Agent"),
-    )
+        await log_action(
+            db,
+            user_id=current_user.id,
+            username=current_user.username,
+            user_role=current_user.role,
+            user_agent_string=request.headers.get("User-Agent"),
+        )
 
 
 # ---------------------------------------------------------------------------

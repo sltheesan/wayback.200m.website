@@ -26,6 +26,16 @@ _RE_GAMBLING_ADULT_KEYWORDS = re.compile(
     re.IGNORECASE
 )
 
+_RE_EXTRACT_META_REDIRECT = re.compile(
+    r'<meta\s+http-equiv=["\']?refresh["\']?\s+content=["\']?\d+;\s*url=([^"\'\s>]+)["\']?',
+    re.IGNORECASE
+)
+
+_RE_EXTRACT_JS_REDIRECT = re.compile(
+    r'(?:window\.location(?:\.href)?|location\.replace|location\.assign|top\.location)\s*=\s*["\']([^"\'\s;]+)["\']',
+    re.IGNORECASE
+)
+
 
 def evaluate_5tier_redirect_priority(
     status_code: int | None,
