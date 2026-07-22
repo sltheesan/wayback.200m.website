@@ -42,7 +42,7 @@ const DETECTOR_METADATA: Record<string, { title: string; desc: string }> = {
 };
 
 export default function DetectorSummary({ detectors, detectorBoost }: DetectorSummaryProps) {
-  if (!detectors || detectors.length === 0) {
+  if (!Array.isArray(detectors) || detectors.length === 0) {
     return (
       <div className="glass-panel p-6 text-center text-slate-500 text-xs">
         No structural detectors telemetry found for this snapshot.

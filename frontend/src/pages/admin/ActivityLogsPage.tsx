@@ -82,8 +82,10 @@ export default function ActivityLogsPage() {
     setLoadingSessions(true);
     try {
       const res = await adminApi.getActiveSessions();
-      setActiveSessions(res);
-    } catch { /* ignore */ }
+      setActiveSessions(Array.isArray(res) ? res : []);
+    } catch {
+      setActiveSessions([]);
+    }
     setLoadingSessions(false);
   }, []);
 
@@ -91,8 +93,10 @@ export default function ActivityLogsPage() {
   const fetchMetrics = useCallback(async () => {
     try {
       const res = await adminApi.getActivityMetrics();
-      setMetrics(res);
-    } catch { /* ignore */ }
+      setMetrics(res && typeof res === 'object' ? res : null);
+    } catch {
+      setMetrics(null);
+    }
   }, []);
 
   // Effect for Tab 1
@@ -329,7 +333,7 @@ export default function ActivityLogsPage() {
           <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden', padding: 20 }}>
             {loadingLogs ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Loading activity feed...</div>
-            ) : !logsData?.logs.length ? (
+            ) : !Array.isArray(logsData?.logs) || logsData.logs.length === 0 ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>No activity records match your criteria.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -31,7 +31,7 @@ export default function FlagList({ snapshots }: FlagListProps) {
     const day = snap.timestamp.substring(6, 8);
     const dateStr = `${year}-${month}-${day}`;
 
-    snap.flags.forEach((flag) => {
+    (Array.isArray(snap.flags) ? snap.flags : []).forEach((flag) => {
       const uniqueKey = `${flag.category}:${flag.keyword}`;
       if (!aggregatedFlags[uniqueKey]) {
         aggregatedFlags[uniqueKey] = {

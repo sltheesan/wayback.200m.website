@@ -134,11 +134,11 @@ export default function IntelligencePanel({ snapshot }: IntelligencePanelProps) 
       <div className="space-y-3">
         <h4 className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 flex items-center">
           <Hash size={12} className="mr-1.5 text-violet-400" />
-          Evidence Log ({snapshot.flags.length} items)
+          Evidence Log ({(Array.isArray(snapshot.flags) ? snapshot.flags : []).length} items)
         </h4>
-        {snapshot.flags.length > 0 ? (
+        {(Array.isArray(snapshot.flags) ? snapshot.flags : []).length > 0 ? (
           <div className="grid grid-cols-1 gap-2.5 max-h-72 overflow-y-auto pr-1">
-            {snapshot.flags.map((flag, idx) => {
+            {(Array.isArray(snapshot.flags) ? snapshot.flags : []).map((flag, idx) => {
               return (
                 <div key={idx} className="flex flex-col p-3 rounded-lg bg-slate-900/20 border border-slate-800/80 text-xs space-y-2">
                   <div className="flex items-center justify-between">

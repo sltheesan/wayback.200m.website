@@ -302,7 +302,7 @@ function ScanApp() {
                   Database Domains
                 </h3>
                 <div className="space-y-2.5 overflow-y-auto pr-1 flex-1">
-                  {stats.recent_domains && stats.recent_domains.length > 0 ? (
+                  {Array.isArray(stats?.recent_domains) && stats.recent_domains.length > 0 ? (
                     stats.recent_domains.map((d, index) => (
                       <button
                         key={index}
@@ -424,7 +424,7 @@ function ScanApp() {
                     )}
                   </div>
 
-                  {batchHistory.length > 0 ? (
+                  {Array.isArray(batchHistory) && batchHistory.length > 0 ? (
                     <div className="space-y-3 overflow-y-auto pr-1 flex-1">
                       {batchHistory.map((run, idx) => (
                         <div

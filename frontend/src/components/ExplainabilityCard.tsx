@@ -118,7 +118,7 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
             Detected Evidence
           </h4>
           <div className="p-5 bg-slate-950/40 border border-slate-900 rounded-xl flex-1 flex flex-col justify-start">
-            {evidence_bullets && evidence_bullets.length > 0 ? (
+            {Array.isArray(evidence_bullets) && evidence_bullets.length > 0 ? (
               <div className="space-y-3 w-full">
                 {evidence_bullets.map((bullet, i) => (
                   <div key={i} className="flex items-start space-x-3 text-xs text-slate-300 bg-slate-900/20 p-3 rounded-lg border border-slate-800/40 hover:border-slate-800/80 transition-colors">
