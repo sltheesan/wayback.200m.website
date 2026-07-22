@@ -194,6 +194,7 @@ _DETECTOR_TEMPLATES: Dict[str, str] = {
     "crypto_wallets":         "cryptocurrency wallet addresses",
     "forms":                  "password-collection forms (phishing indicator)",
     "iframe_redirects":       "iframe injections and JavaScript redirects",
+    "repurposed_domain_redirect": "repurposed domain redirect injections (gaming/adult network)",
     "url_obfuscation":        "heavily obfuscated URLs",
     "external_link_density":  "high external link density",
     "phone_numbers":          "multiple phone number patterns",

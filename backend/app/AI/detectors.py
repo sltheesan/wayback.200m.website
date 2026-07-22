@@ -165,6 +165,20 @@ def content_length_detector(
     }
 
 
+_RE_GAMBLING_KEYWORDS = re.compile(
+    r'\b(?:casino|slots?|roulette|baccarat|poker|jackpot|betting|gambling|online\s+casino|slot\s+gacor|pragmatic\s+play|judi\s+online|bkr\s+toetsing|geld\s+lenen)\b',
+    re.IGNORECASE,
+)
+_RE_ADULT_KEYWORDS = re.compile(
+    r'\b(?:porn|adult|erotic|sex|nude|camgirl|hentai|xx+|breast|strip-poker)\b',
+    re.IGNORECASE,
+)
+_RE_META_REFRESH = re.compile(
+    r'<meta\s+http-equiv=["\']?refresh["\']?\s+content=["\']?\d+;\s*url=',
+    re.IGNORECASE,
+)
+
+
 def iframe_redirect_detector(
     html: str, text: str, clf: ClassificationResult
 ) -> Dict[str, Any]:
@@ -182,6 +196,35 @@ def iframe_redirect_detector(
     }
 
 
+def repurposed_domain_redirect_detector(
+    html: str, text: str, clf: ClassificationResult
+) -> Dict[str, Any]:
+    """Detects expired/dead domains repurposed into gaming, casino, or adult redirectors."""
+    js_redirects = len(_RE_REDIRECT_JS.findall(html))
+    meta_redirects = len(_RE_META_REFRESH.findall(html))
+    gambling_hits = len(_RE_GAMBLING_KEYWORDS.findall(text))
+    adult_hits = len(_RE_ADULT_KEYWORDS.findall(text))
+
+    has_redirect = (js_redirects > 0 or meta_redirects > 0)
+    has_spam_niche = (gambling_hits > 0 or adult_hits > 0)
+
+    is_repurposed_redirect = (has_redirect and has_spam_niche) or (gambling_hits > 3 or adult_hits > 3)
+
+    signal = "high" if is_repurposed_redirect else ("medium" if (has_redirect or has_spam_niche) else "low")
+
+    return {
+        "detector": "repurposed_domain_redirect",
+        "has_redirect": has_redirect,
+        "js_redirects": js_redirects,
+        "meta_redirects": meta_redirects,
+        "gambling_keyword_hits": gambling_hits,
+        "adult_keyword_hits": adult_hits,
+        "is_repurposed_redirect": is_repurposed_redirect,
+        "target_niche": "gambling" if gambling_hits >= adult_hits and gambling_hits > 0 else ("adult" if adult_hits > 0 else "unknown"),
+        "signal": signal,
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Registry
 # ─────────────────────────────────────────────────────────────────────────────
@@ -195,6 +238,7 @@ _REGISTRY: List[DetectorFn] = [
     url_obfuscation_detector,
     content_length_detector,
     iframe_redirect_detector,
+    repurposed_domain_redirect_detector,
 ]
 
 
