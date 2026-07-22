@@ -113,6 +113,11 @@ class User(Base):
         nullable=True
     )
 
+    last_active_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime,
+        nullable=True
+    )
+
 
     # Security: Account lockout
     failed_login_count: Mapped[int] = mapped_column(

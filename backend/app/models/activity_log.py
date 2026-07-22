@@ -43,6 +43,12 @@ class ActivityLog(Base):
     os: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     device: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
 
+    # Category & Severity
+    category: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    severity: Mapped[str] = mapped_column(String(32), default="INFO", nullable=False, index=True)
+    execution_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    endpoint: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+
     # Outcome
     status: Mapped[str] = mapped_column(String(32), default="success", nullable=False)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

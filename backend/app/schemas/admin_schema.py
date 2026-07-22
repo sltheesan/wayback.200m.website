@@ -64,15 +64,20 @@ class ActivityLogResponse(BaseModel):
     username_snapshot: Optional[str] = None
     user_role_snapshot: Optional[str] = None
     action: str
+    category: Optional[str] = None
+    severity: Optional[str] = "INFO"
     object_type: Optional[str] = None
     object_id: Optional[str] = None
     object_label: Optional[str] = None
     old_value: Optional[Dict[str, Any]] = None
     new_value: Optional[Dict[str, Any]] = None
     ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
     browser: Optional[str] = None
     os: Optional[str] = None
     device: Optional[str] = None
+    endpoint: Optional[str] = None
+    execution_time_ms: Optional[int] = None
     status: str
     error_message: Optional[str] = None
     created_at: datetime
@@ -86,6 +91,46 @@ class ActivityLogListResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class SpecificUserActivitySummaryResponse(BaseModel):
+    user_id: int
+    username: str
+    full_name: str
+    email: str
+    role: str
+    status: str
+    last_login_at: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
+    total_actions: int = 0
+    total_scans: int = 0
+    recent_ips: List[str] = []
+    top_categories: Dict[str, int] = {}
+    logs: List[ActivityLogResponse] = []
+
+
+class ActiveUserSessionResponse(BaseModel):
+    user_id: int
+    username: str
+    full_name: str
+    email: str
+    role: str
+    last_active_at: datetime
+    is_online: bool
+    status_label: str
+    last_action: Optional[str] = None
+    last_endpoint: Optional[str] = None
+    last_ip: Optional[str] = None
+    last_browser: Optional[str] = None
+
+
+class ActivityMetricsResponse(BaseModel):
+    total_events: int = 0
+    success_rate_percent: float = 100.0
+    categories_breakdown: Dict[str, int] = {}
+    severity_breakdown: Dict[str, int] = {}
+    top_active_users: List[Dict[str, Any]] = []
+    hourly_trend: List[Dict[str, Any]] = []
 
 
 # ---------------------------------------------------------------------------

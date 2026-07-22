@@ -130,6 +130,10 @@ async def get_current_user(
             detail=f"Account is temporarily locked. Try again after {user.locked_until.strftime('%H:%M:%S')}.",
         )
 
+    # Track active presence
+    user.last_active_at = datetime.utcnow()
+    await db.flush()
+
     return user
 
 

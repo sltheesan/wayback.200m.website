@@ -4,7 +4,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import type {
   UserListResponse, AdminUser, UserCreatePayload, UserUpdatePayload,
-  DashboardStats, ScanRecordList, ActivityLogList, LoginHistoryList,
+  DashboardStats, ScanRecordList, ActivityLogList, SpecificUserActivitySummary, ActiveUserSession, ActivityMetrics, LoginHistoryList,
   NotificationsResponse, SystemSetting, PaginationParams, AuthTokens,
 } from '../types/admin';
 
@@ -148,11 +148,26 @@ async function getScanRecords(params: PaginationParams & {
 
 // ── Activity Logs ─────────────────────────────────────────────────────────
 async function getActivityLogs(params: PaginationParams & {
-  user_id?: number; action?: string; date_from?: string; date_to?: string;
+  user_id?: number; category?: string; severity?: string; action?: string; status?: string; search?: string; date_from?: string; date_to?: string;
 }): Promise<ActivityLogList> {
   const { data } = await _http.get<ActivityLogList>('/admin/activity-logs', {
     params: buildParams(params as unknown as QueryParams),
   });
+  return data;
+}
+
+async function getUserActivitySummary(userId: number): Promise<SpecificUserActivitySummary> {
+  const { data } = await _http.get<SpecificUserActivitySummary>(`/admin/users/${userId}/activity-summary`);
+  return data;
+}
+
+async function getActiveSessions(): Promise<ActiveUserSession[]> {
+  const { data } = await _http.get<ActiveUserSession[]>('/admin/active-sessions');
+  return data;
+}
+
+async function getActivityMetrics(): Promise<ActivityMetrics> {
+  const { data } = await _http.get<ActivityMetrics>('/admin/activity-metrics');
   return data;
 }
 
@@ -239,6 +254,9 @@ export const adminApi = {
   suspendUser, activateUser, resetPassword,
   getScanRecords,
   getActivityLogs,
+  getUserActivitySummary,
+  getActiveSessions,
+  getActivityMetrics,
   getLoginHistory,
   getNotifications, markNotificationRead, markAllNotificationsRead,
   getSettings, updateSettings,

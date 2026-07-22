@@ -45,11 +45,18 @@ async def lifespan(app: FastAPI):
             logger.info("Initializing PostgreSQL database schemas...")
             await conn.run_sync(Base.metadata.create_all)
             
-            # Apply schema upgrades safely for evidence details
+            # Apply schema upgrades safely for evidence details and activity logs
             await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS element VARCHAR NULL"))
             await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS matched_text VARCHAR NULL"))
             await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS snippet VARCHAR NULL"))
             await conn.execute(text("ALTER TABLE analysis_flags ADD COLUMN IF NOT EXISTS position INTEGER NULL"))
+
+            # Activity Logs & Active User tracking upgrades
+            await conn.execute(text("ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS category VARCHAR(64) NULL"))
+            await conn.execute(text("ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS severity VARCHAR(32) DEFAULT 'INFO'"))
+            await conn.execute(text("ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS execution_time_ms INTEGER NULL"))
+            await conn.execute(text("ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS endpoint VARCHAR(256) NULL"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP NULL"))
             
             logger.info("Database tables initialized and migrated successfully.")
     except Exception as e:

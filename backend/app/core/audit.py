@@ -29,6 +29,39 @@ def _parse_user_agent(ua_string: Optional[str]) -> tuple[str, str, str]:
         return "Unknown", "Unknown", "Unknown"
 
 
+def _infer_category_and_severity(action: str, status: str) -> tuple[str, str]:
+    act = action.upper()
+    
+    # Severity default
+    severity = "INFO"
+    if status.lower() in ("failed", "error", "failure"):
+        severity = "ERROR"
+    elif "DELETE" in act or "SUSPEND" in act or "LOCK" in act or "PURGE" in act:
+        severity = "WARNING"
+    elif "SECURITY" in act or "THREAT" in act or "ALERT" in act:
+        severity = "CRITICAL"
+
+    # Category default
+    if any(k in act for k in ["LOGIN", "LOGOUT", "REGISTER", "PASSWORD", "AUTH"]):
+        category = "AUTHENTICATION"
+    elif any(k in act for k in ["USER", "ROLE", "SUSPEND", "ACTIVATE"]):
+        category = "USER_MANAGEMENT"
+    elif any(k in act for k in ["SCAN", "CRAWL", "PIPELINE"]):
+        category = "SECURITY_SCAN"
+    elif any(k in act for k in ["AI", "ANALYSIS", "LLM", "PROMPT"]):
+        category = "AI_ANALYSIS"
+    elif any(k in act for k in ["DOMAIN", "SNAPSHOT", "WAYBACK", "MONITOR"]):
+        category = "DOMAIN_OPERATIONS"
+    elif any(k in act for k in ["SYSTEM", "SETTINGS", "CONFIG", "CLEANUP"]):
+        category = "SYSTEM_SETTINGS"
+    elif any(k in act for k in ["EXPORT", "DOWNLOAD", "REPORT"]):
+        category = "EXPORT"
+    else:
+        category = "GENERAL"
+
+    return category, severity
+
+
 async def log_action(
     db: AsyncSession,
     *,
@@ -36,6 +69,8 @@ async def log_action(
     username: Optional[str],
     user_role: Optional[str],
     action: str,
+    category: Optional[str] = None,
+    severity: Optional[str] = None,
     object_type: Optional[str] = None,
     object_id: Optional[Any] = None,
     object_label: Optional[str] = None,
@@ -43,6 +78,8 @@ async def log_action(
     new_value: Optional[dict] = None,
     ip_address: Optional[str] = None,
     user_agent_string: Optional[str] = None,
+    endpoint: Optional[str] = None,
+    execution_time_ms: Optional[int] = None,
     status: str = "success",
     error_message: Optional[str] = None,
 ) -> None:
@@ -52,12 +89,18 @@ async def log_action(
     """
     try:
         browser, os_name, device = _parse_user_agent(user_agent_string)
+        
+        inf_cat, inf_sev = _infer_category_and_severity(action, status)
+        final_category = category or inf_cat
+        final_severity = severity or inf_sev
 
         log_entry = ActivityLog(
             user_id=user_id,
             username_snapshot=username,
             user_role_snapshot=user_role,
             action=action,
+            category=final_category,
+            severity=final_severity,
             object_type=object_type,
             object_id=str(object_id) if object_id is not None else None,
             object_label=object_label,
@@ -68,6 +111,8 @@ async def log_action(
             browser=browser,
             os=os_name,
             device=device,
+            endpoint=endpoint,
+            execution_time_ms=execution_time_ms,
             status=status,
             error_message=error_message,
             created_at=datetime.utcnow(),

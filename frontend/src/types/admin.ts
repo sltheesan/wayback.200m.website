@@ -137,15 +137,20 @@ export interface ActivityLog {
   username_snapshot?: string;
   user_role_snapshot?: string;
   action: string;
+  category?: string;
+  severity?: string;
   object_type?: string;
   object_id?: string;
   object_label?: string;
   old_value?: Record<string, unknown>;
   new_value?: Record<string, unknown>;
   ip_address?: string;
+  user_agent?: string;
   browser?: string;
   os?: string;
   device?: string;
+  endpoint?: string;
+  execution_time_ms?: number;
   status: string;
   error_message?: string;
   created_at: string;
@@ -157,6 +162,46 @@ export interface ActivityLogList {
   page: number;
   page_size: number;
   total_pages: number;
+}
+
+export interface SpecificUserActivitySummary {
+  user_id: number;
+  username: string;
+  full_name: string;
+  email: string;
+  role: string;
+  status: string;
+  last_login_at?: string;
+  last_active_at?: string;
+  total_actions: number;
+  total_scans: number;
+  recent_ips: string[];
+  top_categories: Record<string, number>;
+  logs: ActivityLog[];
+}
+
+export interface ActiveUserSession {
+  user_id: number;
+  username: string;
+  full_name: string;
+  email: string;
+  role: string;
+  last_active_at: string;
+  is_online: boolean;
+  status_label: string;
+  last_action?: string;
+  last_endpoint?: string;
+  last_ip?: string;
+  last_browser?: string;
+}
+
+export interface ActivityMetrics {
+  total_events: number;
+  success_rate_percent: number;
+  categories_breakdown: Record<string, number>;
+  severity_breakdown: Record<string, number>;
+  top_active_users: Array<{ user_id: number; username: string; count: number }>;
+  hourly_trend: Array<{ hour: string; count: number }>;
 }
 
 // ── Login History ─────────────────────────────────────────────────────────
