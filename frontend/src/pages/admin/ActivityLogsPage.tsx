@@ -325,77 +325,125 @@ export default function ActivityLogsPage() {
             </button>
           </div>
 
-          {/* Table */}
-          <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(30,41,59,0.3)' }}>
-                    {['Timestamp', 'User', 'Role', 'Category', 'Severity', 'Action', 'Resource / Label', 'Endpoint', 'Duration', 'Status', 'Action'].map((h) => (
-                      <th key={h} style={{ padding: '13px 16px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingLogs ? (
-                    <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Loading activity logs...</td></tr>
-                  ) : !logsData?.logs.length ? (
-                    <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>No activity records match criteria.</td></tr>
-                  ) : logsData.logs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(99,102,241,0.04)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          {/* Creative Activity Feed List */}
+          <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden', padding: 20 }}>
+            {loadingLogs ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Loading activity feed...</div>
+            ) : !logsData?.logs.length ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>No activity records match your criteria.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {logsData.logs.map((log) => {
+                  const userInitial = (log.username_snapshot || 'S')[0].toUpperCase();
+                  const isSuccess = log.status === 'success';
+
+                  return (
+                    <div
+                      key={log.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 16,
+                        padding: '14px 18px',
+                        borderRadius: 14,
+                        background: 'rgba(30,41,59,0.4)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        transition: 'all 0.2s',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(99,102,241,0.06)';
+                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(30,41,59,0.4)';
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                      }}
+                      onClick={() => setSelectedLog(log)}
                     >
-                      <td style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap', fontSize: 12 }}>
-                        {new Date(log.created_at).toLocaleString()}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#f1f5f9', fontWeight: 600 }}>
-                        {log.username_snapshot || 'System'}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#64748b', fontSize: 12 }}>
-                        {log.user_role_snapshot || '—'}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {getCategoryBadge(log.category)}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        {getSeverityBadge(log.severity)}
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#e2e8f0' }}>
-                        {log.action}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#94a3b8', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {log.object_label || log.object_id || '—'}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#64748b', fontFamily: 'monospace', fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {log.endpoint || '—'}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#64748b', fontSize: 12 }}>
-                        {log.execution_time_ms ? `${log.execution_time_ms}ms` : '—'}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: log.status === 'success' ? '#34d399' : '#f87171', fontSize: 12, fontWeight: 600 }}>
-                          {log.status === 'success' ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                      {/* Left: User Avatar & Basic Info */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 200 }}>
+                        <div
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: 'rgba(99,102,241,0.18)',
+                            border: '1px solid rgba(99,102,241,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#a5b4fc',
+                            fontWeight: 700,
+                            fontSize: 14,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {userInitial}
+                        </div>
+                        <div>
+                          <div style={{ color: '#f8fafc', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {log.username_snapshot || 'System'}
+                            <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(148,163,184,0.12)', color: '#94a3b8', fontWeight: 600 }}>
+                              {log.user_role_snapshot || 'USER'}
+                            </span>
+                          </div>
+                          <div style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>
+                            {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(log.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle: Action Story & Sub-details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {log.action} {log.object_label ? <span style={{ color: '#818cf8', fontWeight: 500 }}>— {log.object_label}</span> : null}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                          {getCategoryBadge(log.category)}
+                          {getSeverityBadge(log.severity)}
+                          {log.ip_address && (
+                            <span style={{ color: '#64748b', fontSize: 11, fontFamily: 'monospace' }}>IP: {log.ip_address}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Status & Inspect Trigger */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: isSuccess ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: isSuccess ? '#34d399' : '#f87171', border: isSuccess ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(239,68,68,0.25)' }}>
+                          {isSuccess ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
                           {log.status}
                         </span>
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
+
                         <button
-                          onClick={() => setSelectedLog(log)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', color: '#818cf8', fontSize: 12, cursor: 'pointer' }}
+                          onClick={(e) => { e.stopPropagation(); setSelectedLog(log); }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '6px 12px',
+                            borderRadius: 8,
+                            background: 'rgba(99,102,241,0.15)',
+                            border: '1px solid rgba(99,102,241,0.3)',
+                            color: '#a5b4fc',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
                         >
-                          <Eye size={13} /> View
+                          <Eye size={13} /> Inspect Payload
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Pagination */}
             {logsData && logsData.total_pages > 1 && (
-              <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ padding: '16px 0 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ color: '#64748b', fontSize: 13 }}>Page {logsData.page} of {logsData.total_pages} ({logsData.total} total logs)</span>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {Array.from({ length: Math.min(logsData.total_pages, 7) }, (_, i) => i + 1).map((p) => (
