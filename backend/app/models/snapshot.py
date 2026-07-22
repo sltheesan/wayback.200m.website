@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Integer, ForeignKey, Text, Float
+from sqlalchemy import String, Integer, ForeignKey, Text, Float, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.app.core.database import Base
 
@@ -15,6 +15,8 @@ class Snapshot(Base):
     timestamp: Mapped[str] = mapped_column(String(14), nullable=False)
     original_url: Mapped[str] = mapped_column(String, nullable=False)
     status_code: Mapped[int] = mapped_column(Integer, nullable=True)
+    redirect_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_redirect: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     mime_type: Mapped[str] = mapped_column(String, nullable=True)
     risk_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     detected_language: Mapped[str] = mapped_column(String, nullable=True)

@@ -57,6 +57,10 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS execution_time_ms INTEGER NULL"))
             await conn.execute(text("ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS endpoint VARCHAR(256) NULL"))
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP NULL"))
+
+            # Snapshot Redirect Tracking Upgrades
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_url VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS is_redirect BOOLEAN DEFAULT FALSE"))
             
             logger.info("Database tables initialized and migrated successfully.")
     except Exception as e:

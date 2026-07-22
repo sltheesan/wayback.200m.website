@@ -29,6 +29,8 @@ export interface Snapshot {
   timestamp: string;
   original_url: string;
   status_code: number | null;
+  redirect_url?: string | null;
+  is_redirect?: boolean;
   mime_type: string | null;
   risk_score: number;
   detected_language: string | null;

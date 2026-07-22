@@ -172,6 +172,22 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
       {/* Scrollable body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+        {/* Redirect Alert Banner */}
+        {s.is_redirect && (
+          <div style={{
+            padding: '12px 16px', borderRadius: 12,
+            background: 'rgba(244,63,94,0.12)', border: '1px solid rgba(244,63,94,0.3)',
+            color: '#f87171', fontSize: 13, fontWeight: 700,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+            <div>
+              <span style={{ display: 'block', color: '#fda4af', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Snapshot Redirect Detected</span>
+              <span>Target: <code style={{ color: '#ffffff', fontFamily: 'monospace', background: 'rgba(0,0,0,0.4)', padding: '2px 7px', borderRadius: 5 }}>{s.redirect_url || 'External Target Domain'}</code> ⚠️</span>
+            </div>
+          </div>
+        )}
+
         {/* Preview iframe */}
         <div style={{
           borderRadius: 12, border: `1px solid ${pal.border}`,
@@ -531,6 +547,28 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
             }}>
               {s.flags.length > 0 ? `${s.flags.length} Flag${s.flags.length > 1 ? 's' : ''}` : 'Clean'}
             </span>
+
+            {s.is_redirect && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 9px',
+                borderRadius: 7,
+                fontSize: 10,
+                fontWeight: 800,
+                color: '#f87171',
+                background: 'rgba(239,68,68,0.15)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                maxWidth: 220,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                <AlertTriangle size={11} />
+                Redirect: {s.redirect_url || 'External'}
+              </span>
+            )}
 
             <span style={{
               fontFamily: 'monospace',

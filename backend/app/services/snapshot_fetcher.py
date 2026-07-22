@@ -21,14 +21,59 @@ def build_snapshot_url(timestamp: str, url: str) -> str:
 
 import re
 
-_RE_EXTRACT_JS_REDIRECT = re.compile(
-    r'(?:window\.location|document\.location|location\.href|location\.replace)\s*=\s*["\'](https?://[^"\'>\s]+)["\']',
+_RE_GAMBLING_ADULT_KEYWORDS = re.compile(
+    r'\b(?:casino|slots?|roulette|baccarat|poker|jackpot|betting|gambling|porn|adult|erotic|sex|bkr\s+toetsing|geld\s+lenen|slot\s+gacor|judi\s+online)\b',
     re.IGNORECASE
 )
-_RE_EXTRACT_META_REDIRECT = re.compile(
-    r'<meta\s+http-equiv=["\']?refresh["\']?\s+content=["\']?\d+;\s*url=(https?://[^"\'>\s]+)["\']?',
-    re.IGNORECASE
-)
+
+
+def evaluate_5tier_redirect_priority(
+    status_code: int | None,
+    headers: dict | None,
+    html_content: str,
+    original_url: str
+) -> tuple[bool, str | None, str]:
+    """
+    Evaluates redirects using strict 5-tier priority:
+    1. HTTP status code (301, 302, 303, 307, 308)
+    2. Location header (HTTP Location header)
+    3. Meta refresh tag (<meta http-equiv="refresh">)
+    4. JavaScript location script (window.location = ...)
+    5. HTML keyword scan
+
+    Returns: (is_redirect, redirect_url, priority_stage)
+    """
+    norm_headers = {k.lower(): v for k, v in (headers or {}).items()}
+    location_header = norm_headers.get("location")
+
+    # Tier 1 & 2: HTTP status code and Location header
+    if status_code in (301, 302, 303, 307, 308):
+        target = location_header or f"HTTP {status_code} Redirect"
+        return True, target, f"HTTP {status_code} Status Code & Location Header"
+
+    if location_header and location_header.lower() != original_url.lower():
+        return True, location_header, "HTTP Location Header"
+
+    # Tier 3: Meta refresh tag
+    meta_match = _RE_EXTRACT_META_REDIRECT.search(html_content or "")
+    if meta_match:
+        meta_target = meta_match.group(1)
+        return True, meta_target, "Meta Refresh Tag"
+
+    # Tier 4: JavaScript redirect script
+    js_match = _RE_EXTRACT_JS_REDIRECT.search(html_content or "")
+    if js_match:
+        js_target = js_match.group(1)
+        return True, js_target, "JavaScript Location Script"
+
+    # Tier 5: HTML Keyword scan
+    if html_content:
+        target_comment = re.search(r'<!-- REDIRECT TARGET URL:\s*([^\s]+)\s*-->', html_content)
+        redirect_target = target_comment.group(1) if target_comment else None
+        if redirect_target or _RE_GAMBLING_ADULT_KEYWORDS.search(html_content):
+            return bool(redirect_target), redirect_target, "HTML Keyword Threat Scan"
+
+    return False, None, "None"
 
 
 async def follow_redirect_if_needed(html: str, current_url: str) -> str:

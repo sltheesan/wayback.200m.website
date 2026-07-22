@@ -310,10 +310,15 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         }
         metadata_json = json.dumps(metadata, ensure_ascii=False)
 
+        from backend.app.services.snapshot_fetcher import evaluate_5tier_redirect_priority
+        is_redir, redir_url, priority_stage = evaluate_5tier_redirect_priority(status, None, html_content or "", original)
+
         return {
             "timestamp": timestamp,
             "original_url": original,
             "status_code": status,
+            "redirect_url": redir_url,
+            "is_redirect": is_redir,
             "mime_type": mime,
             "risk_score": final_risk_score,
             "detected_language": lang,
@@ -385,6 +390,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                 "timestamp": snap["timestamp"],
                 "original_url": snap["original"],
                 "status_code": int(snap["statuscode"]) if snap.get("statuscode") else 200,
+                "redirect_url": res.get("redirect_url"),
+                "is_redirect": res.get("is_redirect", False),
                 "mime_type": snap.get("mime", "text/html"),
                 "risk_score": res["risk_score"],
                 "detected_language": res["detected_language"],
@@ -488,6 +495,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             timestamp=snap_res["timestamp"],
             original_url=snap_res["original_url"],
             status_code=snap_res["status_code"],
+            redirect_url=snap_res.get("redirect_url"),
+            is_redirect=snap_res.get("is_redirect", False),
             mime_type=snap_res["mime_type"],
             risk_score=snap_res["risk_score"],
             detected_language=snap_res["detected_language"],
@@ -626,6 +635,8 @@ def format_domain_response(
             "timestamp": s.timestamp,
             "original_url": s.original_url,
             "status_code": s.status_code,
+            "redirect_url": getattr(s, "redirect_url", None),
+            "is_redirect": getattr(s, "is_redirect", False),
             "mime_type": s.mime_type,
             "risk_score": s.risk_score,
             "detected_language": getattr(s, "detected_language", None) or "en",

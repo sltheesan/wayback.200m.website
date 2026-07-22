@@ -37,6 +37,8 @@ class SnapshotSchema(BaseModel):
     timestamp: str
     original_url: str
     status_code: Optional[int] = None
+    redirect_url: Optional[str] = None
+    is_redirect: bool = False
     mime_type: Optional[str] = None
     risk_score: int
     detected_language: Optional[str] = None
