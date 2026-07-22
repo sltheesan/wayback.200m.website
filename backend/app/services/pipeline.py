@@ -130,16 +130,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     # Sort chronologically to sample accurately
     all_unique_snapshots.sort(key=lambda s: s["timestamp"])
 
-    # Sample up to 6 representative unique snapshots to fetch and analyze HTML for, preventing timeouts
-    max_samples = 6
-    if len(all_unique_snapshots) <= max_samples:
-        unique_snapshots_to_fetch = all_unique_snapshots
-    else:
-        indices = {0, len(all_unique_snapshots) - 1}
-        step = (len(all_unique_snapshots) - 1) / (max_samples - 1)
-        for i in range(1, max_samples - 1):
-            indices.add(int(round(i * step)))
-        unique_snapshots_to_fetch = [all_unique_snapshots[idx] for idx in sorted(indices)]
+    # Analyze 100% of all unique snapshots — zero sampling, complete coverage
+    unique_snapshots_to_fetch = all_unique_snapshots
 
     # 5. Fetch and analyze snapshot HTML contents sequentially in chronological order
     async def fetch_and_analyze(snap: dict) -> dict:
@@ -317,24 +309,28 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             "evidence_url": evidence_url,
         }
 
-    # Fetch HTML contents in parallel to prevent Cloudflare/proxy timeouts
-    logger.info(f"Fetching {len(unique_snapshots_to_fetch)} unique snapshots in parallel for {domain_clean}...")
-    async def fetch_html_only(s: dict) -> dict:
-        t = s["timestamp"]
-        orig = s["original"]
-        html = s.get("html_content")
-        if html is None:
-            html = await fetch_snapshot_html(t, orig, domain_clean)
-        return {**s, "html_content": html}
+    # Fetch HTML contents in high-concurrency parallel batches (Semaphore cap = 20)
+    sem = asyncio.Semaphore(20)
 
+    async def fetch_html_only(s: dict) -> dict:
+        async with sem:
+            t = s["timestamp"]
+            orig = s["original"]
+            html = s.get("html_content")
+            if html is None:
+                html = await fetch_snapshot_html(t, orig, domain_clean)
+            return {**s, "html_content": html}
+
+    logger.info(f"Fetching 100% of {len(unique_snapshots_to_fetch)} unique snapshots concurrently for {domain_clean}...")
     fetched_snapshots = await asyncio.gather(*[fetch_html_only(snap) for snap in unique_snapshots_to_fetch])
 
-    # Analyze sequentially (Phase 2 chronological)
-    logger.info(f"Analyzing {len(fetched_snapshots)} unique snapshots sequentially for {domain_clean}...")
-    unique_results = []
-    for snap in fetched_snapshots:
-        res = await fetch_and_analyze(snap)
-        unique_results.append(res)
+    # Run AI analysis on 100% of unique snapshots concurrently
+    logger.info(f"Running AI analysis on 100% of {len(fetched_snapshots)} unique snapshots for {domain_clean}...")
+    async def analyze_bounded(snap: dict) -> dict:
+        async with sem:
+            return await fetch_and_analyze(snap)
+
+    unique_results = await asyncio.gather(*[analyze_bounded(snap) for snap in fetched_snapshots])
 
     # Build lookup map from digest/timestamp -> analysis result
     analysis_by_digest = {}

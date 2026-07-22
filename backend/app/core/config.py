@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # External API Configuration
     WAYBACK_CDX_URL: str = "https://web.archive.org/cdx/search/cdx"
     WAYBACK_SNAPSHOT_URL: str = "https://web.archive.org/web"
+    WAYBACK_CDX_LIMIT: int = 1000
     MOCK_WAYBACK: bool = False
 
     # ── Threat Intelligence API Keys ─────────────────────────────────────
