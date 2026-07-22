@@ -146,8 +146,11 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         if html_content is None:
             html_content = await fetch_snapshot_html(timestamp, original, domain_clean)
 
-        # Phase 2 check: If download failed
-        if not html_content:
+        from backend.app.services.snapshot_fetcher import evaluate_5tier_redirect_priority
+        is_redir, redir_url, priority_stage = evaluate_5tier_redirect_priority(status, None, html_content or "", original)
+
+        # Phase 2 check: If download failed and no redirect URL found
+        if not html_content and not is_redir:
             metadata = {
                 "status": "unavailable",
                 "reason": "Download failed across all proxy attempts",
@@ -167,6 +170,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                 "timestamp": timestamp,
                 "original_url": original,
                 "status_code": status,
+                "redirect_url": redir_url,
+                "is_redirect": is_redir,
                 "mime_type": mime,
                 "risk_score": 0,
                 "detected_language": "en",
@@ -179,40 +184,43 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                 "evidence_url": None,
             }
 
-        # Phase 3 check: Validate HTML content
-        from backend.app.services.analyzer import validate_snapshot_html
-        is_valid, invalid_reason = validate_snapshot_html(html_content)
-        if not is_valid:
-            metadata = {
-                "status": "invalid",
-                "reason": invalid_reason,
-                "image_detections": [],
-                "classifier": {
-                    "primary_category": "safe",
-                    "confidence": 0.0,
-                    "all_scores": {},
+        # Phase 3 check: Validate HTML content (bypass for valid HTTP/JS redirects)
+        if not is_redir and status not in (301, 302, 303, 307, 308):
+            from backend.app.services.analyzer import validate_snapshot_html
+            is_valid, invalid_reason = validate_snapshot_html(html_content or "")
+            if not is_valid:
+                metadata = {
+                    "status": "invalid",
+                    "reason": invalid_reason,
+                    "image_detections": [],
+                    "classifier": {
+                        "primary_category": "safe",
+                        "confidence": 0.0,
+                        "all_scores": {},
+                        "detected_language": "en",
+                        "summary": f"Invalid snapshot: {invalid_reason}",
+                    },
+                    "detectors": {},
+                    "detector_boost": 0,
+                    "evidence_url": None
+                }
+                return {
+                    "timestamp": timestamp,
+                    "original_url": original,
+                    "status_code": status,
+                    "redirect_url": redir_url,
+                    "is_redirect": is_redir,
+                    "mime_type": mime,
+                    "risk_score": 0,
                     "detected_language": "en",
-                    "summary": f"Invalid snapshot: {invalid_reason}",
-                },
-                "detectors": {},
-                "detector_boost": 0,
-                "evidence_url": None
-            }
-            return {
-                "timestamp": timestamp,
-                "original_url": original,
-                "status_code": status,
-                "mime_type": mime,
-                "risk_score": 0,
-                "detected_language": "en",
-                "category_scores": {},
-                "flags": [],
-                "content_category": "invalid",
-                "category_confidence": 0.0,
-                "content_summary": f"Invalid snapshot: {invalid_reason}",
-                "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
-                "evidence_url": None,
-            }
+                    "category_scores": {},
+                    "flags": [],
+                    "content_category": "invalid",
+                    "category_confidence": 0.0,
+                    "content_summary": f"Invalid snapshot: {invalid_reason}",
+                    "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
+                    "evidence_url": None,
+                }
 
         # Legacy keyword scorer (already enriches flags with match location details)
         risk_score, category_scores, flags = analyze_snapshot_content(html_content, domain_clean)

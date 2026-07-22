@@ -18,25 +18,29 @@ def select_snapshots_to_check(snapshots: List[Dict[str, Any]]) -> List[Dict[str,
 def compute_overall_risk(snapshot_results: List[Dict[str, Any]]) -> Tuple[int, str, int, int]:
     """
     Computes the overall risk score and level from a list of snapshot results.
-    Aligns with Phase 8 - Domain Decision mapping (Safe / Unsafe / Unknown).
+    Aligns with Phase 8 - Domain Decision mapping (Safe / Medium / High).
     """
     if not snapshot_results:
-        return 0, "UNKNOWN", 0, 0
+        return 0, "SAFE", 0, 0
 
-    # Filter out unavailable or invalid snapshots, normalizing integers to dicts
+    # Filter valid snapshots (including redirects and analyzed captures)
     valid_snaps = []
     for s in snapshot_results:
         if isinstance(s, (int, float)):
             valid_snaps.append({"risk_score": int(s), "content_category": "safe"})
         elif isinstance(s, dict):
-            if s.get("content_category") not in ["unavailable", "invalid"]:
+            if s.get("is_redirect") or s.get("content_category") not in ["unavailable", "invalid"] or s.get("risk_score", 0) > 0:
                 valid_snaps.append(s)
-    
-    if not valid_snaps:
-        # Every snapshot was unavailable or invalid
-        return 0, "UNKNOWN", 0, 0
+            elif s.get("status_code"):
+                valid_snaps.append(s)
 
-    scores = [s["risk_score"] for s in valid_snaps]
+    if not valid_snaps:
+        valid_snaps = [s for s in snapshot_results if isinstance(s, dict)]
+
+    if not valid_snaps:
+        return 0, "SAFE", 0, 0
+
+    scores = [s.get("risk_score", 0) for s in valid_snaps]
     peak_score = max(scores)
     avg_score = sum(scores) / len(scores)
 
