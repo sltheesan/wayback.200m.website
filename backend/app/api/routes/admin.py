@@ -10,7 +10,7 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
@@ -285,8 +285,39 @@ async def get_user_activity_summary(
     total_actions_stmt = select(func.count(ActivityLog.id)).where(ActivityLog.user_id == user_id)
     total_actions = (await db.execute(total_actions_stmt)).scalar() or 0
 
-    total_scans_stmt = select(func.count(ScanRecord.id)).where(ScanRecord.user_id == user_id)
-    total_scans = (await db.execute(total_scans_stmt)).scalar() or 0
+    # Scans & Risk Breakdown
+    scans_stmt = select(ScanRecord).where(ScanRecord.user_id == user_id).order_by(ScanRecord.checked_at.desc())
+    scans = (await db.execute(scans_stmt)).scalars().all()
+    total_scans = len(scans)
+
+    safe_count = 0
+    medium_count = 0
+    unsafe_count = 0
+    risk_breakdown = {"SAFE": 0, "MEDIUM": 0, "UNSAFE": 0}
+    recent_scanned_domains = []
+
+    for s in scans:
+        r_lvl = (s.risk_level or "SAFE").upper()
+        if r_lvl in ("SAFE", "LOW", "CLEAN"):
+            safe_count += 1
+            risk_breakdown["SAFE"] += 1
+        elif r_lvl in ("MEDIUM", "MODERATE", "SUSPICIOUS"):
+            medium_count += 1
+            risk_breakdown["MEDIUM"] += 1
+        else:
+            unsafe_count += 1
+            risk_breakdown["UNSAFE"] += 1
+
+    for s in scans[:15]:
+        recent_scanned_domains.append({
+            "id": s.id,
+            "domain_name": s.domain_name,
+            "status": s.status,
+            "risk_score": s.risk_score,
+            "risk_level": s.risk_level or "SAFE",
+            "source": s.source,
+            "checked_at": s.checked_at,
+        })
 
     # Recent IPs
     ips_stmt = select(ActivityLog.ip_address).where(ActivityLog.user_id == user_id, ActivityLog.ip_address.isnot(None)).distinct().limit(5)
@@ -308,8 +339,13 @@ async def get_user_activity_summary(
         last_active_at=user.last_active_at,
         total_actions=total_actions,
         total_scans=total_scans,
+        safe_domains_count=safe_count,
+        medium_domains_count=medium_count,
+        unsafe_domains_count=unsafe_count,
+        risk_breakdown=risk_breakdown,
         recent_ips=recent_ips,
         top_categories=top_categories,
+        recent_scanned_domains=recent_scanned_domains,
         logs=[ActivityLogResponse.model_validate(l) for l in logs],
     )
 
@@ -333,6 +369,17 @@ async def get_active_sessions(
         # Latest activity log entry for user
         last_log_stmt = select(ActivityLog).where(ActivityLog.user_id == u.id).order_by(ActivityLog.created_at.desc()).limit(1)
         last_log = (await db.execute(last_log_stmt)).scalar_one_or_none()
+
+        # Count scans & risk breakdown for user session summary
+        scans_count_stmt = select(func.count(ScanRecord.id)).where(ScanRecord.user_id == u.id)
+        u_total_scans = (await db.execute(scans_count_stmt)).scalar() or 0
+
+        u_safe_scans_stmt = select(func.count(ScanRecord.id)).where(
+            ScanRecord.user_id == u.id,
+            func.upper(ScanRecord.risk_level).in_(["SAFE", "LOW", "CLEAN"])
+        )
+        u_safe_scans = (await db.execute(u_safe_scans_stmt)).scalar() or 0
+        u_unsafe_scans = u_total_scans - u_safe_scans
 
         last_active = u.last_active_at or (last_log.created_at if last_log else None) or u.created_at
         diff_mins = (now - last_active).total_seconds() / 60.0 if last_active else 999999
@@ -363,6 +410,9 @@ async def get_active_sessions(
             last_endpoint=last_log.endpoint if last_log else None,
             last_ip=last_log.ip_address if last_log else None,
             last_browser=last_log.browser if last_log else None,
+            total_scans=u_total_scans,
+            safe_scans=u_safe_scans,
+            unsafe_scans=u_unsafe_scans,
         ))
 
     return sessions
@@ -462,17 +512,30 @@ async def get_notifications(
     unread_only: bool = Query(False),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
+    role_val = str(getattr(current_user.role, "value", current_user.role)).lower()
+    is_admin = role_val in ("admin", "super_admin", "superadmin")
+
     stmt = select(Notification)
+    if not is_admin:
+        stmt = stmt.where(
+            (Notification.recipient_user_id == current_user.id) |
+            (Notification.recipient_user_id.is_(None))
+        )
+
     if unread_only:
         stmt = stmt.where(Notification.is_read == False)
     stmt = stmt.order_by(Notification.created_at.desc()).limit(limit)
     notifications = (await db.execute(stmt)).scalars().all()
 
-    unread_count = (await db.execute(
-        select(func.count(Notification.id)).where(Notification.is_read == False)
-    )).scalar() or 0
+    unread_stmt = select(func.count(Notification.id)).where(Notification.is_read == False)
+    if not is_admin:
+        unread_stmt = unread_stmt.where(
+            (Notification.recipient_user_id == current_user.id) |
+            (Notification.recipient_user_id.is_(None))
+        )
+    unread_count = (await db.execute(unread_stmt)).scalar() or 0
 
     return {
         "notifications": [NotificationResponse.model_validate(n) for n in notifications],
@@ -487,7 +550,7 @@ async def get_notifications(
 async def mark_notification_read(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Notification).where(Notification.id == notification_id))
     notif: Notification | None = result.scalar_one_or_none()
@@ -502,12 +565,19 @@ async def mark_notification_read(
 @router.patch("/notifications/mark-all-read", status_code=status.HTTP_204_NO_CONTENT)
 async def mark_all_notifications_read(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import update
-    await db.execute(
-        update(Notification).where(Notification.is_read == False).values(is_read=True)
-    )
+    role_val = str(getattr(current_user.role, "value", current_user.role)).lower()
+    is_admin = role_val in ("admin", "super_admin", "superadmin")
+
+    stmt = update(Notification).where(Notification.is_read == False)
+    if not is_admin:
+        stmt = stmt.where(
+            (Notification.recipient_user_id == current_user.id) |
+            (Notification.recipient_user_id.is_(None))
+        )
+    await db.execute(stmt)
 
 
 # ---------------------------------------------------------------------------

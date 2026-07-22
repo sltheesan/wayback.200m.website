@@ -175,8 +175,21 @@ export interface SpecificUserActivitySummary {
   last_active_at?: string;
   total_actions: number;
   total_scans: number;
+  safe_domains_count: number;
+  medium_domains_count: number;
+  unsafe_domains_count: number;
+  risk_breakdown: Record<string, number>;
   recent_ips: string[];
   top_categories: Record<string, number>;
+  recent_scanned_domains: Array<{
+    id: number;
+    domain_name: string;
+    status: string;
+    risk_score?: number;
+    risk_level: string;
+    source: string;
+    checked_at: string;
+  }>;
   logs: ActivityLog[];
 }
 
@@ -193,6 +206,9 @@ export interface ActiveUserSession {
   last_endpoint?: string;
   last_ip?: string;
   last_browser?: string;
+  total_scans: number;
+  safe_scans: number;
+  unsafe_scans: number;
 }
 
 export interface ActivityMetrics {

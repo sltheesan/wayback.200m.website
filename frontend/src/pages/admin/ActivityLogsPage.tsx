@@ -7,7 +7,8 @@ import type {
 import {
   Download, Search, Shield, Activity,
   CheckCircle2, XCircle, Eye, RefreshCw,
-  BarChart2, Layers, Globe, X, User as UserIcon
+  BarChart2, Layers, Globe, X, User as UserIcon,
+  ShieldCheck, ShieldAlert, AlertOctagon
 } from 'lucide-react';
 
 export default function ActivityLogsPage() {
@@ -458,6 +459,57 @@ export default function ActivityLogsPage() {
                 </div>
               </div>
 
+              {/* Domain Safety Breakdown & Verdicts */}
+              <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 20, marginBottom: 24 }}>
+                <h4 style={{ margin: '0 0 14px', color: '#f8fafc', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldCheck size={18} color="#34d399" /> Domain Security Checks Breakdown for {userSummary.full_name}
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 16 }}>
+                  <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 12, padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#34d399', fontSize: 12, fontWeight: 700 }}>SAFE DOMAINS</span>
+                      <ShieldCheck size={16} color="#34d399" />
+                    </div>
+                    <div style={{ color: '#34d399', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{userSummary.safe_domains_count}</div>
+                    <span style={{ color: '#64748b', fontSize: 11 }}>Clean / Low Risk</span>
+                  </div>
+
+                  <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#fbbf24', fontSize: 12, fontWeight: 700 }}>MEDIUM / SUSPICIOUS</span>
+                      <ShieldAlert size={16} color="#fbbf24" />
+                    </div>
+                    <div style={{ color: '#fbbf24', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{userSummary.medium_domains_count}</div>
+                    <span style={{ color: '#64748b', fontSize: 11 }}>Moderate Risk</span>
+                  </div>
+
+                  <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#f87171', fontSize: 12, fontWeight: 700 }}>UNSAFE / DANGEROUS</span>
+                      <AlertOctagon size={16} color="#f87171" />
+                    </div>
+                    <div style={{ color: '#f87171', fontSize: 24, fontWeight: 800, marginTop: 4 }}>{userSummary.unsafe_domains_count}</div>
+                    <span style={{ color: '#64748b', fontSize: 11 }}>High Risk / Malicious</span>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                {userSummary.total_scans > 0 && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 6 }}>
+                      <span>Domain Check Safety Ratio</span>
+                      <span>{Math.round((userSummary.safe_domains_count / userSummary.total_scans) * 100)}% Safe</span>
+                    </div>
+                    <div style={{ height: 10, background: 'rgba(30,41,59,0.8)', borderRadius: 5, overflow: 'hidden', display: 'flex' }}>
+                      <div style={{ width: `${(userSummary.safe_domains_count / userSummary.total_scans) * 100}%`, background: '#10b981' }} />
+                      <div style={{ width: `${(userSummary.medium_domains_count / userSummary.total_scans) * 100}%`, background: '#f59e0b' }} />
+                      <div style={{ width: `${(userSummary.unsafe_domains_count / userSummary.total_scans) * 100}%`, background: '#ef4444' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* IP History & Category breakdown */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                 <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 18 }}>
@@ -490,6 +542,47 @@ export default function ActivityLogsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* User Recent Scanned Domains */}
+              {userSummary.recent_scanned_domains && userSummary.recent_scanned_domains.length > 0 && (
+                <div style={{ background: 'rgba(15,23,42,0.7)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 20, marginBottom: 24 }}>
+                  <h4 style={{ margin: '0 0 14px', color: '#f8fafc', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Globe size={16} color="#38bdf8" /> Recent Domain Scans by {userSummary.full_name}
+                  </h4>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(30,41,59,0.3)' }}>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Domain Name</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Risk Level</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Risk Score</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Source</th>
+                          <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: 11, textTransform: 'uppercase' }}>Checked At</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userSummary.recent_scanned_domains.map((dom) => {
+                          const rLvl = (dom.risk_level || 'SAFE').toUpperCase();
+                          const color = rLvl === 'SAFE' || rLvl === 'LOW' || rLvl === 'CLEAN' ? '#34d399' : rLvl === 'MEDIUM' ? '#fbbf24' : '#f87171';
+                          return (
+                            <tr key={dom.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                              <td style={{ padding: '10px 14px', color: '#f8fafc', fontWeight: 600 }}>{dom.domain_name}</td>
+                              <td style={{ padding: '10px 14px' }}>
+                                <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: `${color}18`, color, border: `1px solid ${color}40` }}>
+                                  {rLvl}
+                                </span>
+                              </td>
+                              <td style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 600 }}>{dom.risk_score ?? '—'}</td>
+                              <td style={{ padding: '10px 14px', color: '#64748b', textTransform: 'capitalize' }}>{dom.source}</td>
+                              <td style={{ padding: '10px 14px', color: '#64748b', fontSize: 12 }}>{new Date(dom.checked_at).toLocaleString()}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* User Activity Stream Timeline */}
               <h3 style={{ color: '#f1f5f9', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>
@@ -562,6 +655,12 @@ export default function ActivityLogsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Latest Operation:</span>
                     <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{session.last_action}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Domain Checks:</span>
+                    <span style={{ color: '#38bdf8', fontWeight: 600 }}>
+                      {session.total_scans} (<span style={{ color: '#34d399' }}>{session.safe_scans} Safe</span> | <span style={{ color: '#f87171' }}>{session.unsafe_scans} Unsafe</span>)
+                    </span>
                   </div>
                   {session.last_endpoint && (
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>

@@ -104,8 +104,13 @@ class SpecificUserActivitySummaryResponse(BaseModel):
     last_active_at: Optional[datetime] = None
     total_actions: int = 0
     total_scans: int = 0
+    safe_domains_count: int = 0
+    medium_domains_count: int = 0
+    unsafe_domains_count: int = 0
+    risk_breakdown: Dict[str, int] = {}
     recent_ips: List[str] = []
     top_categories: Dict[str, int] = {}
+    recent_scanned_domains: List[Dict[str, Any]] = []
     logs: List[ActivityLogResponse] = []
 
 
@@ -122,6 +127,9 @@ class ActiveUserSessionResponse(BaseModel):
     last_endpoint: Optional[str] = None
     last_ip: Optional[str] = None
     last_browser: Optional[str] = None
+    total_scans: int = 0
+    safe_scans: int = 0
+    unsafe_scans: int = 0
 
 
 class ActivityMetricsResponse(BaseModel):

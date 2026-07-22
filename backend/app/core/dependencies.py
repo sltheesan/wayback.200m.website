@@ -158,7 +158,8 @@ async def get_optional_user(
 # ---------------------------------------------------------------------------
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """Allow access only for Admin and Super Admin roles."""
-    if current_user.role not in (UserRole.admin, UserRole.super_admin):
+    role_val = str(getattr(current_user.role, "value", current_user.role)).lower()
+    if role_val not in ("admin", "super_admin", "superadmin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin privileges required.",
@@ -168,7 +169,8 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
 
 async def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
     """Allow access only for Super Admin role."""
-    if current_user.role != UserRole.super_admin:
+    role_val = str(getattr(current_user.role, "value", current_user.role)).lower()
+    if role_val not in ("super_admin", "superadmin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Super Admin privileges required.",
