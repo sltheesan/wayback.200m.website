@@ -178,6 +178,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 @app.get("/health", response_model=SystemStatusResponse, tags=["system"])
+@app.get(f"{settings.API_V1_STR}/health", response_model=SystemStatusResponse, tags=["system"])
 async def health_check(db: AsyncSession = Depends(get_db)):
     """
     Checks the connectivity status of PostgreSQL and Redis.

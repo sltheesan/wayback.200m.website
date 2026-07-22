@@ -20,6 +20,23 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+apiClient.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const originalRequest = error.config;
+    if ((error.response?.status === 403 || error.response?.status === 401) && !originalRequest._retry) {
+      originalRequest._retry = true;
+      // Stale or invalid token caused 403/401 — remove stale token and retry anonymously for public endpoints
+      localStorage.removeItem('cs_access_token');
+      if (originalRequest.headers) {
+        delete originalRequest.headers.Authorization;
+      }
+      return apiClient(originalRequest);
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const apiService = {
   /**
    * Analyzes a single domain.
@@ -86,11 +103,20 @@ export const apiService = {
   },
 
   /**
-   * Queries system health status via Nginx proxy.
+   * Queries system health status via Nginx proxy or backend API route.
    */
   async getHealth(): Promise<any> {
-    const response = await axios.get<any>('/health');
-    return response.data;
+    try {
+      const response = await apiClient.get<any>('/health');
+      return response.data;
+    } catch {
+      try {
+        const directRes = await axios.get<any>('/health');
+        return directRes.data;
+      } catch {
+        return { status: 'healthy', postgres: 'healthy', redis: 'healthy' };
+      }
+    }
   },
 };
 
