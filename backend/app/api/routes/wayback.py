@@ -31,9 +31,27 @@ async def get_snapshot(
 ):
     """
     Retrieve raw HTML content of a specific snapshot.
+    Injects a visual Security Warning banner if redirected to gaming or adult threat networks.
     """
     try:
         html = await wayback_service.get_snapshot_content(timestamp, url, force_refresh)
+        
+        # Check if the HTML content or target contains gambling/adult redirect signatures
+        import re
+        has_redirect = bool(re.search(r'(?:window\.location|location\.href|http-equiv=["\']?refresh)', html, re.I))
+        has_spam_niche = bool(re.search(r'\b(?:casino|slots?|roulette|baccarat|poker|jackpot|betting|gambling|porn|adult|erotic|sex|bkr\s+toetsing|geld\s+lenen)\b', html, re.I))
+
+        if has_redirect and has_spam_niche:
+            warning_banner = (
+                '<div style="background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; padding: 14px 20px; '
+                'text-align: center; font-family: system-ui, -apple-system, sans-serif; font-weight: 700; font-size: 14px; '
+                'letter-spacing: 0.5px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); position: sticky; top: 0; z-index: 9999999; '
+                'border-bottom: 2px solid #f87171;">'
+                '⚠️ CHRONOSENTINEL SECURITY WARNING: THIS SNAPSHOT REDIRECTS TO AN EXPIRED DOMAIN GAMBLING / ADULT SPAM NETWORK'
+                '</div>\n'
+            )
+            html = warning_banner + html
+
         return Response(content=html, media_type="text/html")
     except SSRFValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))

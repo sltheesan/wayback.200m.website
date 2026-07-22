@@ -248,12 +248,30 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         detector_results = run_all_detectors(html_content, cleaned_text, clf_result)
         high_signals = high_signal_count(detector_results)
 
+        # Check for Repurposed Domain Redirect Detector signal
+        repurposed_sig = next((d for d in detector_results if d.get("detector") == "repurposed_domain_redirect"), None)
+        repurposed_boost = 0
+        if repurposed_sig and repurposed_sig.get("signal") == "high":
+            repurposed_boost = 60
+            target_niche = repurposed_sig.get("target_niche", "gambling")
+            primary_cat = "gambling_casino" if target_niche == "gambling" else ("adult_explicit" if target_niche == "adult" else "phishing_scam")
+            confidence = 0.95
+            summary = f"CRITICAL THREAT: Domain redirects to an external {target_niche.upper()} network via client-side/HTTP redirect injections."
+            flags.append({
+                "flag": "EXPIRED_DOMAIN_HIJACK_REDIRECT",
+                "category": primary_cat,
+                "score_impact": 60,
+                "evidence_description": f"Domain redirected to external {target_niche} site."
+            })
+
         # Boost risk score when structural detectors fire (max +15)
-        detector_boost = min(high_signals * 5, 15)
+        detector_boost = min(high_signals * 5, 15) + repurposed_boost
         final_risk_score = min(risk_score + detector_boost + image_boost, 100)
+        if repurposed_boost > 0:
+            final_risk_score = max(final_risk_score, 85)
 
         # Align content classification category and risk score consistency
-        if final_risk_score <= 30:
+        if final_risk_score <= 30 and not repurposed_boost:
             primary_cat = "safe"
         elif primary_cat == "safe":
             # If risk score is unsafe, assign it to the top matching category from legacy keyword analyzer
