@@ -2,6 +2,7 @@ import asyncio
 import nest_asyncio
 import time
 import json
+from typing import Any
 from datetime import datetime, timedelta
 from sqlalchemy import delete
 from backend.app.workers.celery_worker import celery_app
@@ -37,33 +38,62 @@ def _run_async(coro):
 
     return loop.run_until_complete(coro)
 
-def _pick_evidence_snapshot(result: dict) -> dict | None:
-    snapshots = result.get("snapshots") or []
+def _snap_get(snap: Any, key: str, default: Any = None) -> Any:
+    if isinstance(snap, dict):
+        return snap.get(key, default)
+    return getattr(snap, key, default)
+
+def _pick_evidence_snapshot(result: Any) -> dict | None:
+    if isinstance(result, dict):
+        snapshots = result.get("snapshots") or []
+    else:
+        snapshots = getattr(result, "snapshots", []) or []
+
     unsafe = [
         snap for snap in snapshots
-        if snap.get("evidence_url") and (snap.get("risk_score", 0) >= 40 or snap.get("flags"))
+        if _snap_get(snap, "evidence_url") and (int(_snap_get(snap, "risk_score", 0) or 0) >= 40 or _snap_get(snap, "flags"))
     ]
     if not unsafe:
         return None
 
-    snap = max(unsafe, key=lambda item: item.get("risk_score", 0))
+    snap = max(unsafe, key=lambda item: int(_snap_get(item, "risk_score", 0) or 0))
+    flags_val = _snap_get(snap, "flags", []) or []
+    if not isinstance(flags_val, list):
+        flags_val = []
+
+    flags_list = []
+    for f in flags_val:
+        if isinstance(f, dict):
+            flags_list.append(f)
+        else:
+            flags_list.append({
+                "category": getattr(f, "category", None),
+                "keyword": getattr(f, "keyword", None),
+                "weight": getattr(f, "weight", 0),
+                "match_count": getattr(f, "match_count", 1)
+            })
+
     return {
-        "timestamp": snap.get("timestamp"),
-        "original_url": snap.get("original_url"),
-        "risk_score": snap.get("risk_score"),
-        "evidence_url": snap.get("evidence_url"),
-        "flags": snap.get("flags", []),
+        "timestamp": _snap_get(snap, "timestamp"),
+        "original_url": _snap_get(snap, "original_url"),
+        "risk_score": _snap_get(snap, "risk_score"),
+        "evidence_url": _snap_get(snap, "evidence_url"),
+        "flags": flags_list,
     }
 
-def _enrich_snapshots_with_ai(result: dict) -> dict:
-    snapshots = result.get("snapshots", [])
+def _enrich_snapshots_with_ai(result: Any) -> Any:
+    if isinstance(result, dict):
+        snapshots = result.get("snapshots", [])
+    else:
+        snapshots = getattr(result, "snapshots", []) or []
+
     for snap in snapshots:
-        raw_meta = snap.get("extraction_metadata")
+        raw_meta = _snap_get(snap, "extraction_metadata")
         if raw_meta and isinstance(raw_meta, str):
             try:
                 parsed = json.loads(raw_meta)
                 clf = parsed.get("classifier", {})
-                snap["ai_intelligence"] = {
+                ai_dict = {
                     "primary_category": clf.get("primary_category"),
                     "confidence": clf.get("confidence"),
                     "all_scores": clf.get("all_scores"),
@@ -72,10 +102,22 @@ def _enrich_snapshots_with_ai(result: dict) -> dict:
                     "detectors": parsed.get("detectors"),
                     "detector_boost": parsed.get("detector_boost"),
                 }
+                if isinstance(snap, dict):
+                    snap["ai_intelligence"] = ai_dict
+                else:
+                    setattr(snap, "ai_intelligence", ai_dict)
             except Exception:
-                snap["ai_intelligence"] = None
-        elif not snap.get("ai_intelligence"):
-            snap["ai_intelligence"] = None
+                if isinstance(snap, dict):
+                    snap["ai_intelligence"] = None
+                else:
+                    setattr(snap, "ai_intelligence", None)
+        else:
+            existing_ai = _snap_get(snap, "ai_intelligence")
+            if not existing_ai:
+                if isinstance(snap, dict):
+                    snap["ai_intelligence"] = None
+                else:
+                    setattr(snap, "ai_intelligence", None)
     return result
 
 async def run_analyze_domain(domain: str, force_refresh: bool = False, user_id: int | None = None) -> dict:

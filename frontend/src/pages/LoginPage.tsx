@@ -312,10 +312,10 @@ export default function LoginPage() {
             <div className="mb-6 flex justify-between items-center relative z-10">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold text-white tracking-wide">
-                  {forgotPasswordOpen ? 'System Restore' : 'Security Clearance'}
+                  {forgotPasswordOpen ? 'Password Recovery' : 'Sign In'}
                 </h2>
-                <p className="text-[10px] text-slate-500 font-mono">
-                  {forgotPasswordOpen ? 'RECOVERY_PORTAL.EXE' : 'AUTHORIZATION_GATE.EXE'}
+                <p className="text-[10px] text-slate-400 font-sans">
+                  {forgotPasswordOpen ? 'Reset your account password' : 'Access your ChronoSentinel AI dashboard'}
                 </p>
               </div>
               {!forgotPasswordOpen && (
@@ -355,7 +355,7 @@ export default function LoginPage() {
             {!forgotPasswordOpen && !resetSuccessMessage && (
               <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
                 <div>
-                  <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Username / Admin ID</label>
+                  <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Username or Email</label>
                   <div className="relative">
                     <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
                     <input
@@ -363,7 +363,7 @@ export default function LoginPage() {
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter username"
+                      placeholder="Enter username or email"
                       autoComplete="username"
                       className="w-full pl-9 pr-4 py-2.5 text-xs glass-input focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 transition-all duration-200"
                     />
@@ -372,13 +372,13 @@ export default function LoginPage() {
 
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono">Password Key</label>
+                    <label className="text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono">Password</label>
                     <button
                       type="button"
                       onClick={() => setForgotPasswordOpen(true)}
                       className="text-violet-400 hover:text-violet-300 text-[10px] font-bold font-mono"
                     >
-                      FORGOT_KEY?
+                      Forgot Password?
                     </button>
                   </div>
                   <div className="relative">
@@ -388,7 +388,7 @@ export default function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter security key"
+                      placeholder="Enter password"
                       autoComplete="current-password"
                       className="w-full pl-9 pr-10 py-2.5 text-xs glass-input focus:border-violet-500/40 focus:ring-1 focus:ring-violet-500/20 transition-all duration-200"
                     />
@@ -427,12 +427,12 @@ export default function LoginPage() {
                   {isLoading ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      Clearance processing...
+                      Signing in...
                     </>
                   ) : (
                     <>
                       <Shield size={14} />
-                      Verify Security Clearance
+                      Sign In
                     </>
                   )}
                 </button>
@@ -446,18 +446,18 @@ export default function LoginPage() {
                 {/* Step 2.1: Request Token */}
                 {resetStep === 'request' && (
                   <form onSubmit={handleForgotPasswordRequest} className="space-y-4">
-                    <p className="text-slate-400 text-[11px] leading-relaxed font-mono bg-slate-950/40 p-3 rounded-lg border border-slate-800/80">
-                      SYS_LOG: Enter your registered Admin ID. We will generate a verification handshake token.
+                    <p className="text-slate-300 text-[11px] leading-relaxed font-sans bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
+                      Enter your registered username or email address below to receive a password reset token.
                     </p>
                     <div>
-                      <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Username / Admin ID</label>
+                      <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Username or Email</label>
                       <div className="relative">
                         <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                         <input
                           type="text"
                           value={resetUsername}
                           onChange={(e) => setResetUsername(e.target.value)}
-                          placeholder="Admin ID or Email"
+                          placeholder="Enter username or email"
                           className="w-full pl-9 pr-4 py-2.5 text-xs glass-input focus:border-violet-500/40 transition-all duration-200"
                         />
                       </div>
@@ -471,9 +471,9 @@ export default function LoginPage() {
                       {resetLoading ? (
                         <>
                           <Loader2 size={14} className="animate-spin" />
-                          Running analysis...
+                          Sending reset token...
                         </>
-                      ) : 'Request Recovery Handshake'}
+                      ) : 'Send Reset Token'}
                     </button>
                   </form>
                 )}
@@ -481,33 +481,33 @@ export default function LoginPage() {
                 {/* Step 2.2: Verify Token & Reset Password */}
                 {resetStep === 'verify' && (
                   <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-                    <p className="text-slate-400 text-[11px] leading-relaxed font-mono bg-slate-950/40 p-3 rounded-lg border border-slate-800/80">
-                      SYS_LOG: Verification handshake generated. Provide the payload token and establish your new security key.
+                    <p className="text-slate-300 text-[11px] leading-relaxed font-sans bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
+                      Reset token generated. Enter your token and new password below.
                     </p>
                     
                     <div>
-                      <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Handshake Token</label>
+                      <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">Reset Token</label>
                       <div className="relative">
                         <KeyRound size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                         <input
                           type="text"
                           value={resetToken}
                           onChange={(e) => setResetToken(e.target.value)}
-                          placeholder="Paste handshake token"
+                          placeholder="Paste your reset token"
                           className="w-full pl-9 pr-4 py-2.5 text-xs glass-input focus:border-violet-500/40 transition-all duration-200 font-mono"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">New Security Key</label>
+                      <label className="block text-slate-400 text-[10px] uppercase font-bold tracking-widest font-mono mb-2">New Password</label>
                       <div className="relative">
                         <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                         <input
                           type="password"
                           value={resetNewPassword}
                           onChange={(e) => setResetNewPassword(e.target.value)}
-                          placeholder="Enter new security key"
+                          placeholder="Enter your new password"
                           className="w-full pl-9 pr-4 py-2.5 text-xs glass-input focus:border-violet-500/40 transition-all duration-200"
                         />
                       </div>
@@ -521,9 +521,9 @@ export default function LoginPage() {
                       {resetLoading ? (
                         <>
                           <Loader2 size={14} className="animate-spin" />
-                          Commiting encryption changes...
+                          Resetting password...
                         </>
-                      ) : 'Re-establish Security Key'}
+                      ) : 'Reset Password'}
                     </button>
                   </form>
                 )}

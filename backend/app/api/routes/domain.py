@@ -20,19 +20,24 @@ from backend.app.utils.logger import logger
 router = APIRouter()
 
 
-def _enrich_snapshots_with_ai(result: dict) -> dict:
+def _enrich_snapshots_with_ai(result: Any) -> Any:
     """
     Parse each snapshot's `extraction_metadata` JSON string into the
     structured `ai_intelligence` field expected by the API schema.
+    Accepts both dict items and Snapshot ORM objects safely.
     """
-    snapshots = result.get("snapshots", [])
+    if isinstance(result, dict):
+        snapshots = result.get("snapshots", [])
+    else:
+        snapshots = getattr(result, "snapshots", [])
+
     for snap in snapshots:
-        raw_meta = snap.get("extraction_metadata")
+        raw_meta = snap.get("extraction_metadata") if isinstance(snap, dict) else getattr(snap, "extraction_metadata", None)
         if raw_meta and isinstance(raw_meta, str):
             try:
                 parsed = json.loads(raw_meta)
                 clf = parsed.get("classifier", {})
-                snap["ai_intelligence"] = {
+                ai_dict = {
                     "primary_category": clf.get("primary_category"),
                     "confidence": clf.get("confidence"),
                     "all_scores": clf.get("all_scores"),
@@ -41,10 +46,22 @@ def _enrich_snapshots_with_ai(result: dict) -> dict:
                     "detectors": parsed.get("detectors"),
                     "detector_boost": parsed.get("detector_boost"),
                 }
+                if isinstance(snap, dict):
+                    snap["ai_intelligence"] = ai_dict
+                else:
+                    setattr(snap, "ai_intelligence", ai_dict)
             except Exception:
-                snap["ai_intelligence"] = None
-        elif not snap.get("ai_intelligence"):
-            snap["ai_intelligence"] = None
+                if isinstance(snap, dict):
+                    snap["ai_intelligence"] = None
+                else:
+                    setattr(snap, "ai_intelligence", None)
+        else:
+            existing_ai = snap.get("ai_intelligence") if isinstance(snap, dict) else getattr(snap, "ai_intelligence", None)
+            if not existing_ai:
+                if isinstance(snap, dict):
+                    snap["ai_intelligence"] = None
+                else:
+                    setattr(snap, "ai_intelligence", None)
     return result
 
 

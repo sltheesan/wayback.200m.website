@@ -6,19 +6,26 @@ from backend.app.utils.logger import logger
 SNAPSHOT_SAMPLE_SIZE = 10
 
 
-def select_snapshots_to_check(snapshots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _snap_get(snap: Any, key: str, default: Any = None) -> Any:
+    if isinstance(snap, dict):
+        return snap.get(key, default)
+    return getattr(snap, key, default)
+
+
+def select_snapshots_to_check(snapshots: List[Any]) -> List[Any]:
     """
     Returns all snapshots for analysis, sorted chronologically.
+    Accepts both dict items and Snapshot ORM objects safely.
     """
-    sorted_snapshots = sorted(snapshots, key=lambda s: s.get("timestamp", ""))
+    sorted_snapshots = sorted(snapshots, key=lambda s: str(_snap_get(s, "timestamp", "") or ""))
     logger.info(f"Selected all {len(sorted_snapshots)} snapshots for analysis.")
     return sorted_snapshots
 
 
-def compute_overall_risk(snapshot_results: List[Dict[str, Any]]) -> Tuple[int, str, int, int]:
+def compute_overall_risk(snapshot_results: List[Any]) -> Tuple[int, str, int, int]:
     """
     Computes the overall risk score and level from a list of snapshot results.
-    Aligns with Phase 8 - Domain Decision mapping (Safe / Medium / High).
+    Accepts both dict items and Snapshot ORM objects safely.
     """
     if not snapshot_results:
         return 0, "SAFE", 0, 0
@@ -28,19 +35,21 @@ def compute_overall_risk(snapshot_results: List[Dict[str, Any]]) -> Tuple[int, s
     for s in snapshot_results:
         if isinstance(s, (int, float)):
             valid_snaps.append({"risk_score": int(s), "content_category": "safe"})
-        elif isinstance(s, dict):
-            if s.get("is_redirect") or s.get("content_category") not in ["unavailable", "invalid"] or s.get("risk_score", 0) > 0:
-                valid_snaps.append(s)
-            elif s.get("status_code"):
+        else:
+            is_redir = _snap_get(s, "is_redirect", False)
+            cat = _snap_get(s, "content_category")
+            r_score = int(_snap_get(s, "risk_score", 0) or 0)
+            st_code = _snap_get(s, "status_code")
+            if is_redir or cat not in ["unavailable", "invalid"] or r_score > 0 or st_code:
                 valid_snaps.append(s)
 
     if not valid_snaps:
-        valid_snaps = [s for s in snapshot_results if isinstance(s, dict)]
+        valid_snaps = list(snapshot_results)
 
     if not valid_snaps:
         return 0, "SAFE", 0, 0
 
-    scores = [s.get("risk_score", 0) for s in valid_snaps]
+    scores = [int(_snap_get(s, "risk_score", 0) or 0) for s in valid_snaps]
     peak_score = max(scores)
     avg_score = sum(scores) / len(scores)
 

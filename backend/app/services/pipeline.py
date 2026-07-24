@@ -772,7 +772,8 @@ async def save_empty_domain(domain_name: str, db: AsyncSession) -> Domain:
         db_domain.risk_level = "UNKNOWN"
         db_domain.primary_category = "unknown"
         db_domain.risk_narrative = "Insufficient data. No historical archive snapshots exist, or all captures were inaccessible."
-        db_domain.last_analyzed_at = datetime.datetime.utcnow()
+        now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        db_domain.last_analyzed_at = now_utc
         db_domain.snapshots.clear()
         db_domain.timeline.clear()
         db_domain.threat_intel.clear()
@@ -783,7 +784,7 @@ async def save_empty_domain(domain_name: str, db: AsyncSession) -> Domain:
             risk_level="UNKNOWN",
             primary_category="unknown",
             risk_narrative="Insufficient data. No historical archive snapshots exist, or all captures were inaccessible.",
-            last_analyzed_at=datetime.datetime.utcnow(),
+            last_analyzed_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
             snapshots=[],
             timeline=[],
             threat_intel=[]
