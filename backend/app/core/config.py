@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     WAYBACK_CDX_URL: str = "https://web.archive.org/cdx/search/cdx"
     WAYBACK_SNAPSHOT_URL: str = "https://web.archive.org/web"
     WAYBACK_CDX_LIMIT: int = 1000
+    MAX_SNAPSHOTS_TO_ANALYZE: int = 20  # Cap on unique snapshots to fetch/analyze per domain
     MOCK_WAYBACK: bool = False
 
     # ── Threat Intelligence API Keys ─────────────────────────────────────

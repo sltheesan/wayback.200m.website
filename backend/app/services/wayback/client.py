@@ -39,12 +39,12 @@ class WaybackHTTPClient:
                 current_timeout = 4
                 current_retries = 1
             elif proxy is None:
-                # Direct connection: give it more time but only attempt once
-                current_timeout = 25
+                # Direct connection: 8 second timeout to prevent stalled requests
+                current_timeout = 8
                 current_retries = 1
             else:
-                # Explicitly configured trusted proxy: use full timeout
-                current_timeout = timeout
+                # Explicitly configured trusted proxy: cap at 12s timeout
+                current_timeout = min(timeout, 12)
                 current_retries = max_retries
 
             for attempt in range(current_retries):

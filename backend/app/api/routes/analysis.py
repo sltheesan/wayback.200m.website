@@ -6,28 +6,17 @@ from backend.app.utils.logger import logger
 
 router = APIRouter()
 
+from backend.app.services.task_dispatcher import get_task_status_hybrid
+
 @router.get("/task/{task_id}")
 async def get_task_status(task_id: str):
     """
-    Checks the status of a Celery background analysis job.
+    Checks the status of a background analysis job (via Celery or fallback async store).
     """
     try:
-        async_result = AsyncResult(task_id, app=celery_app)
-        
-        response = {
-            "task_id": task_id,
-            "status": async_result.status,
-            "info": str(async_result.info) if async_result.info else None
-        }
-
-        if async_result.ready():
-            response["result"] = async_result.result if async_result.successful() else None
-            if async_result.failed():
-                response["error"] = str(async_result.result)
-
-        return response
+        return await get_task_status_hybrid(task_id)
     except Exception as e:
-        logger.error(f"Error checking Celery task status for {task_id}: {e}")
+        logger.error(f"Error checking task status for {task_id}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Could not retrieve task status: {str(e)}"

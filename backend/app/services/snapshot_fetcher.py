@@ -159,7 +159,7 @@ async def fetch_live_domain_html(domain: str) -> tuple[str, str | None]:
             try:
                 request_kwargs = {
                     "headers": headers,
-                    "timeout": 12,
+                    "timeout": 5,
                     "allow_redirects": True
                 }
                 if proxy and not is_socks_proxy(proxy):

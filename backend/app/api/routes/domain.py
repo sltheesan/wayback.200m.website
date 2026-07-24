@@ -105,28 +105,34 @@ async def proxy_snapshot(timestamp: str, url: str):
         return HTMLResponse(content=error_html, status_code=200)
 
 
+from backend.app.services.task_dispatcher import (
+    dispatch_single_domain_analysis,
+    dispatch_bulk_domain_analysis,
+)
+
 @router.post("/analyze", response_model=DomainAnalysisSubmitResponse)
 async def analyze_domain(
     request: DomainRequest,
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
-    Submits a domain scan job to Celery for background analysis.
-    Returns the celery task ID immediately.
+    Submits a domain scan job for background analysis.
+    Uses Celery when active, or falls back seamlessly to background async task runner.
+    Returns the task ID immediately.
     """
     try:
-        logger.info(f"Received background analysis request for: {request.domain}")
-        task = analyze_domain_task.delay(
+        logger.info(f"Received analysis request for: {request.domain}")
+        task_id = await dispatch_single_domain_analysis(
             request.domain, 
             request.force_refresh, 
             current_user.id if current_user else None
         )
         return DomainAnalysisSubmitResponse(
-            task_id=task.id,
+            task_id=task_id,
             message="Analysis successfully queued in the background."
         )
     except Exception as e:
-        logger.error(f"Failed to queue background domain analysis for {request.domain}: {e}")
+        logger.error(f"Failed to queue domain analysis for {request.domain}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to queue background job: {str(e)}"
@@ -136,18 +142,18 @@ async def analyze_domain(
 @router.post("/bulk-analyze", response_model=BulkAnalysisResponse)
 async def bulk_analyze_domains(request: BulkAnalysisRequest):
     """
-    Submits a list of domains for background processing via Celery.
-    Returns a Celery task ID immediately.
+    Submits a list of domains for background processing.
+    Uses Celery when active, or falls back seamlessly to background async task runner.
+    Returns a task ID immediately.
     """
     if not request.domains:
         raise HTTPException(status_code=400, detail="Domain list cannot be empty")
         
     try:
-        # Trigger Celery task in the background
-        task = analyze_multiple_domains_task.delay(request.domains)
-        logger.info(f"Triggered bulk analysis task {task.id} for domains: {request.domains}")
+        task_id = await dispatch_bulk_domain_analysis(request.domains)
+        logger.info(f"Triggered bulk analysis task {task_id} for domains: {request.domains}")
         return BulkAnalysisResponse(
-            task_id=task.id,
+            task_id=task_id,
             message="Bulk analysis successfully queued in the background."
         )
     except Exception as e:

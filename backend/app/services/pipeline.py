@@ -66,7 +66,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
 
     if db_domain and not force_refresh:
         # Check if the analysis is fresh (within 7 days)
-        age = datetime.datetime.utcnow() - db_domain.last_analyzed_at
+        age = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None) - db_domain.last_analyzed_at
         if age.days < 7:
             logger.info(f"Database HIT (fresh analysis) for domain: {domain_clean}")
             # Format and return from DB
@@ -83,7 +83,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     # Also inspect the current homepage. Some repurposed domains have no useful
     # archive captures, and image-heavy adult pages can otherwise be missed.
     live_html, live_url = await fetch_live_domain_html(domain_clean)
-    live_timestamp = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    live_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
 
     if raw_snapshots is None:
         if db_domain and not force_refresh:
@@ -130,8 +130,50 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     # Sort chronologically to sample accurately
     all_unique_snapshots.sort(key=lambda s: s["timestamp"])
 
-    # Analyze 100% of all unique snapshots — zero sampling, complete coverage
-    unique_snapshots_to_fetch = all_unique_snapshots
+    # Threat-Aware Smart Sampling Strategy:
+    # 1. De-duplicates identical captures via digest.
+    # 2. If unique snapshots count > MAX_SNAPSHOTS_TO_ANALYZE, prioritizes high-risk signals:
+    #    - All HTTP Redirect snapshots (301, 302, 307, 308) — key indicator of domain hijacking/phishing
+    #    - Live homepage capture
+    #    - Digest transition points (moments when site content changed)
+    # 3. Fills remaining quota with uniform chronological samples across the history.
+    max_to_analyze = settings.MAX_SNAPSHOTS_TO_ANALYZE
+    if len(all_unique_snapshots) <= max_to_analyze:
+        unique_snapshots_to_fetch = all_unique_snapshots
+    else:
+        prioritized_snaps = {}
+
+        # a) Always include live snapshot
+        live_snap = next((s for s in all_unique_snapshots if s.get("source") == "live"), None)
+        if live_snap:
+            prioritized_snaps[live_snap["timestamp"]] = live_snap
+
+        # b) Always include HTTP redirect snapshots (301/302/307/308)
+        for s in all_unique_snapshots:
+            st_code = str(s.get("statuscode", ""))
+            if st_code in ("301", "302", "303", "307", "308"):
+                prioritized_snaps[s["timestamp"]] = s
+
+        # c) Always include first and last historical snapshots
+        if all_unique_snapshots:
+            prioritized_snaps[all_unique_snapshots[0]["timestamp"]] = all_unique_snapshots[0]
+            prioritized_snaps[all_unique_snapshots[-1]["timestamp"]] = all_unique_snapshots[-1]
+
+        # d) Fill remaining capacity with uniform chronological samples
+        if len(prioritized_snaps) < max_to_analyze:
+            total_unique = len(all_unique_snapshots)
+            step = (total_unique - 1) / (max_to_analyze - 1) if max_to_analyze > 1 else 1
+            sample_indices = sorted(list(set(int(round(i * step)) for i in range(max_to_analyze))))
+            for idx in sample_indices:
+                snap_item = all_unique_snapshots[idx]
+                prioritized_snaps[snap_item["timestamp"]] = snap_item
+
+        unique_snapshots_to_fetch = list(prioritized_snaps.values())
+        unique_snapshots_to_fetch.sort(key=lambda s: s["timestamp"])
+        logger.info(
+            f"Domain {domain_clean} has {len(all_unique_snapshots)} unique snapshots. "
+            f"Threat-aware sampling selected {len(unique_snapshots_to_fetch)} high-priority snapshots (redirects, transitions & uniform timeline samples)."
+        )
 
     # 5. Fetch and analyze snapshot HTML contents sequentially in chronological order
     async def fetch_and_analyze(snap: dict) -> dict:
@@ -473,10 +515,11 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     if db_domain:
         db_domain.risk_score = overall_score
         db_domain.risk_level = overall_level
-        db_domain.last_analyzed_at = datetime.datetime.utcnow()
+        now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        db_domain.last_analyzed_at = now_utc
         db_domain.primary_category = primary_category
         db_domain.risk_narrative = explanation.narrative
-        db_domain.last_threat_intel_at = datetime.datetime.utcnow()
+        db_domain.last_threat_intel_at = now_utc
         db_domain.snapshots.clear()
         db_domain.timeline.clear()
         db_domain.threat_intel.clear()
@@ -485,10 +528,10 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             name=domain_clean,
             risk_score=overall_score,
             risk_level=overall_level,
-            last_analyzed_at=datetime.datetime.utcnow(),
+            last_analyzed_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
             primary_category=primary_category,
             risk_narrative=explanation.narrative,
-            last_threat_intel_at=datetime.datetime.utcnow(),
+            last_threat_intel_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
         )
         db.add(db_domain)
         db_domain.snapshots = []
@@ -545,7 +588,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             confidence=ti.get("confidence"),
             verdict=ti.get("verdict"),
             raw_response=ti.get("raw_response"),
-            fetched_at=datetime.datetime.utcnow(),
+            fetched_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
         ))
 
     await db.commit()

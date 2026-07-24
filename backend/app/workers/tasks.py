@@ -78,93 +78,85 @@ def _enrich_snapshots_with_ai(result: dict) -> dict:
             snap["ai_intelligence"] = None
     return result
 
+async def run_analyze_domain(domain: str, force_refresh: bool = False, user_id: int | None = None) -> dict:
+    """
+    Async implementation of single domain analysis.
+    """
+    logger.info(f"Initiating analysis for {domain} (User ID: {user_id})")
+    start_time = time.monotonic()
+
+    async with AsyncSessionLocal() as db:
+        result = await analyze_domain_pipeline(domain, force_refresh, db)
+        enriched = _enrich_snapshots_with_ai(result)
+
+        # Record the scan for admin history
+        duration_ms = int((time.monotonic() - start_time) * 1000)
+        try:
+            scan_rec = ScanRecord(
+                domain_name=domain,
+                user_id=user_id,
+                status="completed",
+                risk_score=enriched.get("risk_score"),
+                risk_level=enriched.get("risk_level"),
+                duration_ms=duration_ms,
+                source=ScanSource.manual if user_id else ScanSource.anonymous,
+                wayback_status="fetched" if enriched.get("snapshots") else "no_data",
+            )
+            db.add(scan_rec)
+            await db.commit()
+        except Exception as scan_err:
+            logger.warning(f"Failed to record scan history in background task: {scan_err}")
+            await db.rollback()
+
+        return enriched
+
+
 @celery_app.task(name="tasks.analyze_domain")
 def analyze_domain_task(domain: str, force_refresh: bool = False, user_id: int | None = None) -> dict:
     """
-    Celery task that analyzes a single domain in the background.
-    Additionally records admin scan history when completed.
+    Celery task wrapper for single domain analysis.
     """
-    logger.info(f"[Celery Task] Initiating background analysis for {domain} (User ID: {user_id})")
-    start_time = time.monotonic()
+    return _run_async(run_analyze_domain(domain, force_refresh, user_id))
 
-    async def run_analysis():
-        async with AsyncSessionLocal() as db:
-            result = await analyze_domain_pipeline(domain, force_refresh, db)
-            enriched = _enrich_snapshots_with_ai(result)
 
-            # Record the scan for admin history
-            duration_ms = int((time.monotonic() - start_time) * 1000)
-            try:
-                scan_rec = ScanRecord(
-                    domain_name=domain,
-                    user_id=user_id,
-                    status="completed",
-                    risk_score=enriched.get("risk_score"),
-                    risk_level=enriched.get("risk_level"),
-                    duration_ms=duration_ms,
-                    source=ScanSource.manual if user_id else ScanSource.anonymous,
-                    wayback_status="fetched" if enriched.get("snapshots") else "no_data",
-                )
-                db.add(scan_rec)
-                await db.commit()
-            except Exception as scan_err:
-                logger.warning(f"Failed to record scan history in background task: {scan_err}")
-                await db.rollback()
-
-            return enriched
-
-    return _run_async(run_analysis())
-
-@celery_app.task(name="tasks.analyze_multiple_domains")
-def analyze_multiple_domains_task(domains: list[str], force_refresh: bool = False) -> list[dict]:
+async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool = False) -> list[dict]:
     """
-    Celery task to run batch analysis on multiple domains in the background.
-    On CDX failure for a domain, automatically retries through the full proxy
-    rotation list (HTTP_PROXY_LIST in .env) to bypass regional blocks.
+    Async implementation of batch domain analysis.
     """
-    logger.info(f"[Celery Task] Initiating background bulk analysis for {len(domains)} domains")
+    logger.info(f"Initiating bulk analysis for {len(domains)} domains")
+    semaphore = asyncio.Semaphore(4)  # Process up to 4 domains in parallel
 
-    async def run_bulk():
-        results = []
-        for d in domains:
+    async def analyze_one(d: str) -> dict | None:
+        async with semaphore:
             try:
                 async with AsyncSessionLocal() as db:
                     res = await analyze_domain_pipeline(d, force_refresh, db)
-                    results.append({
+                    return {
                         "domain": res["domain"],
                         "risk_score": res["risk_score"],
                         "risk_level": res["risk_level"],
-                        # Content intelligence — what was found inside the domain
-                        "flags": res.get("flags", []),                          # List of threat category names e.g. ["Gambling", "Phishing"]
-                        "primary_category": res.get("primary_category", ""),   # Top AI-classified category
-                        "category_confidence": res.get("category_confidence", {}),  # Per-category keyword hit counts
-                        "snapshots_checked": res.get("snapshots_checked", 0),  # How many Wayback snapshots were inspected
-                        "risk_narrative": res.get("risk_narrative", ""),       # AI explanation sentence
+                        "flags": res.get("flags", []),
+                        "primary_category": res.get("primary_category", ""),
+                        "category_confidence": res.get("category_confidence", {}),
+                        "snapshots_checked": res.get("snapshots_checked", 0),
+                        "risk_narrative": res.get("risk_narrative", ""),
                         "evidence_snapshot": _pick_evidence_snapshot(res),
                         "proxy_used": res.get("cdx_proxy_used"),
-                    })
+                    }
             except Exception as first_err:
                 logger.warning(
-                    f"[Batch] First attempt failed for {d}: {first_err}. "
-                    f"Retrying with proxy rotation..."
+                    f"[Batch] First attempt failed for {d}: {first_err}. Retrying with proxy rotation..."
                 )
-                # ── Proxy rotation retry ──────────────────────────────────────
-                # Re-run the full pipeline but pre-fetch CDX using each proxy in turn.
-                # We inject the working snapshots into a patched pipeline call by
-                # temporarily monkey-patching fetch_snapshots inside the pipeline module.
                 from backend.app.services import cdx_service as _cdx_mod
                 from backend.app.services import pipeline as _pipe_mod
 
                 _original_fetch = _cdx_mod.fetch_snapshots
-
                 rotated_result = None
                 proxy_succeeded = None
 
                 try:
                     snapshots_found, proxy_used = await fetch_snapshots_with_proxy_rotation(d)
                     if snapshots_found is not None:
-                        # Patch fetch_snapshots temporarily so the pipeline uses
-                        # the already-fetched snapshots from the working proxy
                         async def _patched_fetch(domain, proxy=None):
                             return snapshots_found
 
@@ -176,7 +168,6 @@ def analyze_multiple_domains_task(domains: list[str], force_refresh: bool = Fals
                                 rotated_result = await analyze_domain_pipeline(d, force_refresh, db2)
                                 proxy_succeeded = proxy_used
                         finally:
-                            # Always restore original function
                             _cdx_mod.fetch_snapshots = _original_fetch
                             _pipe_mod.fetch_snapshots = _original_fetch
                     else:
@@ -187,7 +178,7 @@ def analyze_multiple_domains_task(domains: list[str], force_refresh: bool = Fals
                     logger.error(f"[Batch] Proxy rotation error for {d}: {rotation_err}")
 
                 if rotated_result:
-                    results.append({
+                    return {
                         "domain": rotated_result["domain"],
                         "risk_score": rotated_result["risk_score"],
                         "risk_level": rotated_result["risk_level"],
@@ -198,12 +189,20 @@ def analyze_multiple_domains_task(domains: list[str], force_refresh: bool = Fals
                         "risk_narrative": rotated_result.get("risk_narrative", ""),
                         "evidence_snapshot": _pick_evidence_snapshot(rotated_result),
                         "proxy_used": rotated_result.get("cdx_proxy_used", proxy_succeeded),
-                    })
-                # If still failed, domain is simply omitted from results → shows as "Failed" in UI
+                    }
+                return None
 
-        return results
+    task_results = await asyncio.gather(*[analyze_one(d) for d in domains], return_exceptions=True)
+    results = [res for res in task_results if isinstance(res, dict)]
+    return results
 
-    return _run_async(run_bulk())
+
+@celery_app.task(name="tasks.analyze_multiple_domains")
+def analyze_multiple_domains_task(domains: list[str], force_refresh: bool = False) -> list[dict]:
+    """
+    Celery task wrapper for batch domain analysis.
+    """
+    return _run_async(run_analyze_multiple_domains(domains, force_refresh))
 
 @celery_app.task(name="tasks.cleanup_old_domains")
 def cleanup_old_domains_task() -> int:
