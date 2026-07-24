@@ -8,10 +8,13 @@ from backend.app.core.proxy_utils import get_proxy_rotation_list, proxy_label, i
 from backend.app.services.wayback.exceptions import ProviderError
 from backend.app.core.config import settings
 
+# Global semaphore capping total concurrent outbound HTTP requests across all user tasks
+_GLOBAL_OUTBOUND_SEMAPHORE = asyncio.Semaphore(15)
+
 class WaybackHTTPClient:
     """
     Production-grade HTTP client for querying Wayback Machine or archive providers.
-    Handles timeout, retries, user-agent rotation, and proxy rotation.
+    Handles timeout, retries, user-agent rotation, proxy rotation, and global throttling.
     """
 
     async def request(
@@ -24,7 +27,7 @@ class WaybackHTTPClient:
         max_retries: int = 2
     ) -> str:
         """
-        Executes HTTP requests with proxy rotation, user-agent rotation, and retries per proxy.
+        Executes HTTP requests with proxy rotation, user-agent rotation, retries, and global throttling.
         """
         proxy_list = await get_proxy_rotation_list()
         user_agents = settings.get_user_agents()
@@ -69,25 +72,26 @@ class WaybackHTTPClient:
 
                 try:
                     logger.info(f"Querying {url} via {label} (attempt {attempt + 1}/{current_retries})...")
-                    async with session.request(
-                        method,
-                        url,
-                        **request_kwargs
-                    ) as response:
-                        if response.status < 400:
-                            logger.info(f"Request to {url} succeeded via {label}")
-                            return await response.text(errors="ignore")
-                        
-                        if response.status == 429:
-                            logger.warning(
-                                f"Rate limited (429) on {url} via {label}. "
-                                f"Attempt {attempt + 1}/{current_retries}"
-                            )
-                        else:
-                            logger.warning(
-                                f"Provider returned status {response.status} for {url} "
-                                f"via {label}. Attempt {attempt + 1}/{current_retries}"
-                            )
+                    async with _GLOBAL_OUTBOUND_SEMAPHORE:
+                        async with session.request(
+                            method,
+                            url,
+                            **request_kwargs
+                        ) as response:
+                            if response.status < 400:
+                                logger.info(f"Request to {url} succeeded via {label}")
+                                return await response.text(errors="ignore")
+                            
+                            if response.status == 429:
+                                logger.warning(
+                                    f"Rate limited (429) on {url} via {label}. "
+                                    f"Attempt {attempt + 1}/{current_retries}"
+                                )
+                            else:
+                                logger.warning(
+                                    f"Provider returned status {response.status} for {url} "
+                                    f"via {label}. Attempt {attempt + 1}/{current_retries}"
+                                )
                 except asyncio.TimeoutError:
                     logger.warning(
                         f"Timeout querying {url} via {label}. "

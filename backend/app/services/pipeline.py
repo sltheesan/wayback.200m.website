@@ -116,10 +116,14 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         })
 
     # Group snapshots by digest to de-duplicate fetches.
-    # If digest is missing/empty, treat it as a unique snapshot using its timestamp.
+    # For HTTP error snapshots (503, 500, 404, etc.), key by status code + timestamp so error events are preserved.
     digests_map = {}
     for snap in sorted_snapshots:
-        digest_val = snap.get("digest") or snap.get("timestamp")
+        st_val = str(snap.get("statuscode", "200"))
+        if st_val.startswith("4") or st_val.startswith("5"):
+            digest_val = f"err_{st_val}:{snap.get('timestamp')}"
+        else:
+            digest_val = snap.get("digest") or snap.get("timestamp")
         digests_map.setdefault(digest_val, []).append(snap)
 
     # For each unique digest, select the latest snapshot.

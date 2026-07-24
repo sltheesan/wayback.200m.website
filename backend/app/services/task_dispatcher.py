@@ -20,26 +20,40 @@ async def dispatch_single_domain_analysis(
 ) -> str:
     """
     Submits a single domain analysis task.
+    Supports task deduplication if another user is already scanning the same domain.
     Attempts Celery first; if Redis/Celery is down or unavailable, seamlessly falls back
     to an async background task tracked via in-memory/Redis manager.
     """
+    domain_clean = domain.strip().lower().removeprefix("http://").removeprefix("https://").strip("/")
+
+    # Check for active running scan for this domain to avoid duplicate tasks
+    if not force_refresh:
+        active_task_id = await redis_manager.get(f"active_domain_task:{domain_clean}")
+        if active_task_id and isinstance(active_task_id, str):
+            active_st = await get_task_status_hybrid(active_task_id)
+            if active_st.get("status") in ("PENDING", "STARTED"):
+                logger.info(f"Reusing active in-progress scan task {active_task_id} for domain {domain_clean}")
+                return active_task_id
+
     # 1. Try Celery dispatch
     try:
         if not redis_manager.is_fallback:
-            task = analyze_domain_task.delay(domain, force_refresh, user_id)
-            logger.info(f"Queued single domain analysis task {task.id} via Celery for {domain}")
+            task = analyze_domain_task.delay(domain_clean, force_refresh, user_id)
+            logger.info(f"Queued single domain analysis task {task.id} via Celery for {domain_clean}")
+            await redis_manager.set(f"active_domain_task:{domain_clean}", task.id, expire_seconds=300)
             return task.id
     except Exception as cel_err:
-        logger.warning(f"Celery dispatch failed for {domain} ({cel_err}). Switching to async fallback task execution.")
+        logger.warning(f"Celery dispatch failed for {domain_clean} ({cel_err}). Switching to async fallback task execution.")
 
     # 2. Local Async Fallback Task
     task_id = f"fallback_{uuid.uuid4().hex}"
     task_key = f"task_status:{task_id}"
+    await redis_manager.set(f"active_domain_task:{domain_clean}", task_id, expire_seconds=300)
     
     initial_payload = {
         "task_id": task_id,
         "status": "PENDING",
-        "info": f"Analyzing domain {domain} in fallback mode...",
+        "info": f"Analyzing domain {domain_clean} in fallback mode...",
         "result": None,
         "error": None
     }

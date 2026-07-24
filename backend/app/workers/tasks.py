@@ -121,10 +121,11 @@ def analyze_domain_task(domain: str, force_refresh: bool = False, user_id: int |
 
 async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool = False) -> list[dict]:
     """
-    Async implementation of batch domain analysis.
+    Async implementation of batch domain analysis with rate limiting and progress tracking.
     """
-    logger.info(f"Initiating bulk analysis for {len(domains)} domains")
-    semaphore = asyncio.Semaphore(4)  # Process up to 4 domains in parallel
+    total_count = len(domains)
+    logger.info(f"Initiating bulk analysis for {total_count} domains")
+    semaphore = asyncio.Semaphore(6)  # Process up to 6 domains in parallel
 
     async def analyze_one(d: str) -> dict | None:
         async with semaphore:

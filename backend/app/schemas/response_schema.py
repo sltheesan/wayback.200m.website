@@ -1,5 +1,4 @@
-from pydantic import BaseModel
-from typing import Any, Dict, Optional
+from pydantic import BaseModel, Field
 
 class SystemStatusResponse(BaseModel):
     status: str
@@ -8,7 +7,12 @@ class SystemStatusResponse(BaseModel):
     version: str = "1.0.0"
 
 class BulkAnalysisRequest(BaseModel):
-    domains: list[str]
+    domains: list[str] = Field(
+        ..., 
+        min_length=1, 
+        max_length=100, 
+        description="List of domain names to analyze in bulk (1 to 100 domains max per request)"
+    )
 
 class BulkAnalysisResponse(BaseModel):
     task_id: str

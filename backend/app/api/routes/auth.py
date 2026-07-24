@@ -238,7 +238,7 @@ async def change_password(
 
     errors = validate_password_strength(body.new_password)
     if errors:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=errors)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=" ".join(errors))
 
     current_user.hashed_password = hash_password(body.new_password)
     current_user.must_change_password = False
@@ -296,7 +296,7 @@ async def forgot_password(
     user: User | None = result.scalar_one_or_none()
     
     if not user:
-        return {"message": "If the account exists, a password reset token has been created."}
+        return {"message": "If an account matches that username or email, password reset instructions have been generated."}
 
     import secrets
     token = secrets.token_urlsafe(32)
@@ -325,7 +325,7 @@ async def forgot_password(
     await db.flush()
 
     return {
-        "message": "Password reset notification created successfully.",
+        "message": "Password reset token generated successfully. Use your reset token below to set a new password.",
         "reset_token": token
     }
 
@@ -333,7 +333,7 @@ async def forgot_password(
 # ---------------------------------------------------------------------------
 # POST /reset-password
 # ---------------------------------------------------------------------------
-@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
 async def reset_password(
     request: Request,
     body: UserResetPasswordRequest,
@@ -343,7 +343,7 @@ async def reset_password(
     if not user_id_str:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired reset token."
+            detail="Invalid or expired reset token. Please request a new password reset."
         )
         
     user_id = int(user_id_str)
@@ -353,12 +353,12 @@ async def reset_password(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User not found."
+            detail="User account not found or has been disabled."
         )
 
     errors = validate_password_strength(body.new_password)
     if errors:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=errors)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=" ".join(errors))
 
     user.hashed_password = hash_password(body.new_password)
     user.must_change_password = False
@@ -380,3 +380,7 @@ async def reset_password(
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )
+
+    return {
+        "message": "Password has been successfully reset. You can now log in with your new password."
+    }

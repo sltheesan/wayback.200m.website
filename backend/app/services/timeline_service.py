@@ -27,6 +27,8 @@ _YEAR_SUMMARY_TEMPLATES: Dict[str, str] = {
     "phishing_scam":    "{year}: Phishing/scam indicators found in {count} snapshot(s). Avg risk: {avg:.0f}.",
     "malware_hacking":  "{year}: Malware/hacking signals in {count} snapshot(s). Avg risk: {avg:.0f}.",
     "illegal_pharmaceuticals": "{year}: Illegal pharma signals in {count} snapshot(s). Avg risk: {avg:.0f}.",
+    "server_error": "{year}: Server error captures (HTTP 503/500/404) recorded across {count} snapshot(s). Avg risk: {avg:.0f}.",
+    "unavailable":  "{year}: Dead domain captures recorded across {count} snapshot(s). Avg risk: {avg:.0f}.",
     SAFE_LABEL:   "{year}: Content appeared safe across {count} snapshot(s). Avg risk: {avg:.0f}.",
 }
 

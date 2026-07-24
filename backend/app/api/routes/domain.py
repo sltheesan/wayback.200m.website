@@ -88,19 +88,26 @@ async def proxy_snapshot(timestamp: str, url: str):
         # Return a styled error page instead of a 500 that breaks the iframe
         error_html = f"""<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"><title>Snapshot Unavailable</title>
+<head><meta charset="UTF-8"><title>Captured HTTP Error / Snapshot Preview</title>
 <style>
-  body {{ font-family: sans-serif; background: #0f172a; color: #94a3b8;
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0f19; color: #94a3b8;
          display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
-  .box {{ text-align: center; padding: 2rem; border: 1px solid #1e293b; border-radius: 12px; max-width: 400px; }}
-  h2 {{ color: #e2e8f0; margin-bottom: .5rem; }}
-  a {{ color: #818cf8; }}
+  .box {{ text-align: center; padding: 2.5rem; border: 1px solid #1e293b; border-radius: 16px; max-width: 460px; background: #0f172a; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }}
+  .icon {{ font-size: 2.5rem; margin-bottom: 1rem; }}
+  h2 {{ color: #f8fafc; font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem 0; }}
+  p {{ font-size: 0.9rem; line-height: 1.5; color: #94a3b8; margin: 0 0 1.25rem 0; }}
+  .badge {{ display: inline-block; padding: 0.25rem 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-bottom: 1rem; }}
+  a {{ display: inline-block; padding: 0.6rem 1.2rem; background: #3b82f6; color: #ffffff; font-weight: 500; font-size: 0.85rem; border-radius: 8px; text-decoration: none; transition: all 0.2s; }}
+  a:hover {{ background: #2563eb; }}
+  .err-detail {{ font-size: 11px; margin-top: 1.25rem; color: #64748b; word-break: break-all; }}
 </style></head>
 <body><div class="box">
-  <h2>📷 Snapshot Unavailable</h2>
-  <p>Could not retrieve this snapshot through the proxy.</p>
-  <p><a href="https://web.archive.org/web/{timestamp}/{url}" target="_blank">Open directly on Wayback Machine ↗</a></p>
-  <p style="font-size:11px;margin-top:1rem;color:#475569">{str(e)[:120]}</p>
+  <div class="badge">SERVER CAPTURE NOTICE</div>
+  <div class="icon">⚠️</div>
+  <h2>Captured Server Error / Dead Snapshot</h2>
+  <p>This historical capture was recorded while the domain returned an HTTP error (e.g. 503 Service Unavailable / 404) or was unreachable.</p>
+  <a href="https://web.archive.org/web/{timestamp}/{url}" target="_blank">Open on Wayback Machine ↗</a>
+  <div class="err-detail">{str(e)[:150]}</div>
 </div></body></html>"""
         return HTMLResponse(content=error_html, status_code=200)
 
