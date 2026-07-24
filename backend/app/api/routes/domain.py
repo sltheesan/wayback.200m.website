@@ -81,13 +81,21 @@ async def proxy_snapshot(timestamp: str, url: str):
         # 1. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
         html_content = re.sub(r'<meta\s+http-equiv=["\']?refresh["\']?[^>]*>', '', html_content, flags=re.IGNORECASE)
 
-        # 2. Build the Wayback base URL for this snapshot so relative links resolve correctly
+        # 2. Strip defunct 10-year-old analytics and tracking scripts that hang connection pools
+        defunct_trackers_pattern = r'<script[^>]*src=["\']?https?://[^"\'>]*(?:quantserve|socialtwist|addthis|scorecardresearch|chartbeat|googletagservices|outbrain|taboola)[^"\'>]*["\']?[^>]*>\s*</script>'
+        html_content = re.sub(defunct_trackers_pattern, '', html_content, flags=re.IGNORECASE)
+
+        # 3. Upgrade insecure http:// image and media URLs to https:// to prevent Mixed Content warnings
+        html_content = re.sub(r'src=["\']http://', 'src="https://', html_content, flags=re.IGNORECASE)
+
+        # 4. Build the Wayback base URL for this snapshot so relative links resolve correctly
         wayback_base = f"https://web.archive.org/web/{timestamp}id_/{url}"
         base_tag = f'<base href="{wayback_base}" target="_blank">'
 
-        # 3. Inject anti-breakout security script to block window.top.location and window.open redirects
+        # 5. Inject anti-breakout security script & global error handler to suppress uncaught errors from dead scripts
         security_script = """<script>
 (function() {
+    window.onerror = function() { return true; };
     try { Object.defineProperty(window, 'top', { get: function() { return window.self; } }); } catch(e) {}
     try { Object.defineProperty(window, 'parent', { get: function() { return window.self; } }); } catch(e) {}
     window.open = function() { console.warn('ChronoSentinel: Blocked popup window.'); return null; };

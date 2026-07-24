@@ -90,6 +90,13 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || 'UNKNOWN';
 
+  // Smooth fallback loading timer: ensure preview resolves within 2.5s even if 2011 third-party scripts hang
+  useEffect(() => {
+    setIframeLoaded(false);
+    const timer = setTimeout(() => setIframeLoaded(true), 2500);
+    return () => clearTimeout(timer);
+  }, [proxyUrl]);
+
   const getLanguageLabel = (lang: string | null) => {
     if (!lang) return 'EN';
     const l = lang.toLowerCase();
@@ -242,7 +249,7 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
             <iframe
               src={proxyUrl}
               title={`Preview: ${s.original_url}`}
-              sandbox="allow-same-origin allow-scripts"
+              sandbox="allow-scripts"
               style={{ width: '100%', height: '100%', border: 'none', opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.4s ease' }}
               loading="lazy"
               referrerPolicy="no-referrer"

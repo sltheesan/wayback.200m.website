@@ -463,7 +463,7 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
                           <iframe
                             src={batchProxyUrl}
                             title={`Evidence preview for ${result.domain}`}
-                            sandbox="allow-same-origin allow-scripts"
+                            sandbox="allow-scripts"
                             className="h-full w-full bg-white"
                             loading="lazy"
                             referrerPolicy="no-referrer"
