@@ -72,27 +72,49 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
     """
     Proxies Wayback Machine snapshot HTML content through the backend so that users 
     blocked from direct archive.org access can view snapshot iframe previews.
+    Automatically follows redirect targets to render destination snapshot content.
     Injects a <base href> tag, anti-breakout script, and redirect notification banner.
     """
     from backend.app.services.wayback import wayback_service
+    import urllib.parse
+
     try:
+        target_url = url
+        resolved_redirect_url = None
+        if redirect_url:
+            resolved_redirect_url = urllib.parse.urljoin(url, redirect_url)
+
+        # 1. Fetch initial snapshot content
         html_content = await wayback_service.get_snapshot_content(timestamp=timestamp, url=url)
 
-        # 1. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
+        # 2. Check if original snapshot returned a 404 / Not Found page or minimal redirect shell
+        is_not_found = ("not found" in html_content.lower()[:500] and "404" in html_content.lower()[:500]) or len(html_content.strip()) < 200
+        
+        # 3. If redirect target exists and original is 404 or a redirect shell, fetch the destination snapshot HTML
+        if (is_not_found or redirect_url) and resolved_redirect_url and resolved_redirect_url != url:
+            try:
+                dest_html = await wayback_service.get_snapshot_content(timestamp=timestamp, url=resolved_redirect_url)
+                if dest_html and not ("not found" in dest_html.lower()[:500] and "404" in dest_html.lower()[:500]):
+                    html_content = dest_html
+                    target_url = resolved_redirect_url
+            except Exception as ex:
+                logger.warning(f"Proxy snapshot: Could not fetch redirect destination snapshot {resolved_redirect_url}: {ex}")
+
+        # 4. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
         html_content = re.sub(r'<meta\s+http-equiv=["\']?refresh["\']?[^>]*>', '', html_content, flags=re.IGNORECASE)
 
-        # 2. Strip defunct 10-year-old analytics and tracking scripts that hang connection pools
+        # 5. Strip defunct 10-year-old analytics and tracking scripts that hang connection pools
         defunct_trackers_pattern = r'<script[^>]*src=["\']?https?://[^"\'>]*(?:quantserve|socialtwist|addthis|scorecardresearch|chartbeat|googletagservices|outbrain|taboola)[^"\'>]*["\']?[^>]*>\s*</script>'
         html_content = re.sub(defunct_trackers_pattern, '', html_content, flags=re.IGNORECASE)
 
-        # 3. Upgrade insecure http:// image and media URLs to https:// to prevent Mixed Content warnings
+        # 6. Upgrade insecure http:// image and media URLs to https:// to prevent Mixed Content warnings
         html_content = re.sub(r'src=["\']http://', 'src="https://', html_content, flags=re.IGNORECASE)
 
-        # 4. Build the Wayback base URL for this snapshot so relative links resolve correctly
-        wayback_base = f"https://web.archive.org/web/{timestamp}id_/{url}"
+        # 7. Build the Wayback base URL for this target snapshot so relative links resolve correctly
+        wayback_base = f"https://web.archive.org/web/{timestamp}id_/{target_url}"
         base_tag = f'<base href="{wayback_base}" target="_blank">'
 
-        # 5. Inject anti-breakout security script & global error handler to suppress uncaught errors from dead scripts
+        # 8. Inject anti-breakout security script & global error handler to suppress uncaught errors from dead scripts
         security_script = """<script>
 (function() {
     window.onerror = function() { return true; };
@@ -102,14 +124,15 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
 })();
 </script>"""
 
-        # 6. Optional Redirect Target Banner injection
+        # 9. Optional Redirect Target Banner injection
         redirect_banner = ""
-        if redirect_url:
+        display_target = redirect_url or (target_url if target_url != url else None)
+        if display_target:
             redirect_banner = f"""<div style="background: linear-gradient(90deg, #1e1b4b 0%, #31104b 100%); border: 1px solid rgba(139,92,246,0.4); color: #e2e8f0; padding: 10px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; margin: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 999999; relative: true;">
     <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
-        <span style="background: #f43f5e; color: #ffffff; font-weight: 800; padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">REDIRECT TARGET DETECTED</span>
-        <span style="color: #cbd5e1; font-weight: 600;">Destination:</span>
-        <a href="{redirect_url}" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline; font-weight: 700; word-break: break-all;">{redirect_url}</a>
+        <span style="background: #f43f5e; color: #ffffff; font-weight: 800; padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">REDIRECT DESTINATION LOADED</span>
+        <span style="color: #cbd5e1; font-weight: 600;">Target:</span>
+        <a href="{display_target}" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline; font-weight: 700; word-break: break-all;">{display_target}</a>
     </div>
 </div>"""
 
