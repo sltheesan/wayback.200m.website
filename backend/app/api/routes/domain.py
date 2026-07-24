@@ -68,11 +68,11 @@ def _enrich_snapshots_with_ai(result: Any) -> Any:
 from fastapi.responses import HTMLResponse, Response
 
 @router.get("/proxy-snapshot", response_class=HTMLResponse)
-async def proxy_snapshot(timestamp: str, url: str):
+async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] = None):
     """
     Proxies Wayback Machine snapshot HTML content through the backend so that users 
     blocked from direct archive.org access can view snapshot iframe previews.
-    Injects a <base href> tag so relative resources (CSS, JS, images) resolve correctly.
+    Injects a <base href> tag, anti-breakout script, and redirect notification banner.
     """
     from backend.app.services.wayback import wayback_service
     try:
@@ -102,16 +102,35 @@ async def proxy_snapshot(timestamp: str, url: str):
 })();
 </script>"""
 
+        # 6. Optional Redirect Target Banner injection
+        redirect_banner = ""
+        if redirect_url:
+            redirect_banner = f"""<div style="background: linear-gradient(90deg, #1e1b4b 0%, #31104b 100%); border: 1px solid rgba(139,92,246,0.4); color: #e2e8f0; padding: 10px 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; margin: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 999999; relative: true;">
+    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+        <span style="background: #f43f5e; color: #ffffff; font-weight: 800; padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">REDIRECT TARGET DETECTED</span>
+        <span style="color: #cbd5e1; font-weight: 600;">Destination:</span>
+        <a href="{redirect_url}" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: underline; font-weight: 700; word-break: break-all;">{redirect_url}</a>
+    </div>
+</div>"""
+
         injection = base_tag + security_script
 
         if "<head>" in html_content.lower():
             idx = html_content.lower().find("<head>")
             insert_pos = idx + len("<head>")
             html_content = html_content[:insert_pos] + injection + html_content[insert_pos:]
-        elif "<html" in html_content.lower():
-            html_content = injection + html_content
         else:
             html_content = injection + html_content
+
+        if redirect_banner:
+            if "<body" in html_content.lower():
+                body_idx = html_content.lower().find("<body")
+                closing_gt = html_content.find(">", body_idx)
+                if closing_gt != -1:
+                    insert_pos = closing_gt + 1
+                    html_content = html_content[:insert_pos] + redirect_banner + html_content[insert_pos:]
+            else:
+                html_content = redirect_banner + html_content
 
         headers = {
             "X-Frame-Options": "SAMEORIGIN",

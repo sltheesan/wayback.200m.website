@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
@@ -85,7 +85,7 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const pal = getRiskPalette(s.risk_score, s.content_category);
   const apiBase = (import.meta.env.VITE_API_URL as string) || '/api/v1';
-  const proxyUrl = `${apiBase}/domains/proxy-snapshot?timestamp=${s.timestamp}&url=${encodeURIComponent(s.original_url)}`;
+  const proxyUrl = `${apiBase}/domains/proxy-snapshot?timestamp=${s.timestamp}&url=${encodeURIComponent(s.original_url)}${s.redirect_url ? `&redirect_url=${encodeURIComponent(s.redirect_url)}` : ''}`;
   const directUrl = `https://web.archive.org/web/${s.timestamp}/${s.original_url}`;
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || 'UNKNOWN';
@@ -203,11 +203,21 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
           <div style={{
             padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderBottom: `1px solid rgba(255,255,255,0.04)`, background: 'rgba(255,255,255,0.02)',
+            flexWrap: 'wrap', gap: 6,
           }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: pal.text }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: pal.accent, display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
               Visual Evidence Preview
             </span>
+            {s.redirect_url && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#f43f5e', background: 'rgba(244,63,94,0.1)', padding: '2px 8px', borderRadius: 6, border: '1px solid rgba(244,63,94,0.2)' }}>
+                <ExternalLink size={10} style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 9 }}>Redirect Target:</span>
+                <a href={s.redirect_url} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'underline', fontWeight: 600, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.redirect_url}
+                </a>
+              </div>
+            )}
           </div>
           <div style={{ height: 200, background: '#0a0e1a', position: 'relative', overflow: 'hidden' }}>
             {/* Shimmer skeleton loader */}
