@@ -1,4 +1,5 @@
 import time
+import re
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,27 +61,36 @@ async def proxy_snapshot(timestamp: str, url: str):
     try:
         html_content = await wayback_service.get_snapshot_content(timestamp=timestamp, url=url)
 
-        # Build the Wayback base URL for this snapshot so relative links resolve correctly
-        wayback_base = f"https://web.archive.org/web/{timestamp}id_/{url}"
+        # 1. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
+        html_content = re.sub(r'<meta\s+http-equiv=["\']?refresh["\']?[^>]*>', '', html_content, flags=re.IGNORECASE)
 
-        # Inject <base href> right after <head> (or at the start of <html>) so all
-        # relative CSS/JS/image paths are resolved against the archived snapshot origin.
+        # 2. Build the Wayback base URL for this snapshot so relative links resolve correctly
+        wayback_base = f"https://web.archive.org/web/{timestamp}id_/{url}"
         base_tag = f'<base href="{wayback_base}" target="_blank">'
 
+        # 3. Inject anti-breakout security script to block window.top.location and window.open redirects
+        security_script = """<script>
+(function() {
+    try { Object.defineProperty(window, 'top', { get: function() { return window.self; } }); } catch(e) {}
+    try { Object.defineProperty(window, 'parent', { get: function() { return window.self; } }); } catch(e) {}
+    window.open = function() { console.warn('ChronoSentinel: Blocked popup window.'); return null; };
+})();
+</script>"""
+
+        injection = base_tag + security_script
+
         if "<head>" in html_content.lower():
-            # Insert after first <head> tag (case-insensitive)
             idx = html_content.lower().find("<head>")
             insert_pos = idx + len("<head>")
-            html_content = html_content[:insert_pos] + base_tag + html_content[insert_pos:]
+            html_content = html_content[:insert_pos] + injection + html_content[insert_pos:]
         elif "<html" in html_content.lower():
-            # Fallback: insert right before </html>
-            html_content = base_tag + html_content
+            html_content = injection + html_content
         else:
-            html_content = base_tag + html_content
+            html_content = injection + html_content
 
         headers = {
             "X-Frame-Options": "SAMEORIGIN",
-            "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;",
+            "Content-Security-Policy": "frame-ancestors 'self';",
         }
         return HTMLResponse(content=html_content, headers=headers)
     except Exception as e:

@@ -242,6 +242,7 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
             <iframe
               src={proxyUrl}
               title={`Preview: ${s.original_url}`}
+              sandbox="allow-same-origin allow-scripts"
               style={{ width: '100%', height: '100%', border: 'none', opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.4s ease' }}
               loading="lazy"
               referrerPolicy="no-referrer"
