@@ -279,22 +279,29 @@ def preprocess_domain_name(domain: str) -> str:
             
     return " ".join(unique_words)
 
-def analyze_snapshot_content(html_content: str, domain: Optional[str] = None) -> Tuple[int, Dict[str, int], List[Dict[str, Any]]]:
+def analyze_snapshot_content(
+    html_content: str, 
+    domain: Optional[str] = None, 
+    redirect_url: Optional[str] = None
+) -> Tuple[int, Dict[str, int], List[Dict[str, Any]]]:
     """
     Cleans raw HTML, detects language, scans for risk keywords (with context-aware 
     thresholds and negative keywords), and computes the risk score.
+    Now scans redirect target URLs for embedded threat keywords.
 
     returns (snapshot_risk_score, category_scores, list_of_triggered_flags).
     """
-    if not html_content:
+    if not html_content and not redirect_url:
         return 0, {}, []
 
     # Clean the HTML content to obtain readable lowercase text (meta tags + full body content)
-    meta_text = extract_meta_tags_content(html_content)
-    body_text = clean_html_content(html_content)
+    meta_text = extract_meta_tags_content(html_content or "")
+    body_text = clean_html_content(html_content or "")
     cleaned_text = f"{meta_text} {body_text}".lower()
     if domain:
         cleaned_text = f"{preprocess_domain_name(domain)} {cleaned_text}"
+    if redirect_url:
+        cleaned_text = f"{preprocess_domain_name(redirect_url)} {cleaned_text}"
     scan_text = f"{cleaned_text} {normalize_obfuscated_text(cleaned_text)}"
     
     lang = get_language(cleaned_text)

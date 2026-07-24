@@ -298,8 +298,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             confidence = max(d["confidence_score"] for d in image_threats)
             summary = f"Threat content identified via historical image checks: {image_threats[0]['evidence_description']}"
 
-        # Structural Detectors
-        detector_results = run_all_detectors(html_content, cleaned_text, clf_result)
+        # Structural Detectors (inspecting HTML structure and redirect target URL)
+        detector_results = run_all_detectors(html_content, cleaned_text, clf_result, redirect_url=redir_url)
         high_signals = high_signal_count(detector_results)
 
         # Check for Repurposed Domain Redirect Detector signal

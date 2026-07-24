@@ -46,6 +46,9 @@ def compute_overall_risk(snapshot_results: List[Dict[str, Any]]) -> Tuple[int, s
 
     # Weighted combination: peak heavily influences final score
     final_score = int(round(peak_score * 0.6 + avg_score * 0.4))
+    if peak_score >= 80:
+        # High-severity threats (gambling/adult redirects, phishing) elevate final score
+        final_score = max(final_score, 70)
     final_score = min(final_score, 100)
 
     avg_score_rounded = int(round(avg_score))

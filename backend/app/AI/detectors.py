@@ -197,15 +197,18 @@ def iframe_redirect_detector(
 
 
 def repurposed_domain_redirect_detector(
-    html: str, text: str, clf: ClassificationResult
+    html: str, text: str, clf: ClassificationResult, redirect_url: Optional[str] = None
 ) -> Dict[str, Any]:
     """Detects expired/dead domains repurposed into gaming, casino, or adult redirectors."""
     js_redirects = len(_RE_REDIRECT_JS.findall(html))
     meta_redirects = len(_RE_META_REFRESH.findall(html))
-    gambling_hits = len(_RE_GAMBLING_KEYWORDS.findall(text))
-    adult_hits = len(_RE_ADULT_KEYWORDS.findall(text))
+    
+    # Combine body text and redirect target URL for keyword scanning
+    combined_scan = f"{text} {redirect_url or ''}".lower()
+    gambling_hits = len(_RE_GAMBLING_KEYWORDS.findall(combined_scan))
+    adult_hits = len(_RE_ADULT_KEYWORDS.findall(combined_scan))
 
-    has_redirect = (js_redirects > 0 or meta_redirects > 0)
+    has_redirect = (js_redirects > 0 or meta_redirects > 0 or bool(redirect_url))
     has_spam_niche = (gambling_hits > 0 or adult_hits > 0)
 
     is_repurposed_redirect = (has_redirect and has_spam_niche) or (gambling_hits > 3 or adult_hits > 3)
@@ -217,6 +220,7 @@ def repurposed_domain_redirect_detector(
         "has_redirect": has_redirect,
         "js_redirects": js_redirects,
         "meta_redirects": meta_redirects,
+        "redirect_url": redirect_url,
         "gambling_keyword_hits": gambling_hits,
         "adult_keyword_hits": adult_hits,
         "is_repurposed_redirect": is_repurposed_redirect,
@@ -246,30 +250,19 @@ def run_all_detectors(
     html_content: str,
     cleaned_text: str,
     classification: ClassificationResult,
+    redirect_url: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Execute every registered detector and return the list of signal dicts.
-
-    Parameters
-    ----------
-    html_content : str
-        Raw HTML of the snapshot.
-    cleaned_text : str
-        Pre-cleaned, lower-cased plain text (avoids double cleaning).
-    classification : ClassificationResult
-        Result from `classify_content`, passed so detectors can be
-        context-aware.
-
-    Returns
-    -------
-    List[Dict[str, Any]]
-        One dict per detector, each containing a 'signal' key
-        ("low" / "medium" / "high").
+    Passes redirect_url to detectors inspecting redirect destinations.
     """
     results: List[Dict[str, Any]] = []
     for detector_fn in _REGISTRY:
         try:
-            result = detector_fn(html_content, cleaned_text, classification)
+            if detector_fn.__name__ == "repurposed_domain_redirect_detector":
+                result = detector_fn(html_content, cleaned_text, classification, redirect_url=redirect_url)
+            else:
+                result = detector_fn(html_content, cleaned_text, classification)
             results.append(result)
         except Exception as exc:
             logger.warning(
