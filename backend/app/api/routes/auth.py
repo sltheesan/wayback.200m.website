@@ -217,6 +217,8 @@ async def logout(
             user_id=current_user.id,
             username=current_user.username,
             user_role=current_user.role,
+            action="LOGOUT",
+            ip_address=get_client_ip(request),
             user_agent_string=request.headers.get("User-Agent"),
         )
 
