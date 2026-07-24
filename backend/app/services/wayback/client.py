@@ -38,8 +38,8 @@ class WaybackHTTPClient:
 
             # Dynamic timeout and retry config based on proxy type
             if is_free_proxy(proxy):
-                # Fast-fail for scraped free proxies — move on quickly if no response
-                current_timeout = 4
+                # Ultra fast-fail for scraped free proxies — purge dead proxies in 2.5s
+                current_timeout = 2.5
                 current_retries = 1
             elif proxy is None:
                 # Direct connection: 8 second timeout to prevent stalled requests
