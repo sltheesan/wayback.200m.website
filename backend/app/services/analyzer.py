@@ -345,11 +345,13 @@ def analyze_snapshot_content(
     final_score = min(total_score, 100)
 
     # Enrich flags with location data
-    matched_kws = [f["keyword"] for f in flags]
+    matched_kws = [f.get("keyword") for f in flags if isinstance(f, dict) and f.get("keyword")]
     locations = find_keyword_locations(html_content, matched_kws)
     for flag in flags:
-        flag_kw = flag["keyword"].lower()
-        flag_locs = [loc for loc in locations if loc["keyword"].lower() == flag_kw]
+        if not isinstance(flag, dict) or not flag.get("keyword"):
+            continue
+        flag_kw = flag.get("keyword", "").lower()
+        flag_locs = [loc for loc in locations if loc.get("keyword", "").lower() == flag_kw]
         if flag_locs:
             flag["element"] = flag_locs[0]["element"]
             flag["matched_text"] = flag_locs[0]["matched_text"]
@@ -357,8 +359,8 @@ def analyze_snapshot_content(
             flag["position"] = flag_locs[0]["position"]
         else:
             flag["element"] = "<body>"
-            flag["matched_text"] = flag["keyword"]
-            flag["snippet"] = f"Keyword match found ({flag['match_count']} times)"
+            flag["matched_text"] = flag.get("keyword", "")
+            flag["snippet"] = f"Keyword match found ({flag.get('match_count', 1)} times)"
             flag["position"] = 0
 
     return final_score, category_scores, flags

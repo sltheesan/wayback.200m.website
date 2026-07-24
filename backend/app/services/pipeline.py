@@ -314,6 +314,9 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             flags.append({
                 "flag": "EXPIRED_DOMAIN_HIJACK_REDIRECT",
                 "category": primary_cat,
+                "keyword": f"redirect:{target_niche}",
+                "weight": 60,
+                "match_count": 1,
                 "score_impact": 60,
                 "evidence_description": f"Domain redirected to external {target_niche} site."
             })
@@ -561,16 +564,16 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             extraction_metadata=snap_res.get("extraction_metadata"),
         )
         db_domain.snapshots.append(db_snap)
-        for flag_res in snap_res["flags"]:
+        for flag_res in snap_res.get("flags", []):
             db_snap.flags.append(AnalysisFlag(
-                category=flag_res["category"],
-                keyword=flag_res["keyword"],
-                weight=flag_res["weight"],
-                match_count=flag_res["match_count"],
-                element=flag_res.get("element"),
-                matched_text=flag_res.get("matched_text"),
-                snippet=flag_res.get("snippet"),
-                position=flag_res.get("position"),
+                category=flag_res.get("category", "safe"),
+                keyword=flag_res.get("keyword", flag_res.get("flag", "flagged_behavior")),
+                weight=flag_res.get("weight", flag_res.get("score_impact", 10)),
+                match_count=flag_res.get("match_count", 1),
+                element=flag_res.get("element", "<body>"),
+                matched_text=flag_res.get("matched_text", flag_res.get("keyword")),
+                snippet=flag_res.get("snippet", flag_res.get("evidence_description")),
+                position=flag_res.get("position", 0),
             ))
 
     # Timeline rows
