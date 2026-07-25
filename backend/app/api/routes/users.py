@@ -7,6 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.core.database import get_db
@@ -41,6 +42,37 @@ def _can_manage_target(actor: User, target: User) -> bool:
     if actor.role == UserRole.admin:
         return target.role == UserRole.user
     return False
+
+
+async def validate_unique_user(
+    db: AsyncSession,
+    username: str,
+    email: str,
+    exclude_user_id: Optional[int] = None
+) -> None:
+    """
+    Industry-standard validation for username and email uniqueness.
+    Raises HTTP 409 Conflict with exact, distinct field error messages.
+    """
+    stmt_username = select(User).where(User.username == username, User.is_deleted == False)
+    if exclude_user_id:
+        stmt_username = stmt_username.where(User.id != exclude_user_id)
+    existing_username = (await db.execute(stmt_username)).scalar_one_or_none()
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already exists."
+        )
+
+    stmt_email = select(User).where(User.email == email, User.is_deleted == False)
+    if exclude_user_id:
+        stmt_email = stmt_email.where(User.id != exclude_user_id)
+    existing_email = (await db.execute(stmt_email)).scalar_one_or_none()
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -101,18 +133,11 @@ async def create_user(
     if current_user.role == UserRole.admin and body.role in ("admin", "super_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins can only create regular users.")
 
-    # Check uniqueness
-    existing = await db.execute(
-        select(User).where(
-            (User.username == body.username) | (User.email == body.email),
-            User.is_deleted == False,
-        )
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username or email already in use.")
-
     if not body.password or not body.password.strip():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password cannot be empty.")
+
+    # 1. Step 1: Pre-insertion validation for existing username or email
+    await validate_unique_user(db, body.username, body.email)
 
     new_user = User(
         full_name=body.full_name,
@@ -125,49 +150,59 @@ async def create_user(
         created_at=_utcnow(),
         updated_at=_utcnow(),
     )
-    db.add(new_user)
-    await db.flush()
 
-    # Notify all admins
-    notif = Notification(
-        notification_type="new_user",
-        title="New User Created",
-        message=f"{current_user.username} created user '{body.username}' ({body.role}).",
-    )
-    db.add(notif)
+    # 2. Step 2 & 3: Race-condition safe database insertion & transaction handling
+    try:
+        db.add(new_user)
+        await db.flush()
 
-    # Log action for the admin creator
-    await log_action(
-        db,
-        user_id=current_user.id,
-        username=current_user.username,
-        user_role=current_user.role,
-        action="CREATE_USER",
-        object_type="User",
-        object_id=new_user.id,
-        object_label=new_user.username,
-        new_value={"role": body.role, "email": body.email},
-        ip_address=get_client_ip(request),
-        user_agent_string=request.headers.get("User-Agent"),
-    )
+        # Notify all admins
+        notif = Notification(
+            notification_type="new_user",
+            title="New User Created",
+            message=f"{current_user.username} created user '{body.username}' ({body.role}).",
+        )
+        db.add(notif)
 
-    # Log profile creation action for the new user's initial activity trail
-    await log_action(
-        db,
-        user_id=new_user.id,
-        username=new_user.username,
-        user_role=new_user.role,
-        action="PROFILE_CREATED",
-        object_type="User",
-        object_id=new_user.id,
-        object_label=new_user.username,
-        new_value={"message": "System profile auto-bootstrapped"},
-        ip_address=get_client_ip(request),
-        user_agent_string=request.headers.get("User-Agent"),
-    )
+        # Log action for creator
+        await log_action(
+            db,
+            user_id=current_user.id,
+            username=current_user.username,
+            user_role=current_user.role,
+            action="CREATE_USER",
+            object_type="User",
+            object_id=new_user.id,
+            object_label=new_user.username,
+            new_value={"role": body.role, "email": body.email},
+            ip_address=get_client_ip(request),
+            user_agent_string=request.headers.get("User-Agent"),
+        )
 
-    await db.commit()
-    await db.refresh(new_user)
+        # Log profile creation action
+        await log_action(
+            db,
+            user_id=new_user.id,
+            username=new_user.username,
+            user_role=new_user.role,
+            action="PROFILE_CREATED",
+            object_type="User",
+            object_id=new_user.id,
+            object_label=new_user.username,
+            new_value={"message": "System profile auto-bootstrapped"},
+            ip_address=get_client_ip(request),
+            user_agent_string=request.headers.get("User-Agent"),
+        )
+
+        await db.commit()
+        await db.refresh(new_user)
+    except IntegrityError as err:
+        await db.rollback()
+        logger.warning(f"Race condition IntegrityError in create_user for '{body.username}': {err}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username or email already exists."
+        )
 
     return UserResponse.model_validate(new_user)
 
@@ -211,6 +246,11 @@ async def update_user(
     if current_user.role == UserRole.admin and body.role in ("admin", "super_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admins cannot assign admin roles.")
 
+    # Pre-validation for username or email updates
+    target_username = body.username if body.username is not None else target.username
+    target_email = body.email if body.email is not None else target.email
+    await validate_unique_user(db, target_username, target_email, exclude_user_id=target.id)
+
     old = {"full_name": target.full_name, "role": target.role, "status": target.status, "email": target.email}
 
     if body.full_name is not None:
@@ -229,27 +269,36 @@ async def update_user(
 
     new = {"full_name": target.full_name, "role": target.role, "status": target.status, "email": target.email}
 
-    await log_action(
-        db,
-        user_id=current_user.id,
-        username=current_user.username,
-        user_role=current_user.role,
-        action="UPDATE_USER",
-        object_type="User",
-        object_id=target.id,
-        object_label=target.username,
-        old_value=old,
-        new_value=new,
-        ip_address=get_client_ip(request),
-        user_agent_string=request.headers.get("User-Agent"),
-    )
-    await db.commit()
-    await db.refresh(target)
+    try:
+        await log_action(
+            db,
+            user_id=current_user.id,
+            username=current_user.username,
+            user_role=current_user.role,
+            action="UPDATE_USER",
+            object_type="User",
+            object_id=target.id,
+            object_label=target.username,
+            old_value=old,
+            new_value=new,
+            ip_address=get_client_ip(request),
+            user_agent_string=request.headers.get("User-Agent"),
+        )
+        await db.commit()
+        await db.refresh(target)
+    except IntegrityError as err:
+        await db.rollback()
+        logger.warning(f"Race condition IntegrityError in update_user for ID {target.id}: {err}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username or email already exists."
+        )
+
     return UserResponse.model_validate(target)
 
 
 # ---------------------------------------------------------------------------
-# DELETE /users/{user_id} — soft delete
+# DELETE /users/{user_id} — permanent complete deletion
 # ---------------------------------------------------------------------------
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
@@ -258,7 +307,7 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    result = await db.execute(select(User).where(User.id == user_id, User.is_deleted == False))
+    result = await db.execute(select(User).where(User.id == user_id))
     target: User | None = result.scalar_one_or_none()
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
@@ -269,17 +318,7 @@ async def delete_user(
     if target.id == current_user.id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete your own account.")
 
-    target.is_deleted = True
-    target.deleted_at = _utcnow()
-    target.status = UserStatus.suspended
-
-    notif = Notification(
-        notification_type="user_deleted",
-        title="User Deleted",
-        message=f"{current_user.username} deleted user '{target.username}'.",
-    )
-    db.add(notif)
-
+    # Log action before row deletion
     await log_action(
         db,
         user_id=current_user.id,
@@ -292,6 +331,16 @@ async def delete_user(
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )
+
+    notif = Notification(
+        notification_type="user_deleted",
+        title="User Deleted",
+        message=f"{current_user.username} permanently deleted user '{target.username}'.",
+    )
+    db.add(notif)
+
+    # Permanent complete deletion from database
+    await db.delete(target)
     await db.commit()
 
 
