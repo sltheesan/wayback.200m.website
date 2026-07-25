@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CheckCircle2, Play, RefreshCw, Loader2, ArrowUpRight, ShieldAlert, Eye, Tag, FileSearch } from 'lucide-react';
+import { CheckCircle2, Play, RefreshCw, Loader2, ArrowUpRight, ShieldAlert, Eye, Tag, FileSearch, RotateCcw } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface BatchUploadProps {
@@ -215,7 +215,12 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
   };
 
   // Compute successfully analyzed domains and failed ones
-  const successfulDomains = new Set(taskResults.map(r => r.domain.toLowerCase()));
+  const successfulResults = taskResults.filter(r => r.status !== 'failed');
+  const failedResultsMap = new Map<string, string>(
+    taskResults.filter(r => r.status === 'failed').map(r => [r.domain.toLowerCase(), r.error || r.risk_narrative || 'Failed to fetch Wayback CDX or live site'])
+  );
+
+  const successfulDomains = new Set(successfulResults.map(r => r.domain.toLowerCase()));
   const failedDomains = submittedDomains.filter(d => !successfulDomains.has(d.toLowerCase()));
 
   return (
@@ -336,9 +341,9 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
             Batch Analysis Complete
           </h4>
 
-          {taskResults.length > 0 && (
+          {successfulResults.length > 0 && (
             <div className="space-y-4">
-              {taskResults.map((result, idx) => {
+              {successfulResults.map((result, idx) => {
                 const flags: string[] = result.flags || [];
                 const categoryConf: Record<string, number> = result.category_confidence || {};
                 const primaryCat: string = result.primary_category || '';
@@ -499,17 +504,40 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
           )}
 
           {failedDomains.length > 0 && (
-            <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 space-y-2 text-xs">
-              <span className="font-bold text-rose-400 block">⚠️ Failed to Analyze ({failedDomains.length} domains)</span>
+            <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 space-y-3 text-xs">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-bold text-rose-400 block">⚠️ Failed to Analyze ({failedDomains.length} domain{failedDomains.length !== 1 ? 's' : ''})</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputText(failedDomains.join('\n'));
+                    setTaskInfo(null);
+                    setTaskStatus('');
+                    setTaskResults([]);
+                    setSubmittedDomains([]);
+                    setError('');
+                  }}
+                  className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/30 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <RotateCcw size={12} />
+                  <span>Retry Failed Domains</span>
+                </button>
+              </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
                 The following domains could not be fetched from the Wayback Machine. This usually happens if the domain has no historical archives, or if the Wayback Machine CDX API is currently rate-limiting queries.
               </p>
-              <div className="flex flex-wrap gap-2 pt-2">
-                {failedDomains.map((domain, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-slate-950 border border-slate-850 rounded text-slate-300 font-mono text-[10px]">
-                    {domain}
-                  </span>
-                ))}
+              <div className="flex flex-col gap-2 pt-1">
+                {failedDomains.map((domain, idx) => {
+                  const errorReason = failedResultsMap.get(domain.toLowerCase());
+                  return (
+                    <div key={idx} className="flex items-center justify-between gap-2 p-2.5 bg-slate-950 border border-slate-800 rounded-lg">
+                      <span className="font-mono text-slate-200 text-[11px] font-semibold">{domain}</span>
+                      {errorReason && (
+                        <span className="text-[10px] text-rose-400/90 font-mono truncate max-w-sm">{errorReason}</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

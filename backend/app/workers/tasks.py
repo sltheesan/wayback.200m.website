@@ -167,15 +167,20 @@ async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool =
     """
     total_count = len(domains)
     logger.info(f"Initiating bulk analysis for {total_count} domains")
-    semaphore = asyncio.Semaphore(6)  # Process up to 6 domains in parallel
+    semaphore = asyncio.Semaphore(2)  # Process up to 2 domains concurrently to stay within Wayback rate limits
 
-    async def analyze_one(d: str) -> dict | None:
+    async def analyze_one(idx: int, d: str) -> dict:
+        # Stagger domain startup times to prevent simultaneous burst to Wayback CDX API
+        if idx > 0:
+            await asyncio.sleep(idx * 0.4)
+
         async with semaphore:
             try:
                 async with AsyncSessionLocal() as db:
                     res = await analyze_domain_pipeline(d, force_refresh, db)
                     return {
                         "domain": res["domain"],
+                        "status": "success",
                         "risk_score": res["risk_score"],
                         "risk_level": res["risk_level"],
                         "flags": res.get("flags", []),
@@ -214,7 +219,7 @@ async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool =
                             _cdx_mod.fetch_snapshots = _original_fetch
                             _pipe_mod.fetch_snapshots = _original_fetch
                     else:
-                        logger.error(f"[Batch] All proxy rotation attempts failed for {d}. Skipping.")
+                        logger.error(f"[Batch] All proxy rotation attempts failed for {d}.")
                 except Exception as rotation_err:
                     _cdx_mod.fetch_snapshots = _original_fetch
                     _pipe_mod.fetch_snapshots = _original_fetch
@@ -223,6 +228,7 @@ async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool =
                 if rotated_result:
                     return {
                         "domain": rotated_result["domain"],
+                        "status": "success",
                         "risk_score": rotated_result["risk_score"],
                         "risk_level": rotated_result["risk_level"],
                         "flags": rotated_result.get("flags", []),
@@ -233,9 +239,31 @@ async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool =
                         "evidence_snapshot": _pick_evidence_snapshot(rotated_result),
                         "proxy_used": rotated_result.get("cdx_proxy_used", proxy_succeeded),
                     }
-                return None
 
-    task_results = await asyncio.gather(*[analyze_one(d) for d in domains], return_exceptions=True)
+                error_reason = str(first_err)
+                if "rate-limit" in error_reason.lower() or "429" in error_reason:
+                    clean_reason = "Wayback Machine CDX API is currently rate-limiting queries."
+                elif "unreachable" in error_reason.lower() or "timeout" in error_reason.lower():
+                    clean_reason = "Wayback Machine CDX API timed out or is temporarily unreachable."
+                else:
+                    clean_reason = f"Could not fetch domain history or live site: {error_reason}"
+
+                return {
+                    "domain": d,
+                    "status": "failed",
+                    "error": clean_reason,
+                    "risk_score": 0,
+                    "risk_level": "UNKNOWN",
+                    "flags": [],
+                    "primary_category": "",
+                    "category_confidence": {},
+                    "snapshots_checked": 0,
+                    "risk_narrative": clean_reason,
+                    "evidence_snapshot": None,
+                    "proxy_used": None,
+                }
+
+    task_results = await asyncio.gather(*[analyze_one(i, d) for i, d in enumerate(domains)], return_exceptions=True)
     results = [res for res in task_results if isinstance(res, dict)]
     return results
 

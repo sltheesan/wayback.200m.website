@@ -42,9 +42,9 @@ class WaybackHTTPClient:
                 current_timeout = 2.5
                 current_retries = 1
             elif proxy is None:
-                # Direct connection: 8 second timeout to prevent stalled requests
-                current_timeout = 8
-                current_retries = 1
+                # Direct connection: 15 second timeout to handle slow CDX searches, 2 retries with backoff
+                current_timeout = 15
+                current_retries = 2
             else:
                 # Explicitly configured trusted proxy: cap at 12s timeout
                 current_timeout = min(timeout, 12)
@@ -87,6 +87,8 @@ class WaybackHTTPClient:
                                     f"Rate limited (429) on {url} via {label}. "
                                     f"Attempt {attempt + 1}/{current_retries}"
                                 )
+                                # Back off before retrying if rate limited
+                                await asyncio.sleep(2.0 * (attempt + 1))
                             else:
                                 logger.warning(
                                     f"Provider returned status {response.status} for {url} "

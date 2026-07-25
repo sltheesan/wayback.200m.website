@@ -86,11 +86,11 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     live_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
 
     if raw_snapshots is None:
-        if db_domain and not force_refresh:
+        if db_domain:
             logger.warning(f"Wayback Machine CDX API is unreachable for {domain_clean}. Falling back to existing database record.")
             return format_domain_response(db_domain)
         if not live_html:
-            raise RuntimeError("Wayback Machine CDX API is temporarily unreachable or returned a bad response, and the live domain homepage could not be reached. Please try again.")
+            raise RuntimeError("Wayback Machine CDX API is temporarily rate-limited or unreachable, and the live domain homepage could not be reached. Please try again.")
         logger.warning(f"Wayback Machine CDX API is unreachable for {domain_clean}. Falling back to live homepage scan.")
         raw_snapshots = []
 
