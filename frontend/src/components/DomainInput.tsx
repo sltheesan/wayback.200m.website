@@ -21,13 +21,16 @@ export default function DomainInput({ onScan, loading }: DomainInputProps) {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const cleanVal = domain.trim();
+    let cleanVal = domain.trim().toLowerCase();
     if (!cleanVal) {
       setError('Please enter a valid domain name.');
       return;
     }
 
-    // Strict real domain validation
+    // Automatically strip protocol prefixes (http://, https://), paths, and ports
+    cleanVal = cleanVal.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+
+    // Real domain format validation
     const domainPattern = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
 
     if (!domainPattern.test(cleanVal)) {
@@ -69,13 +72,18 @@ export default function DomainInput({ onScan, loading }: DomainInputProps) {
         {/* Input & Search Group */}
         <div className="relative flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3">
           <div className="relative flex-1 group">
-            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-400 transition-colors duration-200" size={18} />
+            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-400 transition-colors duration-200" size={18} />
             <input
               type="text"
               placeholder="Enter target domain (e.g. example.com, suspicious-site.net)"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
-              className="w-full pl-11 pr-4 py-3.5 glass-input text-base font-medium tracking-wide focus:border-brand-500/50 focus:shadow-[0_0_20px_-3px_rgba(124,58,237,0.15)] transition-all duration-200"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSubmit(e);
+                }
+              }}
+              className="w-full pl-11 pr-4 py-3.5 glass-input text-base font-medium tracking-wide focus:border-blue-500/50 focus:shadow-[0_0_20px_-3px_rgba(59,130,246,0.2)] transition-all duration-200"
               disabled={loading}
             />
           </div>
@@ -83,9 +91,9 @@ export default function DomainInput({ onScan, loading }: DomainInputProps) {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full md:w-auto px-8 py-3.5 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-2 text-base ${loading
-                ? 'bg-brand-500/50 text-slate-300 cursor-not-allowed'
-                : 'bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/10 hover:shadow-brand-500/20 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
+            className={`w-full md:w-auto px-8 py-3.5 rounded-lg font-bold transition-all duration-200 flex items-center justify-center space-x-2 text-base ${loading
+                ? 'bg-blue-600/50 text-slate-300 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
               }`}
           >
             {loading ? (
