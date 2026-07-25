@@ -122,10 +122,10 @@ class Settings(BaseSettings):
     SESSION_TIMEOUT_MINUTES: int = 60
     MAX_LOGIN_ATTEMPTS: int = 5
     ACCOUNT_LOCK_MINUTES: int = 15
-    PASSWORD_MIN_LENGTH: int = 8
-    PASSWORD_REQUIRE_UPPERCASE: bool = True
-    PASSWORD_REQUIRE_DIGIT: bool = True
-    PASSWORD_REQUIRE_SPECIAL: bool = True
+    PASSWORD_MIN_LENGTH: int = 1
+    PASSWORD_REQUIRE_UPPERCASE: bool = False
+    PASSWORD_REQUIRE_DIGIT: bool = False
+    PASSWORD_REQUIRE_SPECIAL: bool = False
 
     # SMTP Email Settings (optional — leave empty to disable email features)
     SMTP_HOST: str = ""

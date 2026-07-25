@@ -44,16 +44,21 @@ def validate_password_strength(password: str) -> list[str]:
     """
     errors: list[str] = []
 
-    if len(password) < settings.PASSWORD_MIN_LENGTH:
-        errors.append(f"Password must be at least {settings.PASSWORD_MIN_LENGTH} characters long.")
+    if not password or not password.strip():
+        errors.append("Password cannot be empty.")
+        return errors
 
-    if settings.PASSWORD_REQUIRE_UPPERCASE and not re.search(r"[A-Z]", password):
+    min_len = getattr(settings, "PASSWORD_MIN_LENGTH", 1)
+    if min_len > 1 and len(password) < min_len:
+        errors.append(f"Password must be at least {min_len} characters long.")
+
+    if getattr(settings, "PASSWORD_REQUIRE_UPPERCASE", False) and not re.search(r"[A-Z]", password):
         errors.append("Password must contain at least one uppercase letter.")
 
-    if settings.PASSWORD_REQUIRE_DIGIT and not re.search(r"\d", password):
+    if getattr(settings, "PASSWORD_REQUIRE_DIGIT", False) and not re.search(r"\d", password):
         errors.append("Password must contain at least one digit.")
 
-    if settings.PASSWORD_REQUIRE_SPECIAL and not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", password):
+    if getattr(settings, "PASSWORD_REQUIRE_SPECIAL", False) and not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", password):
         errors.append("Password must contain at least one special character.")
 
     return errors
