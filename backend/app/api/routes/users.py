@@ -52,8 +52,22 @@ async def validate_unique_user(
 ) -> None:
     """
     Industry-standard validation for username and email uniqueness.
-    Raises HTTP 409 Conflict with exact, distinct field error messages.
+    Automatically purges any legacy soft-deleted records matching username or email.
     """
+    # 1. Purge legacy soft-deleted records to free up username and email in DB
+    stmt_purge = select(User).where(
+        (User.username == username) | (User.email == email),
+        User.is_deleted == True
+    )
+    if exclude_user_id:
+        stmt_purge = stmt_purge.where(User.id != exclude_user_id)
+    legacy_deleted = (await db.execute(stmt_purge)).scalars().all()
+    if legacy_deleted:
+        for old_u in legacy_deleted:
+            await db.delete(old_u)
+        await db.commit()
+
+    # 2. Check active user records for conflicts
     stmt_username = select(User).where(User.username == username, User.is_deleted == False)
     if exclude_user_id:
         stmt_username = stmt_username.where(User.id != exclude_user_id)
@@ -88,6 +102,12 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin),
 ):
+    # Auto-cleanup any legacy soft-deleted user rows from the database
+    legacy = (await db.execute(select(User).where(User.is_deleted == True))).scalars().all()
+    if legacy:
+        for u in legacy:
+            await db.delete(u)
+        await db.commit()
     stmt = select(User).where(User.is_deleted == False)
 
     if search:
