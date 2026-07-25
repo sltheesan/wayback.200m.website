@@ -85,7 +85,7 @@ function ScanApp() {
     fetchStats();
   }, []);
 
-  const handleScanDomain = async (domain: string, forceRefresh: boolean, fromBatch: boolean = false) => {
+  const handleScanDomain = async (domain: string, forceRefresh: boolean) => {
     setLoading(true);
     setError('');
     setActiveSnapshot(null);
@@ -94,11 +94,7 @@ function ScanApp() {
     try {
       const result = await apiService.analyzeDomain(domain, forceRefresh);
       setActiveData(result);
-      if (fromBatch) {
-        setInspectedBatchDomain(domain);
-      } else {
-        setInspectedBatchDomain(null);
-      }
+      setInspectedBatchDomain(result.domain);
       if (result.snapshots && result.snapshots.length > 0) {
         // Default to the first (earliest) snapshot
         setActiveSnapshot(result.snapshots[0]);
@@ -470,7 +466,7 @@ function ScanApp() {
               <div className="lg:col-span-3 space-y-6">
                 <BatchUpload 
                   onScanDomain={(d) => {
-                    handleScanDomain(d, false, false);
+                    handleScanDomain(d, false);
                     setActiveTab('scan');
                   }} 
                   loadedJob={selectedBatchJob}
@@ -493,7 +489,7 @@ function ScanApp() {
                   </div>
                 </div>
               </div>
-            ) : (activeData && inspectedBatchDomain && activeData.domain.toLowerCase() === inspectedBatchDomain.toLowerCase()) ? (
+            ) : (activeData && activeData.domain) ? (
               <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6 space-y-8">
                 <div className="space-y-8 animate-fade-in text-left">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
