@@ -13,6 +13,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import SystemHealth from './components/SystemHealth';
 import ReportsPanel from './components/ReportsPanel';
 import BatchUpload from './components/BatchUpload';
+import UniqueDomainLoader from './components/UniqueDomainLoader';
 
 // Admin Dashboard
 import LoginPage from './pages/LoginPage';
@@ -55,6 +56,7 @@ function ScanApp() {
   });
   const [selectedBatchJob, setSelectedBatchJob] = useState<any | null>(null);
   const [inspectedBatchDomain, setInspectedBatchDomain] = useState<string | null>(null);
+  const [activeScanningDomain, setActiveScanningDomain] = useState<string>('');
 
   const handleJobCompleted = (newEntry: any) => {
     setBatchHistory(prev => {
@@ -88,6 +90,7 @@ function ScanApp() {
   const handleScanDomain = async (domain: string, forceRefresh: boolean) => {
     setLoading(true);
     setError('');
+    setActiveScanningDomain(domain);
     setActiveSnapshot(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -173,13 +176,9 @@ function ScanApp() {
                 </div>
               )}
 
-              {/* Loading Skeletons */}
+              {/* Unique Cyber Domain Loader */}
               {loading && (
-                <div className="space-y-6 animate-pulse">
-                  <div className="h-44 bg-slate-900/40 border border-slate-800/80 rounded-xl" />
-                  <div className="h-80 bg-slate-900/40 border border-slate-800/80 rounded-xl" />
-                  <div className="h-60 bg-slate-900/40 border border-slate-800/80 rounded-xl" />
-                </div>
+                <UniqueDomainLoader targetDomain={activeScanningDomain || inspectedBatchDomain || 'Target Domain'} />
               )}
 
               {/* Active Result View */}
@@ -476,17 +475,8 @@ function ScanApp() {
 
             {/* BOTTOM ROW: Full-Width Target Inspection Dashboard */}
             {loading ? (
-              <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6 space-y-8">
-                <div className="glass-panel p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 animate-pulse min-h-[400px]">
-                  <svg className="animate-spin h-8 w-8 text-brand-500" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <div>
-                    <h3 className="text-base font-bold text-white">Running Deep Scan...</h3>
-                    <p className="text-slate-400 text-xs mt-1">Fetching archives and performing active intelligence audits</p>
-                  </div>
-                </div>
+              <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6">
+                <UniqueDomainLoader targetDomain={activeScanningDomain || inspectedBatchDomain || 'Target Domain'} />
               </div>
             ) : (activeData && activeData.domain) ? (
               <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6 space-y-8">
