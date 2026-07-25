@@ -170,6 +170,7 @@ async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool =
     semaphore = asyncio.Semaphore(2)  # Process up to 2 domains concurrently to stay within Wayback rate limits
 
     async def analyze_one(idx: int, d: str) -> dict:
+        d_clean = d.strip().lower().removeprefix("http://").removeprefix("https://").split("/")[0]
         # Stagger domain startup times to prevent simultaneous burst to Wayback CDX API
         if idx > 0:
             await asyncio.sleep(idx * 0.4)
@@ -177,7 +178,7 @@ async def run_analyze_multiple_domains(domains: list[str], force_refresh: bool =
         async with semaphore:
             try:
                 async with AsyncSessionLocal() as db:
-                    res = await analyze_domain_pipeline(d, force_refresh, db)
+                    res = await analyze_domain_pipeline(d_clean, force_refresh, db)
                     return {
                         "domain": res["domain"],
                         "status": "success",

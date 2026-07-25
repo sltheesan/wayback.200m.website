@@ -62,13 +62,31 @@ class WaybackProvider(ArchiveProvider):
                 }
             ]
 
-        logger.info(f"WaybackProvider: Querying CDX for root domain: {domain_clean}")
-        raw_data = await self._query_cdx_raw(domain_clean)
-        if not raw_data or len(raw_data) <= 1:
-            logger.info(f"WaybackProvider: Root CDX query returned no data. Trying wildcard query for: {domain_clean}/*")
-            wildcard_data = await self._query_cdx_raw(f"{domain_clean}/*")
-            if wildcard_data:
-                raw_data = wildcard_data
+        domain_bare = domain_clean.removeprefix("http://").removeprefix("https://").split("/")[0]
+
+        # Candidate CDX search queries to try sequentially until data is found
+        candidates = [
+            domain_bare,
+            f"{domain_bare}/*",
+            f"*.{domain_bare}/*",
+        ]
+        if domain_bare.startswith("www."):
+            bare_no_www = domain_bare.removeprefix("www.")
+            candidates.extend([bare_no_www, f"{bare_no_www}/*", f"*.{bare_no_www}/*"])
+        else:
+            candidates.extend([f"www.{domain_bare}", f"www.{domain_bare}/*"])
+
+        raw_data = None
+        for candidate_url in candidates:
+            try:
+                logger.info(f"WaybackProvider: Querying CDX for target pattern: {candidate_url}")
+                data = await self._query_cdx_raw(candidate_url)
+                if data and len(data) > 1:
+                    raw_data = data
+                    break
+            except Exception as candidate_err:
+                logger.warning(f"WaybackProvider: CDX query for '{candidate_url}' failed: {candidate_err}")
+                continue
 
         if not raw_data or len(raw_data) <= 1:
             return []

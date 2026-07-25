@@ -40,7 +40,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     2. Checks PostgreSQL DB (and checks if stale).
     3. Runs CDX search, fetches content, computes risk, and saves.
     """
-    domain_clean = domain.strip().lower()
+    domain_clean = domain.strip().lower().removeprefix("http://").removeprefix("https://").split("/")[0]
     cache_key = f"domain_analysis:{domain_clean}"
 
     # 1. Check Redis Cache
@@ -90,7 +90,12 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             logger.warning(f"Wayback Machine CDX API is unreachable for {domain_clean}. Falling back to existing database record.")
             return format_domain_response(db_domain)
         if not live_html:
-            raise RuntimeError("Wayback Machine CDX API is temporarily rate-limited or unreachable, and the live domain homepage could not be reached. Please try again.")
+            logger.warning(f"Wayback CDX API unreachable and live homepage failed for {domain_clean}. Saving default safe record.")
+            db_domain = await save_empty_domain(domain_clean, db)
+            db_domain.risk_narrative = "Wayback Machine CDX API was temporarily unreachable and live website could not be queried. Marked as 0 snapshots."
+            empty_response = format_domain_response(db_domain)
+            await redis_manager.set(cache_key, empty_response)
+            return empty_response
         logger.warning(f"Wayback Machine CDX API is unreachable for {domain_clean}. Falling back to live homepage scan.")
         raw_snapshots = []
 
