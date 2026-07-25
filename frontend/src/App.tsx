@@ -470,7 +470,8 @@ function ScanApp() {
               <div className="lg:col-span-3 space-y-6">
                 <BatchUpload 
                   onScanDomain={(d) => {
-                    handleScanDomain(d, false, true);
+                    handleScanDomain(d, false, false);
+                    setActiveTab('scan');
                   }} 
                   loadedJob={selectedBatchJob}
                   onJobCompleted={handleJobCompleted}
