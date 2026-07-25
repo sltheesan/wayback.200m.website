@@ -115,12 +115,12 @@ def detect_benign_content_niche(domain: str, snapshot_results: Optional[List[Dic
     combined_text = domain_clean.replace("-", " ").replace(".", " ")
     if snapshot_results:
         for snap in snapshot_results[:3]:
-            meta_json = snap.get("extraction_metadata")
+            meta_json = snap.get("extraction_metadata") if isinstance(snap, dict) else getattr(snap, "extraction_metadata", None)
             if meta_json:
                 try:
                     meta = json.loads(meta_json) if isinstance(meta_json, str) else meta_json
-                    title = meta.get("title", "") or ""
-                    combined_text += f" {title.lower()}"
+                    title = (meta.get("title", "") or "") if isinstance(meta, dict) else ""
+                    combined_text += f" {str(title).lower()}"
                 except Exception:
                     pass
 
