@@ -67,7 +67,7 @@ async def log_action(
     *,
     user_id: Optional[int],
     username: Optional[str],
-    user_role: Optional[str],
+    user_role: Optional[Any],
     action: str,
     category: Optional[str] = None,
     severity: Optional[str] = None,
@@ -94,10 +94,14 @@ async def log_action(
         final_category = category or inf_cat
         final_severity = severity or inf_sev
 
+        role_str = (
+            user_role.value if hasattr(user_role, 'value') else str(user_role)
+        ) if user_role is not None else None
+
         log_entry = ActivityLog(
             user_id=user_id,
             username_snapshot=username,
-            user_role_snapshot=user_role,
+            user_role_snapshot=role_str,
             action=action,
             category=final_category,
             severity=final_severity,
@@ -118,6 +122,6 @@ async def log_action(
             created_at=datetime.utcnow(),
         )
         db.add(log_entry)
-        await db.flush()  # push to transaction without committing
-    except Exception as exc:
-        logger.error(f"[Audit] Failed to write activity log: {exc}")
+        await db.flush()
+    except Exception as err:
+        logger.error(f"Failed to write audit log: {err}")

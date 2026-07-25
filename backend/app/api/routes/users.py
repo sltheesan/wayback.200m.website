@@ -166,6 +166,9 @@ async def create_user(
         user_agent_string=request.headers.get("User-Agent"),
     )
 
+    await db.commit()
+    await db.refresh(new_user)
+
     return UserResponse.model_validate(new_user)
 
 
@@ -240,6 +243,8 @@ async def update_user(
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )
+    await db.commit()
+    await db.refresh(target)
     return UserResponse.model_validate(target)
 
 
@@ -287,6 +292,7 @@ async def delete_user(
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )
+    await db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +329,8 @@ async def suspend_user(
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )
+    await db.commit()
+    await db.refresh(target)
     return UserResponse.model_validate(target)
 
 
@@ -360,6 +368,8 @@ async def activate_user(
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )
+    await db.commit()
+    await db.refresh(target)
     return UserResponse.model_validate(target)
 
 
@@ -410,6 +420,7 @@ async def admin_reset_password(
         ip_address=get_client_ip(request),
         user_agent_string=request.headers.get("User-Agent"),
     )
+    await db.commit()
 
     response: dict = {"message": "Password reset successfully.", "must_change_password": True}
     if temp_password:
