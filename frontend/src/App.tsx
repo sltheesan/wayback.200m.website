@@ -467,7 +467,6 @@ function ScanApp() {
                 <BatchUpload 
                   onScanDomain={(d) => {
                     handleScanDomain(d, false);
-                    setActiveTab('scan');
                   }} 
                   loadedJob={selectedBatchJob}
                   onJobCompleted={handleJobCompleted}
