@@ -23,6 +23,16 @@ from backend.app.AI.detectors import run_all_detectors, high_signal_count
 from backend.app.AI.explainer import build_explanation, detect_benign_content_niche
 from backend.app.utils.logger import logger
 
+def safe_parse_status_code(status_code_val: Any, default: int = 200) -> int:
+    """Safely parses status code strings ('200', '302', '-', None, '') to integer."""
+    if not status_code_val:
+        return default
+    s = str(status_code_val).strip()
+    if s.isdigit():
+        return int(s)
+    return default
+
+
 def build_snapshot_evidence_url(timestamp: str, original_url: str, risk_score: int, flags: list, source: str = "archive") -> str | None:
     """Return a visual evidence URL for snapshots that crossed an unsafe threshold."""
     if risk_score < 40 and not flags:
@@ -384,7 +394,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                     **closest_res,
                     "timestamp": snap["timestamp"],
                     "original_url": snap["original"],
-                    "status_code": int(snap["statuscode"]) if snap.get("statuscode") else 200,
+                    "status_code": safe_parse_status_code(snap.get("statuscode")),
                     "mime_type": snap.get("mime", "text/html"),
                 }
 
@@ -397,7 +407,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             snapshot_results.append({
                 "timestamp": snap["timestamp"],
                 "original_url": snap["original"],
-                "status_code": int(snap["statuscode"]) if snap.get("statuscode") else 200,
+                "status_code": safe_parse_status_code(snap.get("statuscode")),
                 "redirect_url": res.get("redirect_url"),
                 "is_redirect": res.get("is_redirect", False),
                 "mime_type": snap.get("mime", "text/html"),
