@@ -677,6 +677,13 @@ def format_domain_response(
         if not evidence_url:
             evidence_url = build_snapshot_evidence_url(s.timestamp, s.original_url, s.risk_score, flags_list)
 
+        redirect_ev_parsed = None
+        if getattr(s, "redirect_evidence", None):
+            try:
+                redirect_ev_parsed = json.loads(s.redirect_evidence)
+            except Exception:
+                redirect_ev_parsed = []
+
         snapshots_list.append({
             "timestamp": s.timestamp,
             "original_url": s.original_url,
@@ -692,7 +699,20 @@ def format_domain_response(
             "content_summary": getattr(s, "content_summary", None),
             "extraction_metadata": getattr(s, "extraction_metadata", None),
             "evidence_url": evidence_url,
-            "flags": flags_list
+            "flags": flags_list,
+            # Advanced Redirect & Dual Risk Telemetry
+            "redirect_detected": getattr(s, "redirect_detected", False),
+            "redirect_method": getattr(s, "redirect_method", None),
+            "redirect_confidence": getattr(s, "redirect_confidence", 0),
+            "redirect_verified": getattr(s, "redirect_verified", False),
+            "redirect_same_domain": getattr(s, "redirect_same_domain", False),
+            "redirect_target": getattr(s, "redirect_target", None),
+            "redirect_target_status": getattr(s, "redirect_target_status", None),
+            "redirect_target_category": getattr(s, "redirect_target_category", None),
+            "redirect_target_risk": getattr(s, "redirect_target_risk", 0),
+            "original_category": getattr(s, "original_category", None),
+            "original_risk": getattr(s, "original_risk", 0),
+            "redirect_evidence": redirect_ev_parsed,
         })
 
     timeline = [
