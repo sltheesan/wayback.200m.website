@@ -24,12 +24,17 @@ apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config;
-    if ((error.response?.status === 403 || error.response?.status === 401) && !originalRequest._retry) {
+    if ((error.response?.status === 403 || error.response?.status === 401) && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       // Stale or invalid token caused 403/401 — remove stale token and retry anonymously for public endpoints
       localStorage.removeItem('cs_access_token');
+      localStorage.removeItem('cs_refresh_token');
       if (originalRequest.headers) {
-        delete originalRequest.headers.Authorization;
+        if (typeof originalRequest.headers.set === 'function') {
+          originalRequest.headers.set('Authorization', '');
+        }
+        delete originalRequest.headers['Authorization'];
+        delete originalRequest.headers['authorization'];
       }
       return apiClient(originalRequest);
     }

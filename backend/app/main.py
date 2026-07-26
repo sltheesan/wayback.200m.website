@@ -128,10 +128,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS configuration
+# Production-grade CORS configuration
+_allowed_origins = [o for o in settings.get_allowed_origins() if o != "*"]
+if not _allowed_origins:
+    _allowed_origins = [
+        "https://wayback.200m.website",
+        "http://wayback.200m.website",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.get_allowed_origins(),
+    allow_origins=_allowed_origins,
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
