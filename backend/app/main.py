@@ -128,20 +128,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Production-grade CORS configuration
-_allowed_origins = [o for o in settings.get_allowed_origins() if o != "*"]
-if not _allowed_origins:
-    _allowed_origins = [
-        "https://wayback.200m.website",
-        "http://wayback.200m.website",
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ]
-
+# Production-grade CORS configuration — allows company network & public origins seamlessly
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
-    allow_origin_regex=r"https?://.*",
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -243,8 +233,8 @@ frontend_dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."
 if os.path.exists(frontend_dist_dir):
     @app.get("/{catchall:path}", include_in_schema=False)
     async def serve_spa(catchall: str):
-        # Prevent intercepting API routes, Docs, Redoc, Metrics
-        if catchall.startswith(("api/", "docs", "redoc", "openapi.json", "metrics")):
+        # Prevent intercepting API routes, Health, Docs, Redoc, Metrics
+        if catchall.startswith(("api", "health", "docs", "redoc", "openapi.json", "metrics")):
             from fastapi import HTTPException
             raise HTTPException(status_code=404)
         
