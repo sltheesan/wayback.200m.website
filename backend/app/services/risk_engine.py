@@ -74,7 +74,11 @@ class RiskDecisionEngine:
         and applies the Dual Risk Matrix.
         """
         # 1. Clean & Classify Original Snapshot
+
         orig_clf = classify_content(original_html or "", domain)
+
+        orig_cleaned = clean_html_content(original_html or "")
+        orig_clf = classify_content(orig_cleaned)
 
         orig_category = orig_clf.primary_category
         orig_confidence = orig_clf.confidence
@@ -93,7 +97,12 @@ class RiskDecisionEngine:
 
         # 2. Clean & Classify Target HTML if redirect detected & target HTML available
         if redirect_eval.redirect_detected and target_html:
+
             target_clf = classify_content(target_html, domain)
+
+            target_cleaned = clean_html_content(target_html)
+            target_clf = classify_content(target_cleaned)
+
             target_category = target_clf.primary_category
             t_scores = target_clf.all_scores
             target_risk = int(round(t_scores.get(target_category, 0.0) * 100)) if t_scores else 0
