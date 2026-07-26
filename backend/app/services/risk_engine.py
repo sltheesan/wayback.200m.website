@@ -1,9 +1,51 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass
-from backend.app.AI.classifier import classifier
+from backend.app.AI.classifier import classify_content
 from backend.app.utils.text_cleaner import clean_html_content
 from backend.app.services.redirect_engine import RedirectEvaluationResult
 from backend.app.utils.logger import logger
+
+
+def select_snapshots_to_check(snapshots: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Sorts snapshots by timestamp in chronological order."""
+    if not snapshots:
+        return []
+    return sorted(snapshots, key=lambda s: str(s.get("timestamp", "")))
+
+
+def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int, int]:
+    """
+    Computes overall risk score, risk level (SAFE/MEDIUM/HIGH), peak score, and average score.
+    Supports either a list of integer risk scores or a list of snapshot dict objects.
+    """
+    if not scores_or_snapshots:
+        return 0, "SAFE", 0, 0
+
+    scores: List[int] = []
+    for item in scores_or_snapshots:
+        if isinstance(item, (int, float)):
+            scores.append(int(item))
+        elif isinstance(item, dict):
+            scores.append(int(item.get("risk_score", 0)))
+
+    if not scores:
+        return 0, "SAFE", 0, 0
+
+    peak_score = max(scores)
+    avg_score = int(round(sum(scores) / len(scores)))
+
+    # Weighted calculation: 60% peak + 40% average
+    final_score = int(round(0.6 * peak_score + 0.4 * (sum(scores) / len(scores))))
+
+    if final_score <= 30:
+        level = "SAFE"
+    elif final_score <= 60:
+        level = "MEDIUM"
+    else:
+        level = "HIGH"
+
+    return final_score, level, peak_score, avg_score
+
 
 @dataclass
 class DualRiskEvaluationResult:
@@ -32,8 +74,7 @@ class RiskDecisionEngine:
         and applies the Dual Risk Matrix.
         """
         # 1. Clean & Classify Original Snapshot
-        orig_cleaned = clean_html_content(original_html or "")
-        orig_clf = classifier.classify_snapshot(orig_cleaned)
+        orig_clf = classify_content(original_html or "", domain)
 
         orig_category = orig_clf.primary_category
         orig_confidence = orig_clf.confidence
@@ -52,8 +93,7 @@ class RiskDecisionEngine:
 
         # 2. Clean & Classify Target HTML if redirect detected & target HTML available
         if redirect_eval.redirect_detected and target_html:
-            target_cleaned = clean_html_content(target_html)
-            target_clf = classifier.classify_snapshot(target_cleaned)
+            target_clf = classify_content(target_html, domain)
             target_category = target_clf.primary_category
             t_scores = target_clf.all_scores
             target_risk = int(round(t_scores.get(target_category, 0.0) * 100)) if t_scores else 0
