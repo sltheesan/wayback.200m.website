@@ -38,6 +38,19 @@ export interface Snapshot {
   category_confidence: number | null;
   content_summary: string | null;
   evidence_url?: string | null;
+  // Advanced Redirect Engine & Dual Risk Telemetry
+  redirect_detected?: boolean;
+  redirect_method?: string | null;
+  redirect_confidence?: number;
+  redirect_verified?: boolean;
+  redirect_same_domain?: boolean;
+  redirect_target?: string | null;
+  redirect_target_status?: number | null;
+  redirect_target_category?: string | null;
+  redirect_target_risk?: number;
+  original_category?: string | null;
+  original_risk?: number;
+  redirect_evidence?: string[] | null;
   ai_intelligence: AIIntelligence | null;
   flags: AnalysisFlag[];
 }

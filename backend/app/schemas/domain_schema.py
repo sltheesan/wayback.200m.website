@@ -46,6 +46,19 @@ class SnapshotSchema(BaseModel):
     category_confidence: Optional[float] = None
     content_summary: Optional[str] = None
     evidence_url: Optional[str] = None
+    # Advanced Redirect Engine Telemetry
+    redirect_detected: bool = False
+    redirect_method: Optional[str] = None
+    redirect_confidence: int = 0
+    redirect_verified: bool = False
+    redirect_same_domain: bool = False
+    redirect_target: Optional[str] = None
+    redirect_target_status: Optional[int] = None
+    redirect_target_category: Optional[str] = None
+    redirect_target_risk: int = 0
+    original_category: Optional[str] = None
+    original_risk: int = 0
+    redirect_evidence: Optional[List[str]] = None
     ai_intelligence: Optional[AIClassificationSchema] = None
     flags: List[AnalysisFlagSchema] = []
 

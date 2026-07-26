@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import json
+from typing import List, Dict, Any, Optional
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -192,16 +193,28 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         mime = snap.get("mime", "text/html")
 
         # Fetch the HTML content. Live captures are already loaded; archive
-        # captures are fetched through Wayback's raw snapshot endpoint.
+        # Fetch HTML content independently
         html_content = snap.get("html_content")
         if html_content is None:
             html_content = await fetch_snapshot_html(timestamp, original, domain_clean)
 
-        from backend.app.services.snapshot_fetcher import evaluate_5tier_redirect_priority
-        is_redir, redir_url, priority_stage = evaluate_5tier_redirect_priority(status, None, html_content or "", original)
+        # 1. Run RedirectEngine to gather 5-tier weighted evidence
+        from backend.app.services.redirect_engine import RedirectEngine
+        from backend.app.services.risk_engine import RiskDecisionEngine
 
-        # Phase 2 check: If download failed and no redirect URL found
-        if not html_content and not is_redir:
+        redirect_eval = RedirectEngine.evaluate_redirect(status, None, html_content or "", original)
+
+        # Verify reachability of target URL asynchronously if redirect detected
+        target_html: Optional[str] = None
+        if redirect_eval.redirect_detected and redirect_eval.redirect_target:
+            is_verified, target_status = await RedirectEngine.verify_redirect_target(redirect_eval.redirect_target)
+            redirect_eval.redirect_verified = is_verified
+            redirect_eval.redirect_target_status = target_status
+            if "web.archive.org" in redirect_eval.redirect_target:
+                target_html = await fetch_snapshot_html(timestamp, redirect_eval.redirect_target, domain_clean)
+
+        # Phase 2 check: If download failed and no redirect detected
+        if not html_content and not redirect_eval.redirect_detected:
             metadata = {
                 "status": "unavailable",
                 "reason": "Download failed across all proxy attempts",
@@ -221,8 +234,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                 "timestamp": timestamp,
                 "original_url": original,
                 "status_code": status,
-                "redirect_url": redir_url,
-                "is_redirect": is_redir,
+                "redirect_url": redirect_eval.redirect_target,
+                "is_redirect": redirect_eval.redirect_detected,
                 "mime_type": mime,
                 "risk_score": 0,
                 "detected_language": "en",
@@ -233,165 +246,98 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                 "content_summary": "Snapshot unavailable or failed to download.",
                 "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
                 "evidence_url": None,
+                "redirect_detected": False,
+                "redirect_method": None,
+                "redirect_confidence": 0,
+                "redirect_verified": False,
+                "redirect_same_domain": False,
+                "redirect_target": None,
+                "redirect_target_status": None,
+                "redirect_target_category": None,
+                "redirect_target_risk": 0,
+                "original_category": "unavailable",
+                "original_risk": 0,
+                "redirect_evidence": [],
             }
 
-        # Phase 3 check: Validate HTML content (bypass for valid HTTP/JS redirects)
-        if not is_redir and status not in (301, 302, 303, 307, 308):
-            from backend.app.services.analyzer import validate_snapshot_html
-            is_valid, invalid_reason = validate_snapshot_html(html_content or "")
-            if not is_valid:
-                metadata = {
-                    "status": "invalid",
-                    "reason": invalid_reason,
-                    "image_detections": [],
-                    "classifier": {
-                        "primary_category": "safe",
-                        "confidence": 0.0,
-                        "all_scores": {},
-                        "detected_language": "en",
-                        "summary": f"Invalid snapshot: {invalid_reason}",
-                    },
-                    "detectors": {},
-                    "detector_boost": 0,
-                    "evidence_url": None
-                }
-                return {
-                    "timestamp": timestamp,
-                    "original_url": original,
-                    "status_code": status,
-                    "redirect_url": redir_url,
-                    "is_redirect": is_redir,
-                    "mime_type": mime,
-                    "risk_score": 0,
-                    "detected_language": "en",
-                    "category_scores": {},
-                    "flags": [],
-                    "content_category": "invalid",
-                    "category_confidence": 0.0,
-                    "content_summary": f"Invalid snapshot: {invalid_reason}",
-                    "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
-                    "evidence_url": None,
-                }
+        # 2. Run RiskDecisionEngine for independent classification & Dual Risk Matrix
+        dual_risk = RiskDecisionEngine.evaluate_dual_risk(html_content or "", target_html, redirect_eval, domain_clean)
 
-        # Legacy keyword scorer (already enriches flags with match location details)
+        # Legacy keyword analyzer for flags enrichment
         risk_score, category_scores, flags = analyze_snapshot_content(html_content, domain_clean)
 
-        # AI Classifier
+        # AI Classifier on original text
         from backend.app.utils.text_cleaner import clean_html_content
         cleaned_text = clean_html_content(html_content).lower()
         lang = get_language(cleaned_text)
 
         clf_result = classify_content(html_content, domain_clean)
 
-        # Phase 5: Image Analysis
-        from backend.app.services.analyzer import classify_images_in_html
-        image_detections = classify_images_in_html(html_content, domain_clean)
-        image_threats = [d for d in image_detections if d["category"] != "safe"]
-
-        # Boost risk score if unsafe images are found
-        image_boost = 0
-        if image_threats:
-            image_boost = 60
-        
-        # Promote primary classification category to top image threat if text was deemed safe
-        primary_cat = clf_result.primary_category
-        confidence = clf_result.confidence
-        summary = clf_result.summary
-        
-        if primary_cat == "safe" and image_threats:
-            primary_cat = image_threats[0]["category"]
-            confidence = max(d["confidence_score"] for d in image_threats)
-            summary = f"Threat content identified via historical image checks: {image_threats[0]['evidence_description']}"
-
         # Structural Detectors (inspecting HTML structure and redirect target URL)
-        detector_results = run_all_detectors(html_content, cleaned_text, clf_result, redirect_url=redir_url)
+        detector_results = run_all_detectors(html_content, cleaned_text, clf_result, redirect_url=redirect_eval.redirect_target)
         high_signals = high_signal_count(detector_results)
 
-        # Check for Repurposed Domain Redirect Detector signal
-        repurposed_sig = next((d for d in detector_results if d.get("detector") == "repurposed_domain_redirect"), None)
-        repurposed_boost = 0
-        if repurposed_sig and repurposed_sig.get("signal") == "high":
-            repurposed_boost = 60
-            target_niche = repurposed_sig.get("target_niche", "gambling")
-            primary_cat = "gambling_casino" if target_niche == "gambling" else ("adult_explicit" if target_niche == "adult" else "phishing_scam")
-            confidence = 0.95
-            summary = f"CRITICAL THREAT: Domain redirects to an external {target_niche.upper()} network via client-side/HTTP redirect injections."
-            flags.append({
-                "flag": "EXPIRED_DOMAIN_HIJACK_REDIRECT",
-                "category": primary_cat,
-                "keyword": f"redirect:{target_niche}",
-                "weight": 60,
-                "match_count": 1,
-                "score_impact": 60,
-                "evidence_description": f"Domain redirected to external {target_niche} site."
-            })
-
-        # Boost risk score when structural detectors fire (max +15)
-        detector_boost = min(high_signals * 5, 15) + repurposed_boost
-        final_risk_score = min(risk_score + detector_boost + image_boost, 100)
-        if repurposed_boost > 0:
+        # Final risk score calculation combining Dual Risk Engine + detector signals
+        final_risk_score = max(risk_score, dual_risk.final_risk_score)
+        if redirect_eval.redirect_detected and dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "malware"):
             final_risk_score = max(final_risk_score, 85)
-
-        # Align content classification category and risk score consistency
-        if final_risk_score <= 30 and not repurposed_boost:
-            primary_cat = "safe"
-        elif primary_cat == "safe":
-            # If risk score is unsafe, assign it to the top matching category from legacy keyword analyzer
-            if category_scores:
-                max_legacy_cat = max(category_scores, key=category_scores.get)
-                if category_scores[max_legacy_cat] > 0:
-                    primary_cat = max_legacy_cat
-            if primary_cat == "safe" and flags:
-                primary_cat = flags[0]["category"]
-            # Fallback if no specific categories triggered
-            if primary_cat == "safe":
-                primary_cat = "phishing_scam"
-
-        if primary_cat != "safe" and final_risk_score < 40:
-            final_risk_score = 40
 
         evidence_url = build_snapshot_evidence_url(
             timestamp, original, final_risk_score, flags, snap.get("source", "archive")
         )
 
-        # Serialise full AI intelligence payload including Phase 5/6/7 details
         metadata = {
             "status": "success",
             "classifier": {
-                "primary_category": primary_cat,
-                "confidence": confidence,
+                "primary_category": dual_risk.primary_category,
+                "confidence": dual_risk.category_confidence,
                 "all_scores": clf_result.all_scores,
                 "detected_language": clf_result.detected_language,
-                "summary": summary,
+                "summary": dual_risk.risk_narrative or dual_risk.summary,
             },
             "detectors": detector_results,
-            "detector_boost": detector_boost,
-            "image_boost": image_boost,
-            "image_detections": image_detections,
             "evidence_url": evidence_url,
+            "redirect_engine": {
+                "confidence": redirect_eval.redirect_confidence,
+                "method": redirect_eval.redirect_method,
+                "verified": redirect_eval.redirect_verified,
+                "same_domain": redirect_eval.redirect_same_domain,
+                "target": redirect_eval.redirect_target,
+                "evidence": redirect_eval.evidence,
+            }
         }
         metadata_json = json.dumps(metadata, ensure_ascii=False)
-
-        from backend.app.services.snapshot_fetcher import evaluate_5tier_redirect_priority
-        is_redir, redir_url, priority_stage = evaluate_5tier_redirect_priority(status, None, html_content or "", original)
 
         return {
             "timestamp": timestamp,
             "original_url": original,
             "status_code": status,
-            "redirect_url": redir_url,
-            "is_redirect": is_redir,
+            "redirect_url": redirect_eval.redirect_target,
+            "is_redirect": redirect_eval.redirect_detected,
             "mime_type": mime,
             "risk_score": final_risk_score,
             "detected_language": lang,
             "category_scores": category_scores,
             "flags": flags,
             # AI intelligence fields
-            "content_category": primary_cat,
-            "category_confidence": confidence,
-            "content_summary": summary,
+            "content_category": dual_risk.primary_category,
+            "category_confidence": dual_risk.category_confidence,
+            "content_summary": dual_risk.risk_narrative or dual_risk.summary,
             "extraction_metadata": metadata_json,
             "evidence_url": evidence_url,
+            # Advanced Redirect Engine & Dual Risk fields
+            "redirect_detected": redirect_eval.redirect_detected,
+            "redirect_method": redirect_eval.redirect_method,
+            "redirect_confidence": redirect_eval.redirect_confidence,
+            "redirect_verified": redirect_eval.redirect_verified,
+            "redirect_same_domain": redirect_eval.redirect_same_domain,
+            "redirect_target": redirect_eval.redirect_target,
+            "redirect_target_status": redirect_eval.redirect_target_status,
+            "redirect_target_category": dual_risk.redirect_target_category,
+            "redirect_target_risk": dual_risk.redirect_target_risk,
+            "original_category": dual_risk.original_category,
+            "original_risk": dual_risk.original_risk,
+            "redirect_evidence": redirect_eval.evidence,
         }
 
     # Fetch HTML contents in high-concurrency parallel batches (Semaphore cap = 20)
@@ -464,6 +410,19 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
                 "content_summary": res.get("content_summary"),
                 "extraction_metadata": res.get("extraction_metadata"),
                 "evidence_url": res.get("evidence_url"),
+                # Advanced Redirect & Dual Risk Fields
+                "redirect_detected": res.get("redirect_detected", False),
+                "redirect_method": res.get("redirect_method"),
+                "redirect_confidence": res.get("redirect_confidence", 0),
+                "redirect_verified": res.get("redirect_verified", False),
+                "redirect_same_domain": res.get("redirect_same_domain", False),
+                "redirect_target": res.get("redirect_target"),
+                "redirect_target_status": res.get("redirect_target_status"),
+                "redirect_target_category": res.get("redirect_target_category"),
+                "redirect_target_risk": res.get("redirect_target_risk", 0),
+                "original_category": res.get("original_category"),
+                "original_risk": res.get("original_risk", 0),
+                "redirect_evidence": res.get("redirect_evidence", []),
             })
 
     # 6. Compute overall risk metrics
@@ -554,6 +513,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
 
     # Snapshots + flags
     for snap_res in snapshot_results:
+        import json as _json_mod
         db_snap = Snapshot(
             timestamp=snap_res["timestamp"],
             original_url=snap_res["original_url"],
@@ -567,6 +527,18 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             category_confidence=snap_res.get("category_confidence"),
             content_summary=snap_res.get("content_summary"),
             extraction_metadata=snap_res.get("extraction_metadata"),
+            redirect_detected=snap_res.get("redirect_detected", False),
+            redirect_method=snap_res.get("redirect_method"),
+            redirect_confidence=snap_res.get("redirect_confidence", 0),
+            redirect_verified=snap_res.get("redirect_verified", False),
+            redirect_same_domain=snap_res.get("redirect_same_domain", False),
+            redirect_target=snap_res.get("redirect_target"),
+            redirect_target_status=snap_res.get("redirect_target_status"),
+            redirect_target_category=snap_res.get("redirect_target_category"),
+            redirect_target_risk=snap_res.get("redirect_target_risk", 0),
+            original_category=snap_res.get("original_category"),
+            original_risk=snap_res.get("original_risk", 0),
+            redirect_evidence=_json_mod.dumps(snap_res.get("redirect_evidence", [])) if snap_res.get("redirect_evidence") else None,
         )
         db_domain.snapshots.append(db_snap)
         for flag_res in snap_res.get("flags", []):

@@ -180,18 +180,54 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Redirect Alert Banner */}
-        {s.is_redirect && (
+        {(s.is_redirect || s.redirect_detected) && (
           <div style={{
-            padding: '12px 16px', borderRadius: 12,
-            background: 'rgba(244,63,94,0.12)', border: '1px solid rgba(244,63,94,0.3)',
+            padding: '14px 18px', borderRadius: 12,
+            background: 'linear-gradient(135deg, rgba(244,63,94,0.14) 0%, rgba(139,92,246,0.12) 100%)',
+            border: '1px solid rgba(244,63,94,0.35)',
             color: '#f87171', fontSize: 13, fontWeight: 700,
-            display: 'flex', alignItems: 'center', gap: 10,
+            display: 'flex', flexDirection: 'column', gap: 8,
           }}>
-            <AlertTriangle size={18} style={{ flexShrink: 0 }} />
-            <div>
-              <span style={{ display: 'block', color: '#fda4af', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Snapshot Redirect Detected</span>
-              <span>Target: <code style={{ color: '#ffffff', fontFamily: 'monospace', background: 'rgba(0,0,0,0.4)', padding: '2px 7px', borderRadius: 5 }}>{s.redirect_url || 'External Target Domain'}</code> ⚠️</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertTriangle size={18} style={{ color: '#f43f5e', flexShrink: 0 }} />
+                <div>
+                  <span style={{ display: 'block', color: '#fda4af', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Snapshot Redirect Engine
+                  </span>
+                  <span>Target: <code style={{ color: '#ffffff', fontFamily: 'monospace', background: 'rgba(0,0,0,0.4)', padding: '2px 7px', borderRadius: 5 }}>{s.redirect_target || s.redirect_url || 'External Target Domain'}</code></span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {s.redirect_confidence !== undefined && (
+                  <span style={{ background: '#f43f5e', color: '#ffffff', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6 }}>
+                    {s.redirect_confidence}% Confidence
+                  </span>
+                )}
+                {s.redirect_verified && (
+                  <span style={{ background: '#10b981', color: '#ffffff', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6 }}>
+                    ✓ Verified Target
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Evidence items & Dual risk */}
+            {s.redirect_evidence && s.redirect_evidence.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                {s.redirect_evidence.map((ev, idx) => (
+                  <span key={idx} style={{ fontSize: 10, background: 'rgba(0,0,0,0.4)', color: '#cbd5e1', padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(255,255,255,0.08)' }}>
+                    {ev}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {s.original_category && s.redirect_target_category && (
+              <div style={{ fontSize: 11, color: '#e2e8f0', background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: 6, marginTop: 2 }}>
+                <span style={{ color: '#94a3b8' }}>Dual Risk Matrix:</span> Original Snapshot (<strong>{s.original_category.toUpperCase()}</strong>) ➔ Redirect Target (<strong>{s.redirect_target_category.toUpperCase()}</strong>)
+              </div>
+            )}
           </div>
         )}
 
@@ -566,7 +602,7 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
               {s.flags.length > 0 ? `${s.flags.length} Flag${s.flags.length > 1 ? 's' : ''}` : 'Clean'}
             </span>
 
-            {s.is_redirect && (
+            {(s.is_redirect || s.redirect_detected) && (
               <span style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -584,7 +620,7 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
                 whiteSpace: 'nowrap',
               }}>
                 <AlertTriangle size={11} />
-                Redirect: {s.redirect_url || 'External'}
+                Redirect {s.redirect_confidence ? `(${s.redirect_confidence}%)` : ''}: {s.redirect_target || s.redirect_url || 'External'}
               </span>
             )}
 

@@ -61,6 +61,18 @@ async def lifespan(app: FastAPI):
             # Snapshot Redirect Tracking Upgrades
             await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_url VARCHAR NULL"))
             await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS is_redirect BOOLEAN DEFAULT FALSE"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_detected BOOLEAN DEFAULT FALSE"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_method VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_confidence INTEGER DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_verified BOOLEAN DEFAULT FALSE"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_same_domain BOOLEAN DEFAULT FALSE"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_target VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_target_status INTEGER NULL"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_target_category VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_target_risk INTEGER DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS original_category VARCHAR NULL"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS original_risk INTEGER DEFAULT 0"))
+            await conn.execute(text("ALTER TABLE snapshots ADD COLUMN IF NOT EXISTS redirect_evidence TEXT NULL"))
             
             logger.info("Database tables initialized and migrated successfully.")
     except Exception as e:

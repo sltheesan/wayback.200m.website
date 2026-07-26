@@ -1,9 +1,10 @@
 import asyncio
+import re
+from typing import Optional, Tuple, Dict
 from backend.app.core.config import settings
 from backend.app.utils.logger import logger
-from backend.app.core.http_client import HttpClient
-from backend.app.core.proxy_utils import get_proxy_rotation_list, proxy_label
 from backend.app.services.wayback import wayback_service
+from backend.app.services.redirect_engine import RedirectEngine, SnapshotExtractor, RedirectEvaluationResult
 
 
 def build_snapshot_url(timestamp: str, url: str) -> str:
@@ -19,24 +20,6 @@ def build_snapshot_url(timestamp: str, url: str) -> str:
     return f"{settings.WAYBACK_SNAPSHOT_URL}/{timestamp}/{clean_url}"
 
 
-import re
-
-_RE_GAMBLING_ADULT_KEYWORDS = re.compile(
-    r'\b(?:casino|slots?|roulette|baccarat|poker|jackpot|betting|gambling|porn|adult|erotic|sex|bkr\s+toetsing|geld\s+lenen|slot\s+gacor|judi\s+online)\b',
-    re.IGNORECASE
-)
-
-_RE_EXTRACT_META_REDIRECT = re.compile(
-    r'<meta\s+http-equiv=["\']?refresh["\']?\s+content=["\']?\d+;\s*url=([^"\'\s>]+)["\']?',
-    re.IGNORECASE
-)
-
-_RE_EXTRACT_JS_REDIRECT = re.compile(
-    r'(?:window\.location(?:\.href)?|location\.replace|location\.assign|top\.location)\s*=\s*["\']([^"\'\s;]+)["\']',
-    re.IGNORECASE
-)
-
-
 def evaluate_5tier_redirect_priority(
     status_code: int | None,
     headers: dict | None,
@@ -44,92 +27,22 @@ def evaluate_5tier_redirect_priority(
     original_url: str
 ) -> tuple[bool, str | None, str]:
     """
-    Evaluates redirects using strict 5-tier priority:
-    1. HTTP status code (301, 302, 303, 307, 308)
-    2. Location header (HTTP Location header)
-    3. Meta refresh tag (<meta http-equiv="refresh">)
-    4. JavaScript location script (window.location = ...)
-    5. HTML keyword scan
-
-    Returns: (is_redirect, redirect_url, priority_stage)
+    Backward-compatible wrapper. Delegates to RedirectEngine for weighted evidence scoring
+    and AST/DOM analysis.
     """
-    norm_headers = {k.lower(): v for k, v in (headers or {}).items()}
-    location_header = norm_headers.get("location")
-
-    # Tier 1 & 2: HTTP status code and Location header
-    if status_code in (301, 302, 303, 307, 308):
-        target = location_header or f"HTTP {status_code} Redirect"
-        return True, target, f"HTTP {status_code} Status Code & Location Header"
-
-    if location_header and location_header.lower() != original_url.lower():
-        return True, location_header, "HTTP Location Header"
-
-    # Tier 3: Meta refresh tag
-    meta_match = _RE_EXTRACT_META_REDIRECT.search(html_content or "")
-    if meta_match:
-        meta_target = meta_match.group(1)
-        return True, meta_target, "Meta Refresh Tag"
-
-    # Tier 4: JavaScript redirect script
-    js_match = _RE_EXTRACT_JS_REDIRECT.search(html_content or "")
-    if js_match:
-        js_target = js_match.group(1)
-        return True, js_target, "JavaScript Location Script"
-
-    # Tier 5: HTML Keyword scan
-    if html_content:
-        target_comment = re.search(r'<!-- REDIRECT TARGET URL:\s*([^\s]+)\s*-->', html_content)
-        redirect_target = target_comment.group(1) if target_comment else None
-        if redirect_target or _RE_GAMBLING_ADULT_KEYWORDS.search(html_content):
-            return bool(redirect_target), redirect_target, "HTML Keyword Threat Scan"
-
-    return False, None, "None"
-
-
-async def follow_redirect_if_needed(html: str, current_url: str) -> str:
-    """Extracts JS or Meta-refresh redirect target URLs and appends target HTML content for deep analysis."""
-    if not html:
-        return html
-
-    target_match = _RE_EXTRACT_JS_REDIRECT.search(html) or _RE_EXTRACT_META_REDIRECT.search(html)
-    if not target_match:
-        return html
-
-    redirect_target = target_match.group(1)
-    if redirect_target and redirect_target.lower() != current_url.lower():
-        logger.info(f"Detected client-side redirect in snapshot/live page to: {redirect_target}")
-        from backend.app.core.http_client import http_client
-        session = http_client.get_session_for_proxy(None)
-        try:
-            async with session.get(redirect_target, timeout=8, headers={"User-Agent": "Mozilla/5.0"}) as res:
-                if res.status < 400:
-                    target_html = await res.text(errors="ignore")
-                    logger.info(f"Fetched redirect target HTML ({len(target_html)} bytes) from {redirect_target}")
-                    return (
-                        f"{html}\n"
-                        f"<!-- REDIRECT TARGET URL: {redirect_target} -->\n"
-                        f"<!-- REDIRECT TARGET CONTENT BEGIN -->\n"
-                        f"{target_html}\n"
-                        f"<!-- REDIRECT TARGET CONTENT END -->"
-                    )
-        except Exception as e:
-            logger.warning(f"Could not fetch redirect target content from {redirect_target}: {e}")
-
-        # Always append target URL to HTML comment so text cleaners & threat analyzers see the target domain!
-        return f"{html}\n<!-- REDIRECT TARGET URL: {redirect_target} -->"
-
-    return html
+    eval_res = RedirectEngine.evaluate_redirect(status_code, headers, html_content, original_url)
+    return eval_res.redirect_detected, eval_res.redirect_target, eval_res.redirect_method or "None"
 
 
 async def fetch_snapshot_html(timestamp: str, original_url: str, domain: str) -> str:
     """
-    Fetches the raw HTML content of a snapshot from the Wayback Machine.
-    Now routed through the centralized, validated, and cached WaybackAccessService,
-    with client-side redirect target inspection.
+    Fetches raw snapshot HTML content from the Wayback Machine
+    and cleans Wayback toolbar artifacts using SnapshotExtractor.
+    Never merges target HTML strings into the original snapshot HTML.
     """
     try:
         raw_html = await wayback_service.get_snapshot_content(timestamp, original_url)
-        return await follow_redirect_if_needed(raw_html, original_url)
+        return SnapshotExtractor.clean_wayback_html(raw_html)
     except Exception as e:
         logger.error(f"snapshot_fetcher.fetch_snapshot_html: Failed to fetch snapshot {timestamp} for {original_url}: {e}")
         return ""
@@ -138,7 +51,7 @@ async def fetch_snapshot_html(timestamp: str, original_url: str, domain: str) ->
 async def fetch_live_domain_html(domain: str) -> tuple[str, str | None]:
     """
     Fetches the current homepage HTML for a domain.
-    Includes client-side and HTTP redirect target inspection.
+    Cleaned independently using SnapshotExtractor.
     """
     domain_clean = domain.strip().lower().removeprefix("http://").removeprefix("https://").strip("/")
     if not domain_clean:
@@ -149,7 +62,7 @@ async def fetch_live_domain_html(domain: str) -> tuple[str, str | None]:
     }
 
     from backend.app.core.http_client import http_client
-    from backend.app.core.proxy_utils import is_socks_proxy
+    from backend.app.core.proxy_utils import is_socks_proxy, proxy_label
 
     proxy_list = settings.get_proxy_rotation_list()
     for proxy in proxy_list:
@@ -171,10 +84,8 @@ async def fetch_live_domain_html(domain: str) -> tuple[str, str | None]:
                         logger.debug(f"Fetched live homepage for {domain_clean} via {label}")
                         raw_text = await res.text(errors="ignore")
                         final_url = str(res.url)
-                        enhanced_html = await follow_redirect_if_needed(raw_text, final_url)
-                        if final_url and final_url.lower() != url.lower():
-                            enhanced_html += f"\n<!-- HTTP REDIRECT FINAL URL: {final_url} -->"
-                        return enhanced_html, final_url
+                        cleaned_html = SnapshotExtractor.clean_wayback_html(raw_text)
+                        return cleaned_html, final_url
                     logger.warning(
                         f"Live homepage returned status {res.status} ({content_type}) for {url} via {label}"
                     )

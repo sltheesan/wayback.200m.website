@@ -27,6 +27,20 @@ class Snapshot(Base):
     content_summary: Mapped[str] = mapped_column(Text, nullable=True)          # Short human-readable description
     extraction_metadata: Mapped[str] = mapped_column(Text, nullable=True)      # JSON blob with detector-level detail
 
+    # Advanced Redirect Engine & Dual Risk Telemetry
+    redirect_detected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    redirect_method: Mapped[str | None] = mapped_column(String, nullable=True)
+    redirect_confidence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    redirect_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    redirect_same_domain: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    redirect_target: Mapped[str | None] = mapped_column(String, nullable=True)
+    redirect_target_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    redirect_target_category: Mapped[str | None] = mapped_column(String, nullable=True)
+    redirect_target_risk: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    original_category: Mapped[str | None] = mapped_column(String, nullable=True)
+    original_risk: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    redirect_evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Relationships
     domain: Mapped["Domain"] = relationship("Domain", back_populates="snapshots")
     flags: Mapped[list["AnalysisFlag"]] = relationship(

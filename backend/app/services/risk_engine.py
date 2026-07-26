@@ -1,73 +1,98 @@
-import random
-from typing import List, Dict, Any, Tuple
+from typing import Optional, Dict, Any
+from dataclasses import dataclass
+from backend.app.AI.classifier import classifier
+from backend.app.utils.text_cleaner import clean_html_content
+from backend.app.services.redirect_engine import RedirectEvaluationResult
 from backend.app.utils.logger import logger
 
-# Number of snapshots to sample for analysis
-SNAPSHOT_SAMPLE_SIZE = 10
+@dataclass
+class DualRiskEvaluationResult:
+    final_risk_score: int
+    primary_category: str
+    category_confidence: float
+    summary: str
+    original_category: str
+    original_risk: int
+    redirect_target_category: Optional[str] = None
+    redirect_target_risk: int = 0
+    risk_narrative: Optional[str] = None
+    category_scores: Dict[str, float] = None
 
 
-def _snap_get(snap: Any, key: str, default: Any = None) -> Any:
-    if isinstance(snap, dict):
-        return snap.get(key, default)
-    return getattr(snap, key, default)
+class RiskDecisionEngine:
+    @staticmethod
+    def evaluate_dual_risk(
+        original_html: str,
+        target_html: Optional[str],
+        redirect_eval: RedirectEvaluationResult,
+        domain: str
+    ) -> DualRiskEvaluationResult:
+        """
+        Runs independent ML classification on original snapshot HTML and target HTML,
+        and applies the Dual Risk Matrix.
+        """
+        # 1. Clean & Classify Original Snapshot
+        orig_cleaned = clean_html_content(original_html or "")
+        orig_clf = classifier.classify_snapshot(orig_cleaned)
 
+        orig_category = orig_clf.primary_category
+        orig_confidence = orig_clf.confidence
+        orig_scores = orig_clf.all_scores
+        orig_risk = int(round(orig_scores.get(orig_category, 0.0) * 100)) if orig_scores else 0
 
-def select_snapshots_to_check(snapshots: List[Any]) -> List[Any]:
-    """
-    Returns all snapshots for analysis, sorted chronologically.
-    Accepts both dict items and Snapshot ORM objects safely.
-    """
-    sorted_snapshots = sorted(snapshots, key=lambda s: str(_snap_get(s, "timestamp", "") or ""))
-    logger.info(f"Selected all {len(sorted_snapshots)} snapshots for analysis.")
-    return sorted_snapshots
+        # Adjust base original risk for high-severity categories
+        if orig_category in ("gambling", "adult", "phishing", "malware"):
+            orig_risk = max(orig_risk, 80)
+        elif orig_category in ("crypto", "financial_scam"):
+            orig_risk = max(orig_risk, 65)
 
+        target_category: Optional[str] = None
+        target_risk: int = 0
+        target_clf = None
 
-def compute_overall_risk(snapshot_results: List[Any]) -> Tuple[int, str, int, int]:
-    """
-    Computes the overall risk score and level from a list of snapshot results.
-    Accepts both dict items and Snapshot ORM objects safely.
-    """
-    if not snapshot_results:
-        return 0, "SAFE", 0, 0
+        # 2. Clean & Classify Target HTML if redirect detected & target HTML available
+        if redirect_eval.redirect_detected and target_html:
+            target_cleaned = clean_html_content(target_html)
+            target_clf = classifier.classify_snapshot(target_cleaned)
+            target_category = target_clf.primary_category
+            t_scores = target_clf.all_scores
+            target_risk = int(round(t_scores.get(target_category, 0.0) * 100)) if t_scores else 0
+            if target_category in ("gambling", "adult", "phishing", "malware"):
+                target_risk = max(target_risk, 85)
 
-    # Filter valid snapshots (including redirects and analyzed captures)
-    valid_snaps = []
-    for s in snapshot_results:
-        if isinstance(s, (int, float)):
-            valid_snaps.append({"risk_score": int(s), "content_category": "safe"})
-        else:
-            is_redir = _snap_get(s, "is_redirect", False)
-            cat = _snap_get(s, "content_category")
-            r_score = int(_snap_get(s, "risk_score", 0) or 0)
-            st_code = _snap_get(s, "status_code")
-            if is_redir or cat not in ["unavailable", "invalid"] or r_score > 0 or st_code:
-                valid_snaps.append(s)
+        # 3. Apply Dual Risk Matrix
+        final_risk = orig_risk
+        display_category = orig_category
+        narrative: Optional[str] = None
+        final_confidence = orig_confidence
+        final_summary = orig_clf.summary
 
-    if not valid_snaps:
-        valid_snaps = list(snapshot_results)
+        if redirect_eval.redirect_detected:
+            if target_category in ("gambling", "adult", "phishing", "malware"):
+                final_risk = max(orig_risk, target_risk, 85)
+                display_category = f"{orig_category} -> {target_category}"
+                narrative = (
+                    f"⚠️ CHRONOSENTINEL WARNING: Snapshot for {domain} redirects to an external "
+                    f"{target_category.upper()} threat network ({redirect_eval.redirect_target}). "
+                    f"Original page was classified as '{orig_category}'."
+                )
+                if target_clf:
+                    final_confidence = target_clf.confidence
+                    final_summary = target_clf.summary
+            elif target_category and target_category != "safe":
+                final_risk = max(orig_risk, target_risk, 50)
+                display_category = f"{orig_category} -> {target_category}"
+                narrative = f"Snapshot redirects to external {target_category} site ({redirect_eval.redirect_target})."
 
-    if not valid_snaps:
-        return 0, "SAFE", 0, 0
-
-    scores = [int(_snap_get(s, "risk_score", 0) or 0) for s in valid_snaps]
-    peak_score = max(scores)
-    avg_score = sum(scores) / len(scores)
-
-    # Weighted combination: peak heavily influences final score
-    final_score = int(round(peak_score * 0.6 + avg_score * 0.4))
-    if peak_score >= 80:
-        # High-severity threats (gambling/adult redirects, phishing) elevate final score
-        final_score = max(final_score, 70)
-    final_score = min(final_score, 100)
-
-    avg_score_rounded = int(round(avg_score))
-
-    # Classify risk level based on final score
-    if final_score > 60:
-        risk_level = "HIGH"
-    elif final_score > 30:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "SAFE"
-
-    return final_score, risk_level, peak_score, avg_score_rounded
+        return DualRiskEvaluationResult(
+            final_risk_score=final_risk,
+            primary_category=display_category,
+            category_confidence=final_confidence,
+            summary=final_summary,
+            original_category=orig_category,
+            original_risk=orig_risk,
+            redirect_target_category=target_category,
+            redirect_target_risk=target_risk,
+            risk_narrative=narrative,
+            category_scores=orig_scores
+        )
