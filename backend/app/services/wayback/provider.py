@@ -76,33 +76,35 @@ class WaybackProvider(ArchiveProvider):
         else:
             candidates.extend([f"www.{domain_bare}", f"www.{domain_bare}/*"])
 
-        raw_data = None
+        collected_snapshots: Dict[str, Dict[str, Any]] = {}
         for candidate_url in candidates:
             try:
                 logger.info(f"WaybackProvider: Querying CDX for target pattern: {candidate_url}")
                 data = await self._query_cdx_raw(candidate_url)
                 if data and len(data) > 1:
-                    raw_data = data
-                    break
+                    headers_list = [h.lower() for h in data[0]]
+                    for row in data[1:]:
+                        snapshot_dict = dict(zip(headers_list, row))
+                        ts = snapshot_dict.get("timestamp", "")
+                        orig = snapshot_dict.get("original", "")
+                        if ts and orig:
+                            key = f"{ts}_{orig}"
+                            if key not in collected_snapshots:
+                                collected_snapshots[key] = {
+                                    "timestamp": ts,
+                                    "original": orig,
+                                    "statuscode": snapshot_dict.get("statuscode", ""),
+                                    "mime": snapshot_dict.get("mimetype", snapshot_dict.get("mime", "")),
+                                    "digest": snapshot_dict.get("digest", "")
+                                }
+                    # If candidate yielded plenty of snapshots, we can stop querying candidates
+                    if len(collected_snapshots) >= 10:
+                        break
             except Exception as candidate_err:
                 logger.warning(f"WaybackProvider: CDX query for '{candidate_url}' failed: {candidate_err}")
                 continue
 
-        if not raw_data or len(raw_data) <= 1:
-            return []
-
-        headers_list = [h.lower() for h in raw_data[0]]
-        snapshots = []
-        for row in raw_data[1:]:
-            snapshot_dict = dict(zip(headers_list, row))
-            snapshots.append({
-                "timestamp": snapshot_dict.get("timestamp", ""),
-                "original": snapshot_dict.get("original", ""),
-                "statuscode": snapshot_dict.get("statuscode", ""),
-                "mime": snapshot_dict.get("mimetype", snapshot_dict.get("mime", "")),
-                "digest": snapshot_dict.get("digest", "")
-            })
-        return snapshots
+        return list(collected_snapshots.values())
 
     async def get_snapshot(self, timestamp: str, url: str) -> str:
         if getattr(settings, "MOCK_WAYBACK", False):
