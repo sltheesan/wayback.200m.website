@@ -17,6 +17,7 @@ def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int,
     """
     Computes overall risk score, risk level (SAFE/MEDIUM/HIGH), peak score, and average score.
     Supports either a list of integer risk scores or a list of snapshot dict objects.
+    Ensures high risk peaks maintain primary weight so old safe snapshots cannot dilute threats.
     """
     if not scores_or_snapshots:
         return 0, "SAFE", 0, 0
@@ -34,8 +35,13 @@ def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int,
     peak_score = max(scores)
     avg_score = int(round(sum(scores) / len(scores)))
 
-    # Weighted calculation: 60% peak + 40% average
-    final_score = int(round(0.6 * peak_score + 0.4 * (sum(scores) / len(scores))))
+    # Weighted calculation: if a severe threat peak exists, retain peak dominance (85% peak + 15% avg)
+    if peak_score >= 65:
+        final_score = max(int(round(0.85 * peak_score + 0.15 * avg_score)), peak_score - 10)
+    else:
+        final_score = int(round(0.6 * peak_score + 0.4 * avg_score))
+
+    final_score = min(100, max(0, final_score))
 
     if final_score <= 30:
         level = "SAFE"
@@ -45,6 +51,13 @@ def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int,
         level = "HIGH"
 
     return final_score, level, peak_score, avg_score
+
+
+HIGH_SEVERITY_CATEGORIES = (
+    "gambling", "adult", "phishing", "phishing_scam", "malware",
+    "malware_hacking", "illegal_pharmaceuticals"
+)
+MEDIUM_SEVERITY_CATEGORIES = ("crypto", "financial_scam")
 
 
 @dataclass
@@ -83,9 +96,9 @@ class RiskDecisionEngine:
         orig_risk = int(round(orig_scores.get(orig_category, 0.0) * 100)) if orig_scores else 0
 
         # Adjust base original risk for high-severity categories
-        if orig_category in ("gambling", "adult", "phishing", "malware"):
+        if orig_category in HIGH_SEVERITY_CATEGORIES:
             orig_risk = max(orig_risk, 80)
-        elif orig_category in ("crypto", "financial_scam"):
+        elif orig_category in MEDIUM_SEVERITY_CATEGORIES:
             orig_risk = max(orig_risk, 65)
 
         target_category: Optional[str] = None
@@ -100,7 +113,7 @@ class RiskDecisionEngine:
             target_category = target_clf.primary_category
             t_scores = target_clf.all_scores
             target_risk = int(round(t_scores.get(target_category, 0.0) * 100)) if t_scores else 0
-            if target_category in ("gambling", "adult", "phishing", "malware"):
+            if target_category in HIGH_SEVERITY_CATEGORIES:
                 target_risk = max(target_risk, 85)
 
         # 3. Apply Dual Risk Matrix
@@ -111,7 +124,7 @@ class RiskDecisionEngine:
         final_summary = orig_clf.summary
 
         if redirect_eval.redirect_detected:
-            if target_category in ("gambling", "adult", "phishing", "malware"):
+            if target_category in HIGH_SEVERITY_CATEGORIES:
                 final_risk = max(orig_risk, target_risk, 85)
                 display_category = f"{orig_category} -> {target_category}"
                 narrative = (

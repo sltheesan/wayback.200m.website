@@ -128,7 +128,7 @@ def classify_content(html_content: str, domain: Optional[str] = None) -> Classif
     ClassificationResult
         Structured classification result ready to be stored and displayed.
     """
-    if not html_content or not html_content.strip():
+    if (not html_content or not html_content.strip()) and not domain:
         return ClassificationResult(
             primary_category=SAFE_LABEL,
             confidence=0.0,

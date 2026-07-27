@@ -278,12 +278,10 @@ def preprocess_domain_name(domain: str) -> str:
         return ""
     
     domain_lower = domain.lower()
-    domain_clean = domain_lower
-    # Strip common TLDs to avoid matching 'com', 'net', 'org' if they appear in keywords
-    for tld in [".com", ".net", ".org", ".info", ".xyz", ".biz", ".co", ".io"]:
-        if domain_clean.endswith(tld):
-            domain_clean = domain_clean[:-len(tld)]
-            break
+    # Strip protocol and path if present
+    domain_clean = domain_lower.removeprefix("http://").removeprefix("https://").split("/")[0].split(":")[0]
+    # Strip any top-level domain suffix (e.g. .com, .co.uk, .casino, .online)
+    domain_clean = re.sub(r"\.[a-z]{2,}(?:\.[a-z]{2,})?$", "", domain_clean)
             
     found_keywords = []
     for lang, categories in LANGUAGE_KEYWORDS.items():
@@ -320,7 +318,7 @@ def analyze_snapshot_content(
 
     returns (snapshot_risk_score, category_scores, list_of_triggered_flags).
     """
-    if not html_content and not redirect_url:
+    if not html_content and not redirect_url and not domain:
         return 0, {}, []
 
     # Clean the HTML content to obtain readable lowercase text (meta tags + full body content)

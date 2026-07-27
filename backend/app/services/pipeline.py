@@ -224,8 +224,53 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             if "web.archive.org" in redirect_eval.redirect_target:
                 target_html = await fetch_snapshot_html(timestamp, redirect_eval.redirect_target, domain_clean)
 
-        # Phase 2 check: If download failed and no redirect detected
+        # Phase 2 check: If download failed and no redirect detected, check domain name keywords
         if not html_content and not redirect_eval.redirect_detected:
+            fallback_risk, fallback_cat_scores, fallback_flags = analyze_snapshot_content("", domain_clean)
+            if fallback_risk > 0:
+                top_cat = max(fallback_cat_scores, key=lambda k: fallback_cat_scores[k]) if fallback_cat_scores else "suspicious"
+                metadata = {
+                    "status": "success",
+                    "classifier": {
+                        "primary_category": top_cat,
+                        "confidence": round(fallback_risk / 100.0, 2),
+                        "all_scores": fallback_cat_scores,
+                        "detected_language": "en",
+                        "summary": f"Domain name contains high-risk threat keywords ({', '.join(f['keyword'] for f in fallback_flags[:3])}).",
+                    },
+                    "detectors": {},
+                    "evidence_url": None
+                }
+                return {
+                    "timestamp": timestamp,
+                    "original_url": original,
+                    "status_code": status,
+                    "redirect_url": None,
+                    "is_redirect": False,
+                    "mime_type": mime,
+                    "risk_score": fallback_risk,
+                    "detected_language": "en",
+                    "category_scores": fallback_cat_scores,
+                    "flags": fallback_flags,
+                    "content_category": top_cat,
+                    "category_confidence": round(fallback_risk / 100.0, 2),
+                    "content_summary": "Domain name contains threat keywords.",
+                    "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
+                    "evidence_url": None,
+                    "redirect_detected": False,
+                    "redirect_method": None,
+                    "redirect_confidence": 0,
+                    "redirect_verified": False,
+                    "redirect_same_domain": False,
+                    "redirect_target": None,
+                    "redirect_target_status": None,
+                    "redirect_target_category": None,
+                    "redirect_target_risk": 0,
+                    "original_category": top_cat,
+                    "original_risk": fallback_risk,
+                    "redirect_evidence": [],
+                }
+
             metadata = {
                 "status": "unavailable",
                 "reason": "Download failed across all proxy attempts",
@@ -524,6 +569,15 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     threat_intel_results = await query_all_providers(domain_clean)
     threat_overall = overall_threat_status(threat_intel_results)
 
+    # Blend Threat Intelligence verdict into overall risk score
+    if threat_overall == "malicious":
+        overall_score = max(overall_score, 85)
+        overall_level = "HIGH"
+    elif threat_overall == "suspicious":
+        overall_score = max(overall_score, 55)
+        if overall_level == "SAFE":
+            overall_level = "MEDIUM"
+
     # 7. Persist to PostgreSQL database
     query_existing = select(Domain).options(
         selectinload(Domain.snapshots),
@@ -804,7 +858,19 @@ def format_domain_response(
     }
 
 async def save_empty_domain(domain_name: str, db: AsyncSession) -> Domain:
-    """Saves a domain with 0 risk and no snapshots if none exist on CDX."""
+    """Saves a domain record, analyzing domain name threat keywords if CDX snapshots are unavailable."""
+    d_risk, d_cat_scores, d_flags = analyze_snapshot_content("", domain_name)
+    if d_risk > 0:
+        assigned_score = d_risk
+        assigned_level = "HIGH" if d_risk >= 60 else ("MEDIUM" if d_risk >= 30 else "SAFE")
+        assigned_cat = max(d_cat_scores, key=lambda k: d_cat_scores[k]) if d_cat_scores else "suspicious"
+        assigned_narrative = f"Domain name contains high-risk threat keywords ({', '.join(f['keyword'] for f in d_flags[:3])})."
+    else:
+        assigned_score = 0
+        assigned_level = "UNKNOWN"
+        assigned_cat = "unknown"
+        assigned_narrative = "Insufficient data. No historical archive snapshots exist, or all captures were inaccessible."
+
     query = (
         select(Domain)
         .options(
@@ -817,12 +883,12 @@ async def save_empty_domain(domain_name: str, db: AsyncSession) -> Domain:
     result = await db.execute(query)
     db_domain = result.scalar_one_or_none()
 
+    now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     if db_domain:
-        db_domain.risk_score = 0
-        db_domain.risk_level = "UNKNOWN"
-        db_domain.primary_category = "unknown"
-        db_domain.risk_narrative = "Insufficient data. No historical archive snapshots exist, or all captures were inaccessible."
-        now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        db_domain.risk_score = assigned_score
+        db_domain.risk_level = assigned_level
+        db_domain.primary_category = assigned_cat
+        db_domain.risk_narrative = assigned_narrative
         db_domain.last_analyzed_at = now_utc
         db_domain.snapshots.clear()
         db_domain.timeline.clear()
@@ -830,11 +896,11 @@ async def save_empty_domain(domain_name: str, db: AsyncSession) -> Domain:
     else:
         db_domain = Domain(
             name=domain_name,
-            risk_score=0,
-            risk_level="UNKNOWN",
-            primary_category="unknown",
-            risk_narrative="Insufficient data. No historical archive snapshots exist, or all captures were inaccessible.",
-            last_analyzed_at=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
+            risk_score=assigned_score,
+            risk_level=assigned_level,
+            primary_category=assigned_cat,
+            risk_narrative=assigned_narrative,
+            last_analyzed_at=now_utc,
             snapshots=[],
             timeline=[],
             threat_intel=[]

@@ -86,7 +86,7 @@ def test_risk_engine_classification():
     
     # High risk: final > 60
     assert compute_overall_risk([70, 70, 70]) == (70, "HIGH", 70, 70)
-    assert compute_overall_risk([80, 90, 75]) == (87, "HIGH", 90, 82)
+    assert compute_overall_risk([80, 90, 75]) == (89, "HIGH", 90, 82)
 
 def test_sampling_strategy_six_or_fewer():
     """Verify that all records are returned sorted chronologically."""
@@ -224,3 +224,39 @@ def test_ssrf_validator():
 
     # Offline/unresolvable domains should pass (not throw SSRFValidationError)
     assert validate_target("completely-fake-domain-that-does-not-exist-at-all-12345.xyz") == "completely-fake-domain-that-does-not-exist-at-all-12345.xyz"
+
+
+def test_phishing_and_malware_category_boosting():
+    """Verify that phishing_scam and malware_hacking trigger high risk in Dual Risk engine."""
+    from backend.app.services.risk_engine import RiskDecisionEngine
+    from backend.app.services.redirect_engine import RedirectEvaluationResult
+
+    html = """
+    <html>
+      <head>
+        <meta name="description" content="Paypal security alert verify account billing details immediately account suspension">
+      </head>
+      <body><h1>Verify Account</h1></body>
+    </html>
+    """
+    res = RiskDecisionEngine.evaluate_dual_risk(html, None, RedirectEvaluationResult(), "verify-paypal-login.com")
+    assert res.final_risk_score >= 80
+    assert "phishing" in res.primary_category or "scam" in res.primary_category
+
+
+def test_domain_name_keyword_scoring_on_empty_html():
+    """Verify that domain name keywords generate a risk score even when HTML content is empty."""
+    score, cat_scores, flags = analyze_snapshot_content("", "slotgacor777.casino")
+    assert score >= 65
+    assert cat_scores.get("gambling", 0) >= 65
+    assert len(flags) > 0
+
+
+def test_peak_score_retention_in_compute_overall_risk():
+    """Verify that a single high-risk snapshot peak is not over-diluted by old safe snapshots."""
+    # 1 peak of 90 + 19 zero snapshots should yield at least 75 (HIGH risk level)
+    scores = [0] * 19 + [90]
+    final_score, level, peak, avg = compute_overall_risk(scores)
+    assert peak == 90
+    assert final_score >= 75
+    assert level == "HIGH"
