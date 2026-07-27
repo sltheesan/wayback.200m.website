@@ -119,59 +119,88 @@ def classify_images_in_html(html: str, domain: str) -> List[Dict[str, Any]]:
 
 def find_keyword_locations(html: str, keywords_list: List[str]) -> List[Dict[str, Any]]:
     """
-    Searches the HTML structure to locate where target keywords appear.
+    Searches the HTML structure (meta tags, titles, headings, p, div, span, li, a, td)
+    to accurately locate where target keywords appear in body paragraphs and elements.
     Returns a list of match details (keyword, element, matched_text, snippet, position).
     """
     if not html or not keywords_list:
         return []
-        
+
     matches = []
+    seen_keys = set()
     try:
         soup = BeautifulSoup(html, "html.parser")
     except Exception:
         return []
-        
+
     for keyword in keywords_list:
-        keyword_lower = keyword.lower()
+        if not keyword or not keyword.strip():
+            continue
+        keyword_clean = keyword.lower().strip()
+        parts = [re.escape(p) for p in keyword_clean.split() if p]
+        if not parts:
+            continue
         
+        sep = r"[\W_]+"
+        pattern = rf"(?<![a-z0-9]){sep.join(parts)}(?![a-z0-9])" if len(parts) > 1 else rf"(?<![a-z0-9]){parts[0]}(?![a-z0-9])"
+
         # 1. Search meta tags first
         for meta in soup.find_all("meta"):
             content = meta.get("content", "")
-            if keyword_lower in content.lower():
+            if content and re.search(pattern, content.lower()):
                 name_attr = meta.get("name") or meta.get("property") or "meta"
-                matches.append({
-                    "keyword": keyword,
-                    "element": f'<meta name="{name_attr}">',
-                    "matched_text": content,
-                    "snippet": content[:120],
-                    "position": content.lower().find(keyword_lower)
-                })
-                
+                dedup_key = (keyword, f'<meta name="{name_attr}">', content[:120])
+                if dedup_key not in seen_keys:
+                    seen_keys.add(dedup_key)
+                    m = re.search(pattern, content.lower())
+                    matches.append({
+                        "keyword": keyword,
+                        "element": f'<meta name="{name_attr}">',
+                        "matched_text": content.strip(),
+                        "snippet": content.strip()[:120],
+                        "position": m.start() if m else 0
+                    })
+
         # 2. Search title tag
-        if soup.title and keyword_lower in soup.title.get_text().lower():
-            title_text = soup.title.get_text()
-            matches.append({
-                "keyword": keyword,
-                "element": "<title>",
-                "matched_text": title_text,
-                "snippet": title_text[:120],
-                "position": title_text.lower().find(keyword_lower)
-            })
-            
-        # 3. Search other HTML elements
-        for element in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "a", "li", "span", "div"]):
-            if len(element.find_all(recursive=False)) > 3:
+        if soup.title:
+            title_text = soup.title.get_text().strip()
+            if title_text and re.search(pattern, title_text.lower()):
+                dedup_key = (keyword, "<title>", title_text[:120])
+                if dedup_key not in seen_keys:
+                    seen_keys.add(dedup_key)
+                    m = re.search(pattern, title_text.lower())
+                    matches.append({
+                        "keyword": keyword,
+                        "element": "<title>",
+                        "matched_text": title_text,
+                        "snippet": title_text[:120],
+                        "position": m.start() if m else 0
+                    })
+
+        # 3. Search HTML body paragraph & text elements (<p>, <div>, <span>, <a>, <li>, <td>, <h1>-<h6>, <article>, <section>)
+        for element in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "a", "li", "span", "div", "td", "article", "section"]):
+            text = element.get_text(separator=" ").strip()
+            if not text:
                 continue
-            text = element.get_text()
-            if text and keyword_lower in text.lower():
-                matches.append({
-                    "keyword": keyword,
-                    "element": f"<{element.name}>",
-                    "matched_text": text.strip(),
-                    "snippet": text.strip()[:120],
-                    "position": text.lower().find(keyword_lower)
-                })
-                
+
+            # Skip huge outer container divs to pinpoint specific paragraph/div element
+            if len(text) > 1000 and element.name in ("div", "article", "section"):
+                continue
+
+            if re.search(pattern, text.lower()):
+                snippet = text[:150]
+                dedup_key = (keyword, f"<{element.name}>", snippet)
+                if dedup_key not in seen_keys:
+                    seen_keys.add(dedup_key)
+                    m = re.search(pattern, text.lower())
+                    matches.append({
+                        "keyword": keyword,
+                        "element": f"<{element.name}>",
+                        "matched_text": text[:300],
+                        "snippet": snippet,
+                        "position": m.start() if m else 0
+                    })
+
     return matches
 
 # Ensure consistent language detection
