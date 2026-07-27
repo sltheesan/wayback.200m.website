@@ -361,10 +361,16 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
 
         # Final risk score calculation combining Dual Risk Engine + detector signals
         final_risk_score = max(risk_score, dual_risk.final_risk_score)
-        if high_signals >= 2:
-            final_risk_score = max(final_risk_score, 85)
-        elif high_signals >= 1:
-            final_risk_score = max(final_risk_score, 70)
+
+        # Critical malicious detectors (crypto drainers, cloaked casino redirects, url obfuscation)
+        critical_detectors = sum(
+            1 for d in detector_results 
+            if d.get("signal") == "high" and d.get("detector") in ("crypto_wallets", "repurposed_domain_redirect", "url_obfuscation")
+        )
+        if critical_detectors >= 1:
+            final_risk_score = max(final_risk_score, 80)
+        elif high_signals >= 2 and dual_risk.primary_category != "safe":
+            final_risk_score = max(final_risk_score, 75)
 
         if redirect_eval.redirect_detected and dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "phishing_scam", "malware", "malware_hacking"):
             final_risk_score = max(final_risk_score, 85)

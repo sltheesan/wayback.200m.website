@@ -187,13 +187,14 @@ def classify_content(html_content: str, domain: Optional[str] = None) -> Classif
             raw_scores[category] = normalised
             all_evidence.extend(cat_evidence)
 
-    # 4. Determine primary category
-    if not raw_scores:
+    # 4. Determine primary category (require at least 0.35 confidence for threat classification)
+    significant_threats = {c: s for c, s in raw_scores.items() if s >= 0.35}
+    if not significant_threats:
         primary = SAFE_LABEL
         confidence = 0.0
     else:
-        primary = max(raw_scores, key=lambda c: raw_scores[c])
-        confidence = round(raw_scores[primary], 4)
+        primary = max(significant_threats, key=lambda c: significant_threats[c])
+        confidence = round(significant_threats[primary], 4)
 
     # Sort evidence by contribution descending, keep top 20 per result
     all_evidence.sort(key=lambda e: e.contribution, reverse=True)

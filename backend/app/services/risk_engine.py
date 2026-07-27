@@ -102,10 +102,10 @@ class RiskDecisionEngine:
         orig_scores = orig_clf.all_scores
         orig_risk = int(round(orig_scores.get(orig_category, 0.0) * 100)) if orig_scores else 0
 
-        # Adjust base original risk for high-severity categories
-        if orig_category in HIGH_SEVERITY_CATEGORIES:
+        # Adjust base original risk for high-severity categories ONLY if confidence is significant (>= 0.35)
+        if orig_category in HIGH_SEVERITY_CATEGORIES and orig_confidence >= 0.35:
             orig_risk = max(orig_risk, 80)
-        elif orig_category in MEDIUM_SEVERITY_CATEGORIES:
+        elif orig_category in MEDIUM_SEVERITY_CATEGORIES and orig_confidence >= 0.35:
             orig_risk = max(orig_risk, 65)
 
         target_category: Optional[str] = None

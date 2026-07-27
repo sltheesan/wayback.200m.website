@@ -308,3 +308,48 @@ def test_aesthetic_dermatology_clinic_false_positive_prevention():
     assert score == 0
     assert clf.primary_category == "safe"
     assert len(flags) == 0
+
+
+def test_low_confidence_keyword_hits_do_not_mark_safe_pages_unsafe():
+    """Verify that a single low-confidence keyword hit does not elevate safe pages to 80 risk."""
+    from backend.app.services.risk_engine import RiskDecisionEngine
+    from backend.app.services.redirect_engine import RedirectEvaluationResult
+
+    html = "<html><body><p>We analyze sports news and card games for entertainment only.</p></body></html>"
+    res = RiskDecisionEngine.evaluate_dual_risk(html, None, RedirectEvaluationResult(), "sportsnewsblog.com")
+    assert res.primary_category == "safe"
+    assert res.final_risk_score <= 30
+
+
+def test_safe_site_with_bootstrap_dropdowns_and_login_form_stays_safe():
+    """Verify that legitimate sites using display:none CSS dropdowns and login forms stay SAFE."""
+    html = """
+    <html>
+      <head>
+        <style>
+          .menu-item { display: none; }
+          .modal { display: none; }
+          .tab-content { display: none; }
+          .dropdown-1 { display: none; }
+          .dropdown-2 { display: none; }
+          .accordion { display: none; }
+        </style>
+      </head>
+      <body>
+        <form action="/login" method="post">
+          <input type="email" name="email">
+          <input type="password" name="password">
+          <button type="submit">Log In</button>
+        </form>
+      </body>
+    </html>
+    """
+    from backend.app.AI.classifier import classify_content
+    from backend.app.AI.detectors import run_all_detectors, high_signal_count
+
+    clf = classify_content(html, "mycompanyportal.com")
+    detectors = run_all_detectors(html, "login portal", clf)
+    high_count = high_signal_count(detectors)
+
+    # Detectors fire on CSS/forms, but content is safe -> primary_category must remain safe
+    assert clf.primary_category == "safe"
