@@ -286,3 +286,25 @@ def test_compute_overall_risk_excludes_failed_zero_captures():
     assert avg == 80
     assert final_score == 80
     assert level == "HIGH"
+
+
+def test_aesthetic_dermatology_clinic_false_positive_prevention():
+    """Verify that dermatology, aesthetic, and skincare clinics are correctly scored as SAFE (0 risk score)."""
+    html = """
+    <html>
+      <head>
+        <title>Aesthetic Clinic & Dermatology Center</title>
+        <meta name="description" content="Premier dermatology clinic providing skincare, cosmetic injectables, botox, dermal fillers, hair restoration, laser hair removal, body contouring, facial rejuvenation, and sexual wellness treatments. Book an appointment today.">
+      </head>
+      <body>
+        <h1>Welcome to Aesthetic Clinic</h1>
+        <p>Book an appointment online with our board certified dermatologist for laser skincare and cosmetic treatments.</p>
+      </body>
+    </html>
+    """
+    score, cat_scores, flags = analyze_snapshot_content(html, "aestheticdermatologyclinic.com")
+    clf = classify_content(html, "aestheticdermatologyclinic.com")
+
+    assert score == 0
+    assert clf.primary_category == "safe"
+    assert len(flags) == 0

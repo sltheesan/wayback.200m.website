@@ -362,6 +362,8 @@ def analyze_snapshot_content(
                 category_score -= neg_weight
                 
         category_score = max(0, category_score) # No negative scores
+        if category_score == 0:
+            flags = [f for f in flags if f.get("category") != category]
 
         # Apply per-category cap for total score, but keep actual category score for confidence
         capped_cat_score = min(category_score, CATEGORY_SCORE_CAP)

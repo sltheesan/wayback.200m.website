@@ -76,6 +76,12 @@ BENIGN_NICHE_PATTERNS = [
         "keywords": ["wiki", "pedia", "encyclopedia", "dictionary", "library", "reference", "archive", "knowledge"]
     },
     {
+        "title": "Dermatology & Aesthetic Clinic",
+        "desc": "Aesthetic medicine, skincare, cosmetic dermatology, facial rejuvenation, and wellness treatment clinic.",
+        "icon": "✨",
+        "keywords": ["dermatology", "aesthetic", "injectable", "botox", "filler", "skincare", "laser", "hair", "contouring", "facial", "liposuction", "rejuvenation", "clinic", "dermatologist", "appointment", "wellness", "aesthetic clinic", "cosmetic surgery", "medspa"]
+    },
+    {
         "title": "Healthcare & Medical Services Portal",
         "desc": "Healthcare and medical services information portal for clinic details, patient care, and wellness resources.",
         "icon": "🏥",
