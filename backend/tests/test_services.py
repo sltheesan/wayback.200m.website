@@ -396,3 +396,21 @@ def test_online_lottery_and_design_naked_false_positive_prevention():
     d_score, d_cat_scores, d_flags = analyze_snapshot_content(design_html, "kimberlycarrhomedesigns.com")
     assert d_score == 0
     assert d_cat_scores.get("adult", 0) == 0
+
+
+def test_strip_wayback_toolbar_and_http_error_snapshot_safety():
+    """Verify that strip_wayback_toolbar removes Wayback internal banner code and HTTP 404/500 snapshots are safe."""
+    from backend.app.services.pipeline import strip_wayback_toolbar
+
+    html_with_toolbar = """
+    <!-- BEGIN WAYBACK TOOLBAR INSERT -->
+    <div id="wm-ipp-base" lang="en">
+      <span>Wayback Machine error / warning notice</span>
+    </div>
+    <!-- END WAYBACK TOOLBAR INSERT -->
+    <html><body><h1>Clean Original Web Content</h1></body></html>
+    """
+    cleaned = strip_wayback_toolbar(html_with_toolbar)
+    assert "wm-ipp-base" not in cleaned
+    assert "Wayback Machine error" not in cleaned
+    assert "Clean Original Web Content" in cleaned

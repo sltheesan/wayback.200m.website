@@ -1,5 +1,6 @@
 
 import asyncio
+import re
 import datetime
 import json
 from typing import List, Dict, Any, Optional
@@ -69,6 +70,15 @@ def get_snapshot_key(snap: dict) -> str:
     if digest and digest != "-" and str(digest).lower() != "none":
         return digest
     return f"ts_{snap.get('timestamp')}"
+
+
+def strip_wayback_toolbar(html: str) -> str:
+    """Strips Archive.org injected header toolbar (#wm-ipp-base) and comment blocks from snapshot HTML."""
+    if not html:
+        return ""
+    cleaned = re.sub(r'<!--\s*BEGIN WAYBACK TOOLBAR INSERT\s*-->.*?<!--\s*END WAYBACK TOOLBAR INSERT\s*-->', '', html, flags=re.DOTALL | re.IGNORECASE)
+    cleaned = re.sub(r'<div[^>]*id=["\']wm-ipp-base["\'][^>]*>.*?</div>\s*</div>\s*</div>', '', cleaned, flags=re.DOTALL | re.IGNORECASE)
+    return cleaned
 
 
 def build_snapshot_evidence_url(timestamp: str, original_url: str, risk_score: int, flags: list, source: str = "archive") -> str | None:
@@ -236,11 +246,59 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         status = safe_parse_status_code(snap.get("statuscode"), 200)
         mime = snap.get("mime", "text/html")
 
-        # Fetch the HTML content. Live captures are already loaded; archive
+        # Short-circuit archived HTTP 4xx / 5xx error pages (404 Not Found, 500 Server Error) -> 0 Risk
+        if str(status).startswith("4") or str(status).startswith("5"):
+            metadata = {
+                "status": "error_page",
+                "status_code": status,
+                "classifier": {
+                    "primary_category": "safe",
+                    "confidence": 1.0,
+                    "all_scores": {},
+                    "detected_language": "en",
+                    "summary": f"Archived HTTP {status} error page.",
+                },
+                "detectors": {},
+                "evidence_url": None
+            }
+            return {
+                "timestamp": timestamp,
+                "original_url": original,
+                "status_code": status,
+                "redirect_url": None,
+                "is_redirect": False,
+                "mime_type": mime,
+                "risk_score": 0,
+                "detected_language": "en",
+                "category_scores": {},
+                "flags": [],
+                "content_category": "safe",
+                "category_confidence": 1.0,
+                "content_summary": f"Archived HTTP {status} error page (safe).",
+                "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
+                "evidence_url": None,
+                "redirect_detected": False,
+                "redirect_method": None,
+                "redirect_confidence": 0,
+                "redirect_verified": False,
+                "redirect_same_domain": False,
+                "redirect_target": None,
+                "redirect_target_status": None,
+                "redirect_target_category": None,
+                "redirect_target_risk": 0,
+                "original_category": "safe",
+                "original_risk": 0,
+                "redirect_evidence": [],
+            }
+
         # Fetch HTML content independently
         html_content = snap.get("html_content")
         if html_content is None:
             html_content = await fetch_snapshot_html(timestamp, original, domain_clean)
+
+        # Strip Archive.org injected toolbar header to prevent scanning Wayback internal banner text
+        if html_content:
+            html_content = strip_wayback_toolbar(html_content)
 
         # Pre-cache snapshot HTML so UI proxy_snapshot endpoint loads instantly (0ms network delay)
         if html_content:
@@ -264,53 +322,55 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             redirect_eval.redirect_target_status = target_status
             if "web.archive.org" in redirect_eval.redirect_target:
                 target_html = await fetch_snapshot_html(timestamp, redirect_eval.redirect_target, domain_clean)
+                if target_html:
+                    target_html = strip_wayback_toolbar(target_html)
 
-        # Phase 2 check: If download failed and no redirect detected, check domain name keywords
+        # If download failed and no redirect detected, return unavailable (0 Risk)
         if not html_content and not redirect_eval.redirect_detected:
-            fallback_risk, fallback_cat_scores, fallback_flags = analyze_snapshot_content("", domain_clean)
-            if fallback_risk > 0:
-                top_cat = max(fallback_cat_scores, key=lambda k: fallback_cat_scores[k]) if fallback_cat_scores else "suspicious"
-                metadata = {
-                    "status": "success",
-                    "classifier": {
-                        "primary_category": top_cat,
-                        "confidence": round(fallback_risk / 100.0, 2),
-                        "all_scores": fallback_cat_scores,
-                        "detected_language": "en",
-                        "summary": f"Domain name contains high-risk threat keywords ({', '.join(f['keyword'] for f in fallback_flags[:3])}).",
-                    },
-                    "detectors": {},
-                    "evidence_url": None
-                }
-                return {
-                    "timestamp": timestamp,
-                    "original_url": original,
-                    "status_code": status,
-                    "redirect_url": None,
-                    "is_redirect": False,
-                    "mime_type": mime,
-                    "risk_score": fallback_risk,
+            metadata = {
+                "status": "unavailable",
+                "reason": "Download failed across all proxy attempts",
+                "image_detections": [],
+                "classifier": {
+                    "primary_category": "safe",
+                    "confidence": 0.0,
+                    "all_scores": {},
                     "detected_language": "en",
-                    "category_scores": fallback_cat_scores,
-                    "flags": fallback_flags,
-                    "content_category": top_cat,
-                    "category_confidence": round(fallback_risk / 100.0, 2),
-                    "content_summary": "Domain name contains threat keywords.",
-                    "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
-                    "evidence_url": None,
-                    "redirect_detected": False,
-                    "redirect_method": None,
-                    "redirect_confidence": 0,
-                    "redirect_verified": False,
-                    "redirect_same_domain": False,
-                    "redirect_target": None,
-                    "redirect_target_status": None,
-                    "redirect_target_category": None,
-                    "redirect_target_risk": 0,
-                    "original_category": top_cat,
-                    "original_risk": fallback_risk,
-                    "redirect_evidence": [],
-                }
+                    "summary": "Snapshot unavailable",
+                },
+                "detectors": {},
+                "detector_boost": 0,
+                "evidence_url": None
+            }
+            return {
+                "timestamp": timestamp,
+                "original_url": original,
+                "status_code": status,
+                "redirect_url": redirect_eval.redirect_target,
+                "is_redirect": redirect_eval.redirect_detected,
+                "mime_type": mime,
+                "risk_score": 0,
+                "detected_language": "en",
+                "category_scores": {},
+                "flags": [],
+                "content_category": "unavailable",
+                "category_confidence": 0.0,
+                "content_summary": "Snapshot unavailable or failed to download.",
+                "extraction_metadata": json.dumps(metadata, ensure_ascii=False),
+                "evidence_url": None,
+                "redirect_detected": False,
+                "redirect_method": None,
+                "redirect_confidence": 0,
+                "redirect_verified": False,
+                "redirect_same_domain": False,
+                "redirect_target": None,
+                "redirect_target_status": None,
+                "redirect_target_category": None,
+                "redirect_target_risk": 0,
+                "original_category": "unavailable",
+                "original_risk": 0,
+                "redirect_evidence": [],
+            }
 
             metadata = {
                 "status": "unavailable",
