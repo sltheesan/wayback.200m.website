@@ -67,7 +67,7 @@ class ClassificationResult:
 
 CATEGORY_META: Dict[str, Dict[str, str]] = {
     "gambling": {
-        "label": "Gambling / Betting",
+        "label": "Gambling & Online Lottery",
         "icon": "🎰",
         "summary_tpl": "Content contains {count} gambling-related signals "
                         "(e.g. {kws}). Classified as {confidence:.0%} confidence gambling site.",

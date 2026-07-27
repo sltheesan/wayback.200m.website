@@ -86,13 +86,21 @@ class WaybackProvider(ArchiveProvider):
                         ts = snapshot_dict.get("timestamp", "")
                         orig = snapshot_dict.get("original", "")
                         if ts and orig:
+                            # Filter out static web asset files (.css, .js, .png, .jpg, .ico, .woff, .json, etc.)
+                            orig_clean_path = orig.lower().split("?")[0]
+                            if any(orig_clean_path.endswith(ext) for ext in (".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf", ".eot", ".xml", ".json", ".less", ".scss", ".map")):
+                                continue
+                            mime_val = str(snapshot_dict.get("mimetype", snapshot_dict.get("mime", ""))).lower()
+                            if mime_val and not any(m in mime_val for m in ("text/html", "text/plain", "warc", "unk", "redirect")) and not mime_val.startswith("text/"):
+                                continue
+
                             key = f"{ts}_{orig}"
                             if key not in collected_snapshots:
                                 collected_snapshots[key] = {
                                     "timestamp": ts,
                                     "original": orig,
                                     "statuscode": snapshot_dict.get("statuscode", ""),
-                                    "mime": snapshot_dict.get("mimetype", snapshot_dict.get("mime", "")),
+                                    "mime": mime_val or "text/html",
                                     "digest": snapshot_dict.get("digest", "")
                                 }
                     # Stop querying further candidates if we have accumulated substantial snapshots (>= 20)
@@ -120,13 +128,20 @@ class WaybackProvider(ArchiveProvider):
                             ts = snapshot_dict.get("timestamp", "")
                             orig = snapshot_dict.get("original", "")
                             if ts and orig:
+                                orig_clean_path = orig.lower().split("?")[0]
+                                if any(orig_clean_path.endswith(ext) for ext in (".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf", ".eot", ".xml", ".json", ".less", ".scss", ".map")):
+                                    continue
+                                mime_val = str(snapshot_dict.get("mimetype", snapshot_dict.get("mime", ""))).lower()
+                                if mime_val and not any(m in mime_val for m in ("text/html", "text/plain", "warc", "unk", "redirect")) and not mime_val.startswith("text/"):
+                                    continue
+
                                 key = f"{ts}_{orig}"
                                 if key not in collected_snapshots:
                                     collected_snapshots[key] = {
                                         "timestamp": ts,
                                         "original": orig,
                                         "statuscode": snapshot_dict.get("statuscode", ""),
-                                        "mime": snapshot_dict.get("mimetype", snapshot_dict.get("mime", "")),
+                                        "mime": mime_val or "text/html",
                                         "digest": snapshot_dict.get("digest", "")
                                     }
                         if len(collected_snapshots) >= 1:

@@ -362,3 +362,37 @@ def test_get_snapshot_key_consistency():
     assert get_snapshot_key(s2) == "SHA1DIGEST123"
     assert get_snapshot_key(s3) == "ts_20220808111111"
     assert get_snapshot_key(s4) == "ts_20230909222222"
+
+
+def test_online_lottery_and_design_naked_false_positive_prevention():
+    """Verify that online lottery / togel sites are classified as gambling and home design 'naked wood' is safe."""
+    from backend.app.services.analyzer import analyze_snapshot_content
+
+    lottery_html = """
+    <html>
+      <head><title>Situs Togel Online & Bandar Togel Terpercaya</title></head>
+      <body>
+        <h1>Situs Togel Resmi & Online Lottery</h1>
+        <p>Pasaran Togel Macau, Singapore, Hongkong. Mainkan Toto Macau & Bandar Togel Online Jackpot Maxwin.</p>
+        <div class="naked-wood-style">Natural Naked Wood Furniture</div>
+      </body>
+    </html>
+    """
+    score, cat_scores, flags = analyze_snapshot_content(lottery_html, "kimberlycarrhomedesigns.com")
+    top_cat = max(cat_scores, key=lambda k: cat_scores[k]) if cat_scores else "safe"
+
+    assert top_cat == "gambling"
+    assert score >= 60
+
+    design_html = """
+    <html>
+      <head><title>Kimberly Carr Home Designs - Interior Architecture</title></head>
+      <body>
+        <h1>Interior Design Showcase</h1>
+        <p>Our craftsmen use naked wood finishes and natural materials visible to the naked eye.</p>
+      </body>
+    </html>
+    """
+    d_score, d_cat_scores, d_flags = analyze_snapshot_content(design_html, "kimberlycarrhomedesigns.com")
+    assert d_score == 0
+    assert d_cat_scores.get("adult", 0) == 0
