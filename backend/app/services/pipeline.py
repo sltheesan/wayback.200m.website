@@ -139,28 +139,21 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     raw_snapshots, cdx_proxy_used = await fetch_snapshots_with_proxy_rotation(domain_clean, force_refresh=force_refresh)
     if cdx_proxy_used:
         logger.info(f"CDX snapshots for {domain_clean} succeeded via proxy: {cdx_proxy_used}")
-    # Also inspect the current homepage. Some repurposed domains have no useful
-    # archive captures, and image-heavy adult pages can otherwise be missed.
-    live_html, live_url = await fetch_live_domain_html(domain_clean)
-    live_timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
 
     if raw_snapshots is None:
         if db_domain:
             logger.warning(f"Wayback Machine CDX API is unreachable for {domain_clean}. Falling back to existing database record.")
             return format_domain_response(db_domain)
-        if not live_html:
-            logger.warning(f"Wayback CDX API unreachable and live homepage failed for {domain_clean}. Saving default safe record.")
-            db_domain = await save_empty_domain(domain_clean, db)
-            db_domain.risk_narrative = "Wayback Machine CDX API was temporarily unreachable and live website could not be queried. Marked as 0 snapshots."
-            empty_response = format_domain_response(db_domain)
-            await redis_manager.set(cache_key, empty_response)
-            return empty_response
-        logger.warning(f"Wayback Machine CDX API is unreachable for {domain_clean}. Falling back to live homepage scan.")
-        raw_snapshots = []
+        logger.warning(f"Wayback CDX API unreachable for {domain_clean}. Saving default safe record.")
+        db_domain = await save_empty_domain(domain_clean, db)
+        db_domain.risk_narrative = "Wayback Machine CDX API was temporarily unreachable. Marked as 0 snapshots."
+        empty_response = format_domain_response(db_domain)
+        await redis_manager.set(cache_key, empty_response)
+        return empty_response
 
-    if len(raw_snapshots) == 0 and not live_html:
-        # Save a default safe/empty record to database to avoid DOSing CDX API on non-existent domains
-        logger.warning(f"No archive snapshots or live homepage content found for {domain_clean}")
+    if len(raw_snapshots) == 0:
+        # Save a default safe/empty record to database
+        logger.info(f"No archive snapshots found for {domain_clean} on Wayback Machine.")
         db_domain = await save_empty_domain(domain_clean, db)
         empty_response = format_domain_response(db_domain)
         await redis_manager.set(cache_key, empty_response)
@@ -168,16 +161,6 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
 
     # 4. Chronologically sort snapshots
     sorted_snapshots = select_snapshots_to_check(raw_snapshots)
-    if live_html:
-        sorted_snapshots.append({
-            "timestamp": live_timestamp,
-            "original": live_url or f"https://{domain_clean}/",
-            "statuscode": "200",
-            "mime": "text/html",
-            "digest": f"live:{live_timestamp}",
-            "html_content": live_html,
-            "source": "live",
-        })
 
     # Group snapshots by digest to de-duplicate fetches.
     # For HTTP error snapshots (503, 500, 404, etc.), key by status code + timestamp so error events are preserved.
