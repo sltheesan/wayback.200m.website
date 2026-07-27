@@ -351,8 +351,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             "redirect_evidence": redirect_eval.evidence,
         }
 
-    # Fetch HTML contents in high-concurrency parallel batches (Semaphore cap = 20)
-    sem = asyncio.Semaphore(20)
+    # Fetch HTML contents in parallel batches with strict timeout (Semaphore cap = 10)
+    sem = asyncio.Semaphore(10)
 
     async def fetch_html_only(s: dict) -> dict:
         async with sem:
@@ -360,17 +360,56 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             orig = s["original"]
             html = s.get("html_content")
             if html is None:
-                html = await fetch_snapshot_html(t, orig, domain_clean)
+                try:
+                    html = await asyncio.wait_for(fetch_snapshot_html(t, orig, domain_clean), timeout=7.0)
+                except asyncio.TimeoutError:
+                    logger.warning(f"Snapshot HTML fetch timed out (7s) for {orig} at {t}")
+                    html = ""
+                except Exception as ex:
+                    logger.warning(f"Snapshot HTML fetch failed for {orig} at {t}: {ex}")
+                    html = ""
             return {**s, "html_content": html}
 
-    logger.info(f"Fetching 100% of {len(unique_snapshots_to_fetch)} unique snapshots concurrently for {domain_clean}...")
+    logger.info(f"Fetching {len(unique_snapshots_to_fetch)} unique snapshots concurrently for {domain_clean}...")
     fetched_snapshots = await asyncio.gather(*[fetch_html_only(snap) for snap in unique_snapshots_to_fetch])
 
-    # Run AI analysis on 100% of unique snapshots concurrently
-    logger.info(f"Running AI analysis on 100% of {len(fetched_snapshots)} unique snapshots for {domain_clean}...")
+    # Run AI analysis on unique snapshots concurrently
+    logger.info(f"Running AI analysis on {len(fetched_snapshots)} unique snapshots for {domain_clean}...")
     async def analyze_bounded(snap: dict) -> dict:
         async with sem:
-            return await fetch_and_analyze(snap)
+            try:
+                return await asyncio.wait_for(fetch_and_analyze(snap), timeout=10.0)
+            except asyncio.TimeoutError:
+                logger.warning(f"Snapshot analysis timed out (10s) for {snap.get('original')} at {snap.get('timestamp')}")
+                return {
+                    "timestamp": snap.get("timestamp", ""),
+                    "original_url": snap.get("original", ""),
+                    "status_code": safe_parse_status_code(snap.get("statuscode")),
+                    "redirect_url": None,
+                    "is_redirect": False,
+                    "mime_type": snap.get("mime", "text/html"),
+                    "risk_score": 0,
+                    "detected_language": "en",
+                    "category_scores": {},
+                    "flags": [],
+                    "content_category": "unavailable",
+                    "category_confidence": 0.0,
+                    "content_summary": "Snapshot analysis timed out.",
+                    "extraction_metadata": json.dumps({"status": "unavailable", "reason": "Timed out"}, ensure_ascii=False),
+                    "evidence_url": None,
+                    "redirect_detected": False,
+                    "redirect_method": None,
+                    "redirect_confidence": 0,
+                    "redirect_verified": False,
+                    "redirect_same_domain": False,
+                    "redirect_target": None,
+                    "redirect_target_status": None,
+                    "redirect_target_category": None,
+                    "redirect_target_risk": 0,
+                    "original_category": "unavailable",
+                    "original_risk": 0,
+                    "redirect_evidence": [],
+                }
 
     unique_results = await asyncio.gather(*[analyze_bounded(snap) for snap in fetched_snapshots])
 

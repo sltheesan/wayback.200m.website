@@ -31,7 +31,7 @@ from backend.app.utils.logger import logger
 # Shared async HTTP client (created lazily per call to avoid lifecycle issues)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_TIMEOUT = httpx.Timeout(12.0, connect=6.0)
+_TIMEOUT = httpx.Timeout(4.0, connect=2.0)
 
 
 async def _request_with_proxy_rotation(

@@ -38,17 +38,17 @@ class WaybackHTTPClient:
 
             # Dynamic timeout and retry config based on proxy type
             if is_free_proxy(proxy):
-                # Ultra fast-fail for scraped free proxies — purge dead proxies in 2.5s
-                current_timeout = 2.5
+                # Ultra fast-fail for scraped free proxies — purge dead proxies in 2.0s
+                current_timeout = 2.0
                 current_retries = 1
             elif proxy is None:
-                # Direct connection: 15 second timeout to handle slow CDX searches, 2 retries with backoff
-                current_timeout = 15
-                current_retries = 2
+                # Direct connection: cap at 6 second timeout per request attempt for fast pipeline execution
+                current_timeout = min(timeout, 6)
+                current_retries = 1
             else:
-                # Explicitly configured trusted proxy: cap at 12s timeout
-                current_timeout = min(timeout, 12)
-                current_retries = max_retries
+                # Explicitly configured trusted proxy: cap at 8s timeout
+                current_timeout = min(timeout, 8)
+                current_retries = min(max_retries, 2)
 
             for attempt in range(current_retries):
                 # 1. Rotate User-Agent

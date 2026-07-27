@@ -107,6 +107,7 @@ function ScanApp() {
       console.error(err);
       const errMsg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ||
+        (err as Error)?.message ||
         'An unexpected error occurred during domain risk scanning. Please check your backend connection.';
       setError(errMsg);
       setActiveData(null);

@@ -56,9 +56,9 @@ export const apiService = {
     const taskId = response.data.task_id;
 
     // 2. Poll the status of the task until completed
-    const maxAttempts = 180; // 360 seconds (6 minutes) total polling window
+    const maxAttempts = 400; // 600 seconds (10 minutes) total polling safeguard
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // wait 2 seconds between polls
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // poll every 1.5s
       const statusRes = await apiClient.get<any>(`/analysis/task/${taskId}`);
       
       if (statusRes.data.status === 'SUCCESS') {
@@ -71,7 +71,7 @@ export const apiService = {
         throw new Error(errorMsg);
       }
     }
-    throw new Error('Scanning timed out. The request took longer than 6 minutes.');
+    throw new Error('Scanning timed out after 10 minutes.');
   },
 
   /**

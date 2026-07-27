@@ -220,11 +220,9 @@ def report_proxy_failure(proxy: str) -> None:
 async def get_proxy_rotation_list() -> list[str | None]:
     """
     Build the full rotation list in priority order:
-      1. HTTP_PROXY  (single primary configured proxy)
-      2. HTTP_PROXY_LIST  (comma-separated configured proxies)
-      3. Verified free proxies (if ENABLE_PROXY_SCRAPER=True)
-      4. Direct connection  (always last)
-    Only returns a maximum of 3 free proxies per request to keep failures fast.
+      1. HTTP_PROXY / HTTP_PROXY_LIST (explicitly configured proxies from env)
+      2. Direct connection (None) (fast, high-reliability primary)
+      3. Verified free proxies (if ENABLE_PROXY_SCRAPER=True, fallback only)
     """
     proxies: list[str | None] = []
 
@@ -234,10 +232,12 @@ async def get_proxy_rotation_list() -> list[str | None]:
     if tier1:
         proxies.extend(tier1)
 
-    # --- Tier 2: Verified free proxies (if scraper enabled) ---
+    # --- Tier 2: Direct connection (primary fast path) ---
+    proxies.append(None)
+
+    # --- Tier 3: Verified free proxies (fallback only if direct connection fails) ---
     free_candidates: list[str] = []
     if getattr(settings, "ENABLE_PROXY_SCRAPER", False):
-        # 1. Check Redis for verified proxies (Fast, non-blocking)
         try:
             from backend.app.core.redis import redis_manager
             cached_working = await redis_manager.get("scraped_working_proxies")
@@ -246,12 +246,10 @@ async def get_proxy_rotation_list() -> list[str | None]:
         except Exception as e:
             logger.warning(f"[Proxy] Failed to fetch working proxies from Redis: {e}")
 
-        # 2. Fall back to local memory cache if Redis is empty/failed
         if not free_candidates:
             global _working_proxies
             free_candidates = [p for p in _working_proxies if p not in tier1]
 
-        # 3. If everything is empty, trigger a background refresh task, but DO NOT block the request
         if not free_candidates:
             async def _bg_run():
                 try:
@@ -262,16 +260,11 @@ async def get_proxy_rotation_list() -> list[str | None]:
                     pass
             asyncio.create_task(_bg_run())
 
-    # Limit to at most 3 free proxies per request to keep rotation fast
     if free_candidates:
-        # Sample randomly or take the first 3
-        selected_free = free_candidates[:3]
+        selected_free = free_candidates[:2]
         for p in selected_free:
             if p not in proxies:
                 proxies.append(p)
-
-    # --- Tier 3: Direct connection (always final fallback) ---
-    proxies.append(None)
 
     return proxies
 

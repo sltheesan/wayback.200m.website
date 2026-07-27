@@ -303,13 +303,13 @@ class RedirectEngine:
         from backend.app.core.http_client import http_client
         session = http_client.get_session_for_proxy(None)
         try:
-            async with session.head(target_url, timeout=5, allow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as res:
+            async with session.head(target_url, timeout=3, allow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as res:
                 if res.status < 400:
                     return True, res.status
                 return False, res.status
         except Exception:
             try:
-                async with session.get(target_url, timeout=5, allow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as res:
+                async with session.get(target_url, timeout=3, allow_redirects=True, headers={"User-Agent": "Mozilla/5.0"}) as res:
                     return res.status < 400, res.status
             except Exception as ex:
                 logger.debug(f"RedirectEngine.verify_redirect_target failed for {target_url}: {ex}")
