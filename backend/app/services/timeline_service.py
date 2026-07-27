@@ -64,7 +64,11 @@ def build_timeline(snapshot_results: List[Any]) -> List[Dict[str, Any]]:
                 scores.append(int(val) if val is not None and str(val).strip().isdigit() else 0)
             except Exception:
                 scores.append(0)
-        avg_score = sum(scores) / len(scores) if scores else 0.0
+        non_zero = [sc for sc in scores if sc > 0]
+        if non_zero:
+            avg_score = sum(non_zero) / len(non_zero)
+        else:
+            avg_score = sum(scores) / len(scores) if scores else 0.0
         peak_score = max(scores) if scores else 0
 
         # Dominant category for the year

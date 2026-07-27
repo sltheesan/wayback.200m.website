@@ -155,11 +155,11 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
         {/* Score Composition Sub-panel */}
         <div className="mt-4 w-full border border-slate-800/80 bg-slate-900/20 p-3 rounded-xl flex flex-col space-y-1.5 text-[11px] font-medium text-slate-400">
           <div className="flex justify-between">
-            <span>Peak Score (60%):</span>
+            <span>Peak Score ({peak_score >= 65 ? '80%' : '60%'}):</span>
             <span className="font-bold text-slate-200">{peak_score}</span>
           </div>
           <div className="flex justify-between">
-            <span>Avg Score (40%):</span>
+            <span>Avg Score ({peak_score >= 65 ? '20%' : '40%'}):</span>
             <span className="font-bold text-slate-200">{avg_score}</span>
           </div>
           <div className="border-t border-slate-800/60 my-1 pt-1 flex justify-between font-bold text-[10px] uppercase text-slate-300">

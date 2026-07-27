@@ -86,7 +86,7 @@ def test_risk_engine_classification():
     
     # High risk: final > 60
     assert compute_overall_risk([70, 70, 70]) == (70, "HIGH", 70, 70)
-    assert compute_overall_risk([80, 90, 75]) == (89, "HIGH", 90, 82)
+    assert compute_overall_risk([80, 90, 75]) == (88, "HIGH", 90, 82)
 
 def test_sampling_strategy_six_or_fewer():
     """Verify that all records are returned sorted chronologically."""
@@ -275,3 +275,14 @@ def test_safe_parse_status_code_with_dash():
     assert safe_int("-") == 0
     assert safe_int("unk") == 0
     assert safe_int("20240101") == 20240101
+
+
+def test_compute_overall_risk_excludes_failed_zero_captures():
+    """Verify that failed/empty 0-score snapshot fetches do not drag down valid snapshot averages."""
+    # 5 active gambling snapshots of 80 + 15 failed 0-score snapshots
+    scores = [80, 80, 80, 80, 80] + [0] * 15
+    final_score, level, peak, avg = compute_overall_risk(scores)
+    assert peak == 80
+    assert avg == 80
+    assert final_score == 80
+    assert level == "HIGH"

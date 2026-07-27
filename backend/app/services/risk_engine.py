@@ -33,13 +33,20 @@ def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int,
         return 0, "SAFE", 0, 0
 
     peak_score = max(scores)
-    avg_score = int(round(sum(scores) / len(scores)))
 
-    # Weighted calculation: if a severe threat peak exists, retain peak dominance (85% peak + 15% avg)
-    if peak_score >= 65:
-        final_score = max(int(round(0.85 * peak_score + 0.15 * avg_score)), peak_score - 10)
+    # Compute average score using active/valid snapshots (excluding 0-score failed fetches if non-zero exist)
+    non_zero_scores = [s for s in scores if s > 0]
+    if non_zero_scores:
+        raw_avg = sum(non_zero_scores) / len(non_zero_scores)
     else:
-        final_score = int(round(0.6 * peak_score + 0.4 * avg_score))
+        raw_avg = sum(scores) / len(scores) if scores else 0.0
+    avg_score = int(round(raw_avg))
+
+    # Weighted calculation: if a severe threat peak exists, retain peak dominance (80% peak + 20% avg)
+    if peak_score >= 65:
+        final_score = max(int(round(0.80 * peak_score + 0.20 * raw_avg)), peak_score - 10)
+    else:
+        final_score = int(round(0.60 * peak_score + 0.40 * raw_avg))
 
     final_score = min(100, max(0, final_score))
 

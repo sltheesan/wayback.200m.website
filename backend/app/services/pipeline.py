@@ -361,7 +361,12 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
 
         # Final risk score calculation combining Dual Risk Engine + detector signals
         final_risk_score = max(risk_score, dual_risk.final_risk_score)
-        if redirect_eval.redirect_detected and dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "malware"):
+        if high_signals >= 2:
+            final_risk_score = max(final_risk_score, 85)
+        elif high_signals >= 1:
+            final_risk_score = max(final_risk_score, 70)
+
+        if redirect_eval.redirect_detected and dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "phishing_scam", "malware", "malware_hacking"):
             final_risk_score = max(final_risk_score, 85)
 
         evidence_url = build_snapshot_evidence_url(
