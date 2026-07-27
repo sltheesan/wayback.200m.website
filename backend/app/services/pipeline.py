@@ -24,13 +24,39 @@ from backend.app.AI.detectors import run_all_detectors, high_signal_count
 from backend.app.AI.explainer import build_explanation, detect_benign_content_niche
 from backend.app.utils.logger import logger
 
+def safe_int(val: Any, default: int = 0) -> int:
+    """Safely converts any string or numeric value to integer, ignoring non-digit characters like '-'."""
+    if val is None:
+        return default
+    if isinstance(val, (int, float)):
+        return int(val)
+    try:
+        s = str(val).strip()
+        if s.isdigit() or (s.startswith("-") and s[1:].isdigit()):
+            return int(s)
+        import re as _re
+        digits = _re.sub(r"[^\d-]", "", s)
+        if digits and digits != "-":
+            return int(digits)
+    except Exception:
+        pass
+    return default
+
+
 def safe_parse_status_code(status_code_val: Any, default: int = 200) -> int:
     """Safely parses status code strings ('200', '302', '-', None, '') to integer."""
     if not status_code_val:
         return default
-    s = str(status_code_val).strip()
-    if s.isdigit():
-        return int(s)
+    try:
+        s = str(status_code_val).strip()
+        if s.isdigit():
+            return int(s)
+        import re as _re
+        digits = _re.sub(r"\D", "", s)
+        if digits:
+            return int(digits)
+    except Exception:
+        pass
     return default
 
 
@@ -200,7 +226,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     async def fetch_and_analyze(snap: dict) -> dict:
         timestamp = snap["timestamp"]
         original = snap["original"]
-        status = int(snap["statuscode"]) if snap.get("statuscode") else 200
+        status = safe_parse_status_code(snap.get("statuscode"), 200)
         mime = snap.get("mime", "text/html")
 
         # Fetch the HTML content. Live captures are already loaded; archive
@@ -470,7 +496,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         if digest_key not in analysis_by_digest and unique_snapshots_to_fetch:
             closest_snap = min(
                 unique_snapshots_to_fetch,
-                key=lambda s: abs(int(s["timestamp"]) - int(snap["timestamp"]))
+                key=lambda s: abs(safe_int(s.get("timestamp")) - safe_int(snap.get("timestamp")))
             )
             closest_digest = closest_snap.get("digest") or closest_snap.get("timestamp")
             closest_res = analysis_by_digest.get(closest_digest)

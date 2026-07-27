@@ -43,6 +43,18 @@ def _snap_get(snap: Any, key: str, default: Any = None) -> Any:
         return snap.get(key, default)
     return getattr(snap, key, default)
 
+def _to_int(val: Any, default: int = 0) -> int:
+    if val is None:
+        return default
+    try:
+        s = str(val).strip()
+        if s.isdigit():
+            return int(s)
+    except Exception:
+        pass
+    return default
+
+
 def _pick_evidence_snapshot(result: Any) -> dict | None:
     if isinstance(result, dict):
         snapshots = result.get("snapshots") or []
@@ -51,12 +63,12 @@ def _pick_evidence_snapshot(result: Any) -> dict | None:
 
     unsafe = [
         snap for snap in snapshots
-        if _snap_get(snap, "evidence_url") and (int(_snap_get(snap, "risk_score", 0) or 0) >= 40 or _snap_get(snap, "flags"))
+        if _snap_get(snap, "evidence_url") and (_to_int(_snap_get(snap, "risk_score", 0)) >= 40 or _snap_get(snap, "flags"))
     ]
     if not unsafe:
         return None
 
-    snap = max(unsafe, key=lambda item: int(_snap_get(item, "risk_score", 0) or 0))
+    snap = max(unsafe, key=lambda item: _to_int(_snap_get(item, "risk_score", 0)))
     flags_val = _snap_get(snap, "flags", []) or []
     if not isinstance(flags_val, list):
         flags_val = []

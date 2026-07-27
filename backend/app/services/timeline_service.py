@@ -57,7 +57,13 @@ def build_timeline(snapshot_results: List[Any]) -> List[Dict[str, Any]]:
 
     for year in sorted(by_year.keys()):
         snaps = by_year[year]
-        scores = [int(_snap_get(s, "risk_score", 0) or 0) for s in snaps]
+        scores = []
+        for s in snaps:
+            val = _snap_get(s, "risk_score", 0)
+            try:
+                scores.append(int(val) if val is not None and str(val).strip().isdigit() else 0)
+            except Exception:
+                scores.append(0)
         avg_score = sum(scores) / len(scores) if scores else 0.0
         peak_score = max(scores) if scores else 0
 

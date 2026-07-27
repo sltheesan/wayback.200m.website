@@ -260,3 +260,18 @@ def test_peak_score_retention_in_compute_overall_risk():
     assert peak == 90
     assert final_score >= 75
     assert level == "HIGH"
+
+
+def test_safe_parse_status_code_with_dash():
+    """Verify that '-' and non-numeric status codes do not raise ValueError."""
+    from backend.app.services.pipeline import safe_parse_status_code, safe_int
+
+    assert safe_parse_status_code("-") == 200
+    assert safe_parse_status_code("") == 200
+    assert safe_parse_status_code(None) == 200
+    assert safe_parse_status_code("301") == 301
+    assert safe_parse_status_code("200 OK") == 200
+
+    assert safe_int("-") == 0
+    assert safe_int("unk") == 0
+    assert safe_int("20240101") == 20240101
