@@ -90,10 +90,10 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
   const catLabel = (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
   const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || 'UNKNOWN';
 
-  // Smooth fallback loading timer: ensure preview resolves within 2.5s even if 2011 third-party scripts hang
+  // Instant preview loading timer: preview resolves within 400ms for instant pre-cached rendering
   useEffect(() => {
     setIframeLoaded(false);
-    const timer = setTimeout(() => setIframeLoaded(true), 2500);
+    const timer = setTimeout(() => setIframeLoaded(true), 400);
     return () => clearTimeout(timer);
   }, [proxyUrl]);
 

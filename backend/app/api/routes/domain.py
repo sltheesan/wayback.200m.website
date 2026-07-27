@@ -1,3 +1,4 @@
+import asyncio
 import time
 import re
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
@@ -84,8 +85,27 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
         if redirect_url:
             resolved_redirect_url = urllib.parse.urljoin(url, redirect_url)
 
-        # 1. Fetch initial snapshot content
-        html_content = await wayback_service.get_snapshot_content(timestamp=timestamp, url=url)
+        # 1. Fetch initial snapshot content with fast 4.0s timeout (hits Redis cache instantly if pre-cached)
+        try:
+            html_content = await asyncio.wait_for(wayback_service.get_snapshot_content(timestamp=timestamp, url=url), timeout=4.0)
+        except (asyncio.TimeoutError, Exception) as fetch_err:
+            logger.warning(f"Proxy snapshot: Fast fetch timeout/failed for {url} at {timestamp}: {fetch_err}")
+            wayback_direct = f"https://web.archive.org/web/{timestamp}id_/{url}"
+            fallback_html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <base href="{wayback_direct}" target="_blank">
+  <style>
+    body {{ margin: 0; padding: 0; background: #0b0f19; color: #94a3b8; font-family: sans-serif; overflow: hidden; }}
+    iframe {{ width: 100%; height: 100vh; border: none; }}
+  </style>
+</head>
+<body>
+  <iframe src="{wayback_direct}" loading="eager" sandbox="allow-same-origin allow-scripts"></iframe>
+</body>
+</html>"""
+            return HTMLResponse(content=fallback_html)
 
         # 2. Check if original snapshot returned a 404 / Not Found page or minimal redirect shell
         is_not_found = ("not found" in html_content.lower()[:500] and "404" in html_content.lower()[:500]) or len(html_content.strip()) < 200

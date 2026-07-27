@@ -242,6 +242,14 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         if html_content is None:
             html_content = await fetch_snapshot_html(timestamp, original, domain_clean)
 
+        # Pre-cache snapshot HTML so UI proxy_snapshot endpoint loads instantly (0ms network delay)
+        if html_content:
+            try:
+                from backend.app.services.wayback import wayback_service
+                await wayback_service.cache.set_snapshot(timestamp, original, html_content)
+            except Exception as _c_err:
+                logger.debug(f"Pre-cache snapshot HTML skipped: {_c_err}")
+
         # 1. Run RedirectEngine to gather 5-tier weighted evidence
         from backend.app.services.redirect_engine import RedirectEngine
         from backend.app.services.risk_engine import RiskDecisionEngine
