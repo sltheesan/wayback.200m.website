@@ -64,13 +64,14 @@ class WaybackProvider(ArchiveProvider):
 
         domain_bare = domain_clean.removeprefix("http://").removeprefix("https://").split("/")[0]
 
-        # Primary non-wildcard CDX candidates first for maximum speed
-        primary_candidates = [domain_bare, f"{domain_bare}/*"]
+        # Query subpath wildcards first to capture all root and subpage historical snapshots
+        primary_candidates = [f"{domain_bare}/*"]
         if domain_bare.startswith("www."):
             bare_no_www = domain_bare.removeprefix("www.")
-            primary_candidates.extend([bare_no_www, f"{bare_no_www}/*"])
+            primary_candidates.extend([f"{bare_no_www}/*", bare_no_www])
         else:
-            primary_candidates.extend([f"www.{domain_bare}", f"www.{domain_bare}/*"])
+            primary_candidates.extend([f"www.{domain_bare}/*", f"www.{domain_bare}"])
+        primary_candidates.append(domain_bare)
 
         collected_snapshots: Dict[str, Dict[str, Any]] = {}
         
@@ -94,8 +95,8 @@ class WaybackProvider(ArchiveProvider):
                                     "mime": snapshot_dict.get("mimetype", snapshot_dict.get("mime", "")),
                                     "digest": snapshot_dict.get("digest", "")
                                 }
-                    # If candidate yielded snapshots, stop querying further candidate patterns
-                    if len(collected_snapshots) >= 1:
+                    # Stop querying further candidates if we have accumulated substantial snapshots (>= 20)
+                    if len(collected_snapshots) >= 20:
                         break
             except Exception as candidate_err:
                 logger.warning(f"WaybackProvider: CDX query for '{candidate_url}' failed: {candidate_err}")

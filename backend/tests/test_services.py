@@ -347,3 +347,18 @@ def test_safe_website_with_login_form_and_mobile_menu_is_safe():
     assert score == 0
     assert res.final_risk_score == 0
     assert res.primary_category == "safe"
+
+
+def test_get_snapshot_key_consistency():
+    """Verify that get_snapshot_key handles 404/500 error status codes, SHA-1 digests, and timestamps consistently."""
+    from backend.app.services.pipeline import get_snapshot_key
+
+    s1 = {"statuscode": "404", "timestamp": "20200101120000", "digest": "ABC"}
+    s2 = {"statuscode": "200", "timestamp": "20210505100000", "digest": "SHA1DIGEST123"}
+    s3 = {"statuscode": "200", "timestamp": "20220808111111", "digest": "-"}
+    s4 = {"statuscode": "200", "timestamp": "20230909222222", "digest": None}
+
+    assert get_snapshot_key(s1) == "err_404:20200101120000"
+    assert get_snapshot_key(s2) == "SHA1DIGEST123"
+    assert get_snapshot_key(s3) == "ts_20220808111111"
+    assert get_snapshot_key(s4) == "ts_20230909222222"

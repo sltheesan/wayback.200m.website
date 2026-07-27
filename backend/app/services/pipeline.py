@@ -60,6 +60,17 @@ def safe_parse_status_code(status_code_val: Any, default: int = 200) -> int:
     return default
 
 
+def get_snapshot_key(snap: dict) -> str:
+    """Helper to return a uniform lookup key for a snapshot dict across analysis mapping."""
+    st_val = str(snap.get("statuscode", "200"))
+    if st_val.startswith("4") or st_val.startswith("5"):
+        return f"err_{st_val}:{snap.get('timestamp')}"
+    digest = snap.get("digest")
+    if digest and digest != "-" and str(digest).lower() != "none":
+        return digest
+    return f"ts_{snap.get('timestamp')}"
+
+
 def build_snapshot_evidence_url(timestamp: str, original_url: str, risk_score: int, flags: list, source: str = "archive") -> str | None:
     """Return a visual evidence URL for snapshots that crossed an unsafe threshold."""
     if risk_score < 40 and not flags:
@@ -162,11 +173,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     # For HTTP error snapshots (503, 500, 404, etc.), key by status code + timestamp so error events are preserved.
     digests_map = {}
     for snap in sorted_snapshots:
-        st_val = str(snap.get("statuscode", "200"))
-        if st_val.startswith("4") or st_val.startswith("5"):
-            digest_val = f"err_{st_val}:{snap.get('timestamp')}"
-        else:
-            digest_val = snap.get("digest") or snap.get("timestamp")
+        digest_val = get_snapshot_key(snap)
         digests_map.setdefault(digest_val, []).append(snap)
 
     # For each unique digest, select the latest snapshot.
@@ -488,18 +495,18 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     # Build lookup map from digest/timestamp -> analysis result
     analysis_by_digest = {}
     for res, snap_orig in zip(unique_results, unique_snapshots_to_fetch):
-        digest_key = snap_orig.get("digest") or snap_orig.get("timestamp")
+        digest_key = get_snapshot_key(snap_orig)
         analysis_by_digest[digest_key] = res
 
     # Interpolate results for non-fetched unique snapshots from the closest analyzed snapshot in time
     for snap in all_unique_snapshots:
-        digest_key = snap.get("digest") or snap.get("timestamp")
+        digest_key = get_snapshot_key(snap)
         if digest_key not in analysis_by_digest and unique_snapshots_to_fetch:
             closest_snap = min(
                 unique_snapshots_to_fetch,
                 key=lambda s: abs(safe_int(s.get("timestamp")) - safe_int(snap.get("timestamp")))
             )
-            closest_digest = closest_snap.get("digest") or closest_snap.get("timestamp")
+            closest_digest = get_snapshot_key(closest_snap)
             closest_res = analysis_by_digest.get(closest_digest)
             if closest_res:
                 analysis_by_digest[digest_key] = {
@@ -513,7 +520,7 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     # Map the unique analysis results back to all snapshots to reconstruct full timeline history
     snapshot_results = []
     for snap in sorted_snapshots:
-        digest_key = snap.get("digest") or snap.get("timestamp")
+        digest_key = get_snapshot_key(snap)
         res = analysis_by_digest.get(digest_key)
         if res:
             snapshot_results.append({
