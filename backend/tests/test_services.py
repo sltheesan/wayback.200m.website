@@ -310,46 +310,40 @@ def test_aesthetic_dermatology_clinic_false_positive_prevention():
     assert len(flags) == 0
 
 
-def test_low_confidence_keyword_hits_do_not_mark_safe_pages_unsafe():
-    """Verify that a single low-confidence keyword hit does not elevate safe pages to 80 risk."""
+def test_safe_website_with_login_form_and_mobile_menu_is_safe():
+    """Verify that a normal safe website with a login form, mobile menu CSS, and social links scores SAFE (0 risk)."""
     from backend.app.services.risk_engine import RiskDecisionEngine
     from backend.app.services.redirect_engine import RedirectEvaluationResult
 
-    html = "<html><body><p>We analyze sports news and card games for entertainment only.</p></body></html>"
-    res = RiskDecisionEngine.evaluate_dual_risk(html, None, RedirectEvaluationResult(), "sportsnewsblog.com")
-    assert res.primary_category == "safe"
-    assert res.final_risk_score <= 30
-
-
-def test_safe_site_with_bootstrap_dropdowns_and_login_form_stays_safe():
-    """Verify that legitimate sites using display:none CSS dropdowns and login forms stay SAFE."""
     html = """
     <html>
       <head>
+        <title>Corporate Portal Login</title>
         <style>
-          .menu-item { display: none; }
-          .modal { display: none; }
-          .tab-content { display: none; }
-          .dropdown-1 { display: none; }
-          .dropdown-2 { display: none; }
-          .accordion { display: none; }
+          .mobile-menu { display: none; visibility: hidden; }
+          .hidden-nav { display: none; }
+          .drawer { display: none; }
         </style>
       </head>
       <body>
+        <h1>Member Sign In</h1>
         <form action="/login" method="post">
-          <input type="email" name="email">
-          <input type="password" name="password">
-          <button type="submit">Log In</button>
+          <input type="text" name="username" placeholder="Username" />
+          <input type="password" name="password" placeholder="Password" />
+          <button type="submit">Sign In</button>
         </form>
+        <footer>
+          <a href="https://twitter.com/mycompany">Twitter</a>
+          <a href="https://facebook.com/mycompany">Facebook</a>
+          <a href="https://linkedin.com/mycompany">LinkedIn</a>
+          <a href="https://instagram.com/mycompany">Instagram</a>
+        </footer>
       </body>
     </html>
     """
-    from backend.app.AI.classifier import classify_content
-    from backend.app.AI.detectors import run_all_detectors, high_signal_count
+    score, cat_scores, flags = analyze_snapshot_content(html, "corporate-portal.com")
+    res = RiskDecisionEngine.evaluate_dual_risk(html, None, RedirectEvaluationResult(), "corporate-portal.com")
 
-    clf = classify_content(html, "mycompanyportal.com")
-    detectors = run_all_detectors(html, "login portal", clf)
-    high_count = high_signal_count(detectors)
-
-    # Detectors fire on CSS/forms, but content is safe -> primary_category must remain safe
-    assert clf.primary_category == "safe"
+    assert score == 0
+    assert res.final_risk_score == 0
+    assert res.primary_category == "safe"

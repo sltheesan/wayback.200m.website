@@ -72,35 +72,34 @@ def external_link_density_detector(
         "total_links": total_hrefs,
         "external_links": external,
         "density_ratio": ratio,
-        "signal": "high" if ratio > 0.7 else ("medium" if ratio > 0.4 else "low"),
+        "signal": "medium" if ratio > 0.85 and total_hrefs > 20 else "low",
     }
 
 
 def hidden_element_detector(
     html: str, text: str, clf: ClassificationResult
 ) -> Dict[str, Any]:
-    """Detects elements hidden via CSS (common in cloaking / SEO spam)."""
+    """Detects elements hidden via CSS (responsive navigation menus / cloaking)."""
     count = len(_RE_HIDDEN_CSS.findall(html))
     return {
         "detector": "hidden_elements",
         "hidden_count": count,
-        "signal": "high" if count > 5 else ("medium" if count > 1 else "low"),
+        "signal": "medium" if count > 15 else "low",
     }
 
 
 def form_detector(
     html: str, text: str, clf: ClassificationResult
 ) -> Dict[str, Any]:
-    """Counts HTML forms and detects password fields (phishing indicator)."""
+    """Counts HTML forms and detects password fields (phishing indicator on non-safe pages)."""
     form_count = len(_RE_FORM.findall(html))
     has_password = bool(_RE_INPUT_PWD.search(html))
+    is_suspicious_form = has_password and form_count > 0 and clf.primary_category not in ("safe", "unknown") and clf.confidence >= 0.35
     return {
         "detector": "forms",
         "form_count": form_count,
         "has_password_field": has_password,
-        "signal": "high" if (has_password and form_count > 0) else (
-            "medium" if form_count > 2 else "low"
-        ),
+        "signal": "high" if is_suspicious_form else ("medium" if form_count > 3 else "low"),
     }
 
 
