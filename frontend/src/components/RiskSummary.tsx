@@ -23,8 +23,8 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     : [];
   const primaryCat = data.primary_category || (activeCategories.length > 0 ? activeCategories[0][0] : 'safe');
 
-  const isUnsafe = risk_level === 'HIGH' || risk_level === 'UNSAFE' || risk_score >= 65 || (primaryCat !== 'safe' && primaryCat !== 'unknown');
-  const isSafe = risk_level === 'SAFE' || (risk_score < 40 && (primaryCat === 'safe' || primaryCat === 'unknown'));
+  const isSafe = (risk_level === 'SAFE' || !risk_level) && risk_score < 40 && (primaryCat === 'safe' || primaryCat === 'unknown');
+  const isUnsafe = !isSafe;
 
   // Configuration for threat colors
   const getRiskDetails = () => {
