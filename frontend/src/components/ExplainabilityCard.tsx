@@ -13,9 +13,15 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
 
   if (!risk_narrative) return null;
 
+  const THREAT_CATEGORIES = new Set(['gambling', 'adult', 'phishing_scam', 'malware_hacking', 'illegal_pharmaceuticals']);
   const cat = primary_category || 'safe';
-  const isUnsafe = risk_level === 'HIGH' || risk_level === 'UNSAFE' || risk_score >= 65 || (cat !== 'safe' && cat !== 'unknown');
-  const isSafe = risk_level === 'SAFE' || (risk_score < 40 && (cat === 'safe' || cat === 'unknown'));
+  const levelStr = (risk_level || '').toUpperCase();
+  const catStr = (cat || '').toLowerCase();
+  const score = risk_score ?? 0;
+
+  const isUnsafe = levelStr === 'HIGH' || levelStr === 'UNSAFE' || levelStr === 'CRITICAL' || score >= 50 || THREAT_CATEGORIES.has(catStr);
+  const isMedium = !isUnsafe && (levelStr === 'MEDIUM' || levelStr === 'MODERATE' || (score >= 40 && score < 50));
+  const isSafe = !isUnsafe && !isMedium;
 
   const theme = isUnsafe
     ? {

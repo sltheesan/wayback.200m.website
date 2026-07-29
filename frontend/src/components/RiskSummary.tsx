@@ -17,14 +17,20 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     category_confidence
   } = data;
 
+  const THREAT_CATEGORIES = new Set(['gambling', 'adult', 'phishing_scam', 'malware_hacking', 'illegal_pharmaceuticals']);
+  
   // Primary category helper
   const activeCategories = category_confidence
     ? Object.entries(category_confidence).filter(([_, score]) => score > 0)
     : [];
   const primaryCat = data.primary_category || (activeCategories.length > 0 ? activeCategories[0][0] : 'safe');
 
-  const isUnsafe = risk_level === 'HIGH' || risk_level === 'UNSAFE' || risk_score >= 65 || (primaryCat !== 'safe' && primaryCat !== 'unknown');
-  const isSafe = risk_level === 'SAFE' || (risk_score < 40 && (primaryCat === 'safe' || primaryCat === 'unknown'));
+  const levelStr = (risk_level || '').toUpperCase();
+  const catStr = (primaryCat || '').toLowerCase();
+
+  const isUnsafe = levelStr === 'HIGH' || levelStr === 'UNSAFE' || levelStr === 'CRITICAL' || risk_score >= 50 || THREAT_CATEGORIES.has(catStr);
+  const isMedium = !isUnsafe && (levelStr === 'MEDIUM' || levelStr === 'MODERATE' || (risk_score >= 40 && risk_score < 50));
+  const isSafe = !isUnsafe && !isMedium;
 
   // Configuration for threat colors
   const getRiskDetails = () => {
