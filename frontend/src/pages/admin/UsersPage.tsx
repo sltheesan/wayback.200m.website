@@ -1,20 +1,22 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { adminApi } from '../../services/adminApi';
 import { useAuth } from '../../contexts/AuthContext';
-import type { AdminUser, UserListResponse } from '../../types/admin';
+import type { AdminUser, UserListResponse, DashboardStats } from '../../types/admin';
 import AddUserModal from './modals/AddUserModal';
 import EditUserModal from './modals/EditUserModal';
 import ResetPasswordModal from './modals/ResetPasswordModal';
 
 import {
   UserPlus, Search, Edit3, Trash2, Eye, Lock, UserCheck, UserX, RefreshCw,
+  Crown, ShieldCheck, User, Users,
 } from 'lucide-react';
 import { ViewUserModal } from './modals/ViewUserModal';
 
-const ROLE_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  super_admin: { label: 'Super Admin', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-  admin: { label: 'Admin', color: '#6366f1', bg: 'rgba(99,102,241,0.15)' },
-  user: { label: 'User', color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+const ROLE_BADGE: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  super_admin: { label: 'Super Admin', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', icon: <Crown size={12} style={{ marginRight: 4 }} /> },
+  admin: { label: 'Admin', color: '#6366f1', bg: 'rgba(99,102,241,0.15)', icon: <ShieldCheck size={12} style={{ marginRight: 4 }} /> },
+  user: { label: 'User', color: '#10b981', bg: 'rgba(16,185,129,0.15)', icon: <User size={12} style={{ marginRight: 4 }} /> },
 };
 
 const STATUS_BADGE: Record<string, { color: string; bg: string }> = {
@@ -23,21 +25,28 @@ const STATUS_BADGE: Record<string, { color: string; bg: string }> = {
   pending: { color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
 };
 
-function Badge({ text, color, bg }: { text: string; color: string; bg: string }) {
+function Badge({ text, color, bg, icon }: { text: string; color: string; bg: string; icon?: React.ReactNode }) {
   return (
     <span style={{
       padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-      color, background: bg, whiteSpace: 'nowrap',
-    }}>{text}</span>
+      color, background: bg, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center',
+    }}>
+      {icon}
+      {text}
+    </span>
   );
 }
 
 export default function UsersPage() {
   const { currentUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<UserListResponse | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  
+  const initialRole = searchParams.get('role') || '';
+  const [roleFilter, setRoleFilter] = useState(initialRole);
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
@@ -46,6 +55,31 @@ export default function UsersPage() {
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
   const [viewTarget, setViewTarget] = useState<AdminUser | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
+
+  // Sync roleFilter with URL query param
+  useEffect(() => {
+    const roleParam = searchParams.get('role') || '';
+    if (roleParam !== roleFilter) {
+      setRoleFilter(roleParam);
+    }
+  }, [searchParams]);
+
+  const handleRoleTabChange = (role: string) => {
+    setRoleFilter(role);
+    setPage(1);
+    if (role) {
+      setSearchParams({ role });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await adminApi.getDashboardStats();
+      setStats(res);
+    } catch { /* ignore */ }
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -60,6 +94,10 @@ export default function UsersPage() {
     } catch { /* ignore */ }
     setLoading(false);
   }, [page, search, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -89,11 +127,11 @@ export default function UsersPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: 20 }}>
         <div>
           <h1 style={{ color: '#f1f5f9', fontSize: 22, fontWeight: 700, margin: 0 }}>User Management</h1>
           <p style={{ color: '#475569', fontSize: 13, margin: '4px 0 0' }}>
-            {data ? `${data.total} total users` : 'Loading...'}
+            {data ? `${data.total} users in view` : 'Loading...'}
           </p>
         </div>
         <button
@@ -111,6 +149,122 @@ export default function UsersPage() {
         </button>
       </div>
 
+      {/* Role Summary Metric Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: 16,
+        marginBottom: 20,
+      }}>
+        {/* Standard Users Card */}
+        <div
+          onClick={() => handleRoleTabChange('user')}
+          style={{
+            background: roleFilter === 'user' ? 'rgba(16,185,129,0.15)' : 'rgba(15,23,42,0.6)',
+            border: roleFilter === 'user' ? '1px solid rgba(16,185,129,0.4)' : '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 16, padding: '16px 18px', cursor: 'pointer', transition: 'all 0.2s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ color: '#10b981', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Standard Users</div>
+              <div style={{ color: '#f1f5f9', fontSize: 26, fontWeight: 700, marginTop: 4 }}>
+                {stats?.total_users ?? '—'}
+              </div>
+            </div>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(16,185,129,0.15)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <User size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* Admins Card */}
+        <div
+          onClick={() => handleRoleTabChange('admin')}
+          style={{
+            background: roleFilter === 'admin' ? 'rgba(99,102,241,0.15)' : 'rgba(15,23,42,0.6)',
+            border: roleFilter === 'admin' ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 16, padding: '16px 18px', cursor: 'pointer', transition: 'all 0.2s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ color: '#6366f1', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Admins</div>
+              <div style={{ color: '#f1f5f9', fontSize: 26, fontWeight: 700, marginTop: 4 }}>
+                {stats?.total_admins ?? '—'}
+              </div>
+            </div>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(99,102,241,0.15)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={20} />
+            </div>
+          </div>
+        </div>
+
+        {/* Super Admins Card */}
+        <div
+          onClick={() => handleRoleTabChange('super_admin')}
+          style={{
+            background: roleFilter === 'super_admin' ? 'rgba(245,158,11,0.15)' : 'rgba(15,23,42,0.6)',
+            border: roleFilter === 'super_admin' ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 16, padding: '16px 18px', cursor: 'pointer', transition: 'all 0.2s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ color: '#f59e0b', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Super Admins</div>
+              <div style={{ color: '#f1f5f9', fontSize: 26, fontWeight: 700, marginTop: 4 }}>
+                {stats?.total_super_admins ?? '—'}
+              </div>
+            </div>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(245,158,11,0.15)', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Crown size={20} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Role Navigation Tabs */}
+      <div style={{
+        display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap',
+        borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12,
+      }}>
+        {[
+          { key: '', label: 'All Accounts', icon: Users, color: '#94a3b8', count: stats ? (stats.total_users + stats.total_admins + stats.total_super_admins) : undefined },
+          { key: 'user', label: 'Standard Users', icon: User, color: '#10b981', count: stats?.total_users },
+          { key: 'admin', label: 'Admins', icon: ShieldCheck, color: '#6366f1', count: stats?.total_admins },
+          { key: 'super_admin', label: 'Super Admins', icon: Crown, color: '#f59e0b', count: stats?.total_super_admins },
+        ].map((tab) => {
+          const isActive = roleFilter === tab.key;
+          const IconComp = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => handleRoleTabChange(tab.key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', transition: 'all 0.15s',
+                background: isActive ? `${tab.color}20` : 'rgba(30,41,59,0.5)',
+                color: isActive ? '#f8fafc' : '#94a3b8',
+                border: isActive ? `1px solid ${tab.color}50` : '1px solid rgba(255,255,255,0.06)',
+              }}
+            >
+              <IconComp size={15} style={{ color: isActive ? tab.color : '#64748b' }} />
+              <span>{tab.label}</span>
+              {tab.count !== undefined && (
+                <span style={{
+                  fontSize: 11, padding: '2px 7px', borderRadius: 12,
+                  background: isActive ? `${tab.color}35` : 'rgba(255,255,255,0.08)',
+                  color: isActive ? '#ffffff' : '#64748b',
+                }}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Filters */}
       <div style={{
         display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap',
@@ -126,7 +280,7 @@ export default function UsersPage() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
-        <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+        <select value={roleFilter} onChange={(e) => handleRoleTabChange(e.target.value)}
           style={{ ...inputStyle, minWidth: 140, cursor: 'pointer' }}>
           <option value="">All Roles</option>
           <option value="super_admin">Super Admin</option>
@@ -140,7 +294,7 @@ export default function UsersPage() {
           <option value="suspended">Suspended</option>
           <option value="pending">Pending</option>
         </select>
-        <button onClick={fetchUsers} style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8' }}>
+        <button onClick={() => { fetchUsers(); fetchStats(); }} style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8' }}>
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
@@ -185,7 +339,12 @@ export default function UsersPage() {
                       <td style={{ padding: '13px 16px', color: '#94a3b8' }}>{user.username}</td>
                       <td style={{ padding: '13px 16px', color: '#94a3b8' }}>{user.email}</td>
                       <td style={{ padding: '13px 16px' }}>
-                        <Badge text={roleBadge?.label ?? user.role} color={roleBadge?.color ?? '#64748b'} bg={roleBadge?.bg ?? 'transparent'} />
+                        <Badge
+                          text={roleBadge?.label ?? user.role}
+                          color={roleBadge?.color ?? '#64748b'}
+                          bg={roleBadge?.bg ?? 'transparent'}
+                          icon={roleBadge?.icon}
+                        />
                       </td>
                       <td style={{ padding: '13px 16px' }}>
                         <Badge text={user.status} color={statusBadge?.color ?? '#64748b'} bg={statusBadge?.bg ?? 'transparent'} />

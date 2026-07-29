@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -6,26 +7,28 @@ import {
 import { adminApi } from '../../services/adminApi';
 import type { DashboardStats } from '../../types/admin';
 import {
-  Users, ShieldAlert, Globe, TrendingUp,
-  UserCheck, UserX, Activity,
+  ShieldAlert, ShieldCheck, Crown, User, Globe, TrendingUp,
+  UserCheck, Activity, ArrowRight,
 } from 'lucide-react';
 
-const CARD_STYLES = (accent: string) => ({
+const CARD_STYLES = (accent: string, clickable: boolean = false) => ({
   background: 'rgba(15,23,42,0.7)',
   border: `1px solid ${accent}30`,
   borderRadius: 16, padding: '20px 22px',
   backdropFilter: 'blur(12px)',
   transition: 'transform 0.2s, box-shadow 0.2s',
-  cursor: 'default',
+  cursor: clickable ? 'pointer' : 'default',
 });
 
 interface StatCardProps {
   label: string; value: number | string;
   icon: React.ReactNode; accent: string; sub?: string;
+  onClick?: () => void;
 }
-function StatCard({ label, value, icon, accent, sub }: StatCardProps) {
+function StatCard({ label, value, icon, accent, sub, onClick }: StatCardProps) {
   return (
-    <div style={CARD_STYLES(accent)}
+    <div style={CARD_STYLES(accent, !!onClick)}
+      onClick={onClick}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
         (e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 30px ${accent}20`;
@@ -61,6 +64,7 @@ const CHART_TOOLTIP_STYLE = {
 };
 
 export default function DashboardHome() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -83,31 +87,124 @@ export default function DashboardHome() {
   if (!stats) return null;
 
   const pieData = Object.entries(stats.safe_vs_unsafe).map(([name, value]) => ({ name, value }));
+  const grandTotalUsers = stats.total_users + stats.total_admins + stats.total_super_admins;
 
   return (
     <div>
       {/* Page header */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{ color: '#f1f5f9', fontSize: 24, fontWeight: 700, margin: 0 }}>Dashboard Overview</h1>
         <p style={{ color: '#475569', fontSize: 14, margin: '6px 0 0' }}>
-          Real-time statistics across users, scans, and system health.
+          Real-time statistics across user accounts, scans, and system health.
         </p>
       </div>
 
-      {/* Stat Cards — Row 1: Users */}
+      {/* Account Categories Overview — Row 1: Users, Admins, Super Admins */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
-        <StatCard label="Total Users" value={stats.total_users} icon={<Users size={20} />} accent="#6366f1" />
-        <StatCard label="Total Admins" value={stats.total_admins} icon={<ShieldAlert size={20} />} accent="#8b5cf6" />
-        <StatCard label="Active Users" value={stats.active_users} icon={<UserCheck size={20} />} accent="#10b981" />
-        <StatCard label="Suspended" value={stats.suspended_users} icon={<UserX size={20} />} accent="#ef4444" />
+        <StatCard
+          label="Super Admins"
+          value={stats.total_super_admins}
+          icon={<Crown size={20} />}
+          accent="#f59e0b"
+          sub="Full System Authority"
+          onClick={() => navigate('/admin/users?role=super_admin')}
+        />
+        <StatCard
+          label="Admins"
+          value={stats.total_admins}
+          icon={<ShieldCheck size={20} />}
+          accent="#6366f1"
+          sub="Administrative Access"
+          onClick={() => navigate('/admin/users?role=admin')}
+        />
+        <StatCard
+          label="Standard Users"
+          value={stats.total_users}
+          icon={<User size={20} />}
+          accent="#10b981"
+          sub="Regular Accounts"
+          onClick={() => navigate('/admin/users?role=user')}
+        />
+        <StatCard
+          label="Active Accounts"
+          value={stats.active_users}
+          icon={<UserCheck size={20} />}
+          accent="#06b6d4"
+          sub={`${stats.suspended_users} suspended accounts`}
+          onClick={() => navigate('/admin/users')}
+        />
       </div>
 
       {/* Stat Cards — Row 2: Scans */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         <StatCard label="Total Domains Checked" value={stats.total_domains_checked} icon={<Globe size={20} />} accent="#06b6d4" />
         <StatCard label="Today's Checks" value={stats.todays_checks} icon={<TrendingUp size={20} />} accent="#6366f1" />
         <StatCard label="Unsafe Domains" value={stats.unsafe_domains} icon={<ShieldAlert size={20} />} accent="#ef4444" sub="HIGH + MEDIUM risk" />
         <StatCard label="Safe Domains" value={stats.safe_domains} icon={<Globe size={20} />} accent="#10b981" />
+      </div>
+
+      {/* Role Breakdown Bar & Quick Filter Section */}
+      <div style={{
+        ...CARD_STYLES('#8b5cf6'),
+        padding: '20px 24px',
+        marginBottom: 28,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div>
+            <h3 style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 600, margin: 0 }}>Account Roles & Distribution</h3>
+            <p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>
+              Separated overview of account access levels across the platform ({grandTotalUsers} total registered accounts)
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/admin/users')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+              borderRadius: 8, color: '#818cf8', fontSize: 12, fontWeight: 600,
+              padding: '6px 12px', cursor: 'pointer',
+            }}
+          >
+            Manage Users <ArrowRight size={14} />
+          </button>
+        </div>
+
+        {/* Visual Progress Bar Breakdown */}
+        {grandTotalUsers > 0 && (
+          <div style={{
+            height: 10, width: '100%', borderRadius: 5, overflow: 'hidden',
+            display: 'flex', background: 'rgba(30,41,59,0.8)', marginBottom: 16,
+          }}>
+            <div style={{ width: `${(stats.total_super_admins / grandTotalUsers) * 100}%`, background: '#f59e0b', transition: 'width 0.4s' }} title={`Super Admins: ${stats.total_super_admins}`} />
+            <div style={{ width: `${(stats.total_admins / grandTotalUsers) * 100}%`, background: '#6366f1', transition: 'width 0.4s' }} title={`Admins: ${stats.total_admins}`} />
+            <div style={{ width: `${(stats.total_users / grandTotalUsers) * 100}%`, background: '#10b981', transition: 'width 0.4s' }} title={`Standard Users: ${stats.total_users}`} />
+          </div>
+        )}
+
+        {/* Legend Pointers */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
+          <div
+            onClick={() => navigate('/admin/users?role=super_admin')}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+          >
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }} />
+            <span style={{ color: '#94a3b8', fontSize: 13 }}>Super Admins: <strong style={{ color: '#f59e0b' }}>{stats.total_super_admins}</strong></span>
+          </div>
+          <div
+            onClick={() => navigate('/admin/users?role=admin')}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+          >
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#6366f1' }} />
+            <span style={{ color: '#94a3b8', fontSize: 13 }}>Admins: <strong style={{ color: '#818cf8' }}>{stats.total_admins}</strong></span>
+          </div>
+          <div
+            onClick={() => navigate('/admin/users?role=user')}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+          >
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
+            <span style={{ color: '#94a3b8', fontSize: 13 }}>Standard Users: <strong style={{ color: '#34d399' }}>{stats.total_users}</strong></span>
+          </div>
+        </div>
       </div>
 
       {/* Charts Row 1 */}
