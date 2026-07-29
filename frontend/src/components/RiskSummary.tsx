@@ -1,11 +1,12 @@
-import { ShieldCheck, ShieldAlert, Calendar, Layers } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Calendar, Layers, Sparkles } from 'lucide-react';
 import { DomainAnalysisResponse } from '../types';
 
 interface RiskSummaryProps {
   data: DomainAnalysisResponse;
+  onOpenVerdict?: () => void;
 }
 
-export default function RiskSummary({ data }: RiskSummaryProps) {
+export default function RiskSummary({ data, onOpenVerdict }: RiskSummaryProps) {
   const {
     domain,
     risk_score,
@@ -17,46 +18,58 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     category_confidence
   } = data;
 
+  // Primary category helper
+  const activeCategories = category_confidence
+    ? Object.entries(category_confidence).filter(([_, score]) => score > 0)
+    : [];
+  const primaryCat = data.primary_category || (activeCategories.length > 0 ? activeCategories[0][0] : 'safe');
+
+  const isUnsafe = risk_level === 'HIGH' || risk_level === 'UNSAFE' || risk_score >= 65 || (primaryCat !== 'safe' && primaryCat !== 'unknown');
+  const isSafe = risk_level === 'SAFE' || (risk_score < 40 && (primaryCat === 'safe' || primaryCat === 'unknown'));
+
   // Configuration for threat colors
-  const getRiskDetails = (level: string) => {
-    switch (level) {
-      case 'HIGH':
-      case 'UNSAFE':
-        return {
-          color: 'text-rose-400 border-rose-500/20 bg-rose-500/5',
-          fill: '#ef4444',
-          icon: <ShieldAlert className="text-rose-400" size={28} />,
-          bg: 'bg-rose-500',
-          desc: 'Threat detected. Historical snapshots contain gambling, adult, or fraudulent/phishing content.'
-        };
-      case 'MEDIUM':
-        return {
-          color: 'text-amber-400 border-amber-500/20 bg-amber-500/5',
-          fill: '#f59e0b',
-          icon: <ShieldAlert className="text-amber-400" size={28} />,
-          bg: 'bg-amber-500',
-          desc: 'Moderate risk. Detected some flagged categories. Historical records show irregular changes or minor risk flags.'
-        };
-      case 'UNKNOWN':
-        return {
-          color: 'text-violet-400 border-violet-500/20 bg-violet-500/5',
-          fill: '#8b5cf6',
-          icon: <ShieldAlert className="text-violet-400" size={28} />,
-          bg: 'bg-violet-500',
-          desc: 'Insufficient data. No historical snapshots exist, or all archive captures were inaccessible.'
-        };
-      default:
-        return {
-          color: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5',
-          fill: '#10b981',
-          icon: <ShieldCheck className="text-emerald-400" size={28} />,
-          bg: 'bg-emerald-500',
-          desc: 'No significant risk patterns detected. Historical content matches safe category signatures.'
-        };
+  const getRiskDetails = () => {
+    if (isUnsafe) {
+      return {
+        color: 'text-rose-300 border-rose-500/40 bg-rose-500/20 shadow-[0_0_14px_rgba(244,63,94,0.35)]',
+        fill: '#f43f5e',
+        icon: <ShieldAlert className="text-rose-400" size={28} />,
+        bg: 'bg-rose-500',
+        desc: 'Threat detected. Historical snapshots contain gambling, adult, or fraudulent/phishing content.',
+        containerStyle: 'border-l-4 border-l-rose-500 border-rose-500/40 bg-gradient-to-br from-rose-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(244,63,94,0.18)] relative overflow-hidden',
+        glowColor: 'bg-rose-500/15',
+        scoreColor: 'text-rose-400',
+        boxStyle: 'border-rose-500/30 bg-rose-950/30',
+      };
     }
+    if (isSafe) {
+      return {
+        color: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/20 shadow-[0_0_14px_rgba(16,185,129,0.35)]',
+        fill: '#10b981',
+        icon: <ShieldCheck className="text-emerald-400" size={28} />,
+        bg: 'bg-emerald-500',
+        desc: 'No significant risk patterns detected. Historical content matches safe category signatures.',
+        containerStyle: 'border-l-4 border-l-emerald-500 border-emerald-500/40 bg-gradient-to-br from-emerald-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(16,185,129,0.18)] relative overflow-hidden',
+        glowColor: 'bg-emerald-500/15',
+        scoreColor: 'text-emerald-400',
+        boxStyle: 'border-emerald-500/30 bg-emerald-950/30',
+      };
+    }
+    // Medium / Unknown Risk
+    return {
+      color: 'text-amber-300 border-amber-500/40 bg-amber-500/20 shadow-[0_0_14px_rgba(245,158,11,0.35)]',
+      fill: '#f59e0b',
+      icon: <ShieldAlert className="text-amber-400" size={28} />,
+      bg: 'bg-amber-500',
+      desc: 'Moderate risk. Detected some flagged categories or irregular historical content changes.',
+      containerStyle: 'border-l-4 border-l-amber-500 border-amber-500/40 bg-gradient-to-br from-amber-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(245,158,11,0.18)] relative overflow-hidden',
+      glowColor: 'bg-amber-500/15',
+      scoreColor: 'text-amber-400',
+      boxStyle: 'border-amber-500/30 bg-amber-950/30',
+    };
   };
 
-  const details = getRiskDetails(risk_level);
+  const details = getRiskDetails();
 
   // SVG circular gauge properties
   const radius = 60;
@@ -78,14 +91,6 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
       return isoString;
     }
   };
-
-  // Get categories with confidence scores
-  const activeCategories = category_confidence
-    ? Object.entries(category_confidence).filter(([_, score]) => score > 0)
-    : [];
-
-  // Primary category helper
-  const primaryCat = data.primary_category || (activeCategories.length > 0 ? activeCategories[0][0] : 'safe');
 
   const getCategoryMeta = (cat: string) => {
     switch (cat) {
@@ -110,20 +115,22 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
 
   // Benign Niche Enrichment for Safe Domains
   const niche = data.content_niche;
-  const catMeta = (niche && risk_level === 'SAFE')
+  const catMeta = (niche && isSafe)
     ? { label: niche.title, icon: niche.icon, style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' }
     : getCategoryMeta(primaryCat);
 
   return (
-    <div className="glass-panel p-5 sm:p-8 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
-      
+    <div className={`glass-panel p-5 sm:p-8 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8 ${details.containerStyle}`}>
+      {/* Background ambient glow blob */}
+      <div className={`absolute -top-24 -right-24 w-64 h-64 ${details.glowColor} rounded-full blur-3xl pointer-events-none`} />
+
       {/* Circle Gauge Component */}
-      <div className="flex flex-col items-center justify-center w-full md:min-w-[180px] md:w-auto">
+      <div className="flex flex-col items-center justify-center w-full md:min-w-[180px] md:w-auto relative z-10">
         <div className="relative">
           <svg className="w-32 h-32 sm:w-36 sm:h-36">
             {/* Background Circle */}
             <circle
-              className="text-slate-800"
+              className="text-slate-800/80"
               strokeWidth={strokeWidth}
               stroke="currentColor"
               fill="transparent"
@@ -147,24 +154,24 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
           </svg>
           {/* Centered Score Text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-extrabold tracking-tight text-white">{risk_score}</span>
+            <span className={`text-3xl font-black tracking-tight ${details.scoreColor}`}>{risk_score}</span>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Risk Score</span>
           </div>
         </div>
 
         {/* Score Composition Sub-panel */}
-        <div className="mt-4 w-full border border-slate-800/80 bg-slate-900/20 p-3 rounded-xl flex flex-col space-y-1.5 text-[11px] font-medium text-slate-400">
+        <div className={`mt-4 w-full border ${details.boxStyle} p-3 rounded-xl flex flex-col space-y-1.5 text-[11px] font-medium text-slate-300`}>
           <div className="flex justify-between">
             <span>Peak Score ({peak_score >= 65 ? '80%' : '60%'}):</span>
-            <span className="font-bold text-slate-200">{peak_score}</span>
+            <span className="font-bold text-white">{peak_score}</span>
           </div>
           <div className="flex justify-between">
             <span>Avg Score ({peak_score >= 65 ? '20%' : '40%'}):</span>
-            <span className="font-bold text-slate-200">{avg_score}</span>
+            <span className="font-bold text-white">{avg_score}</span>
           </div>
-          <div className="border-t border-slate-800/60 my-1 pt-1 flex justify-between font-bold text-[10px] uppercase text-slate-300">
+          <div className="border-t border-slate-700/50 my-1 pt-1 flex justify-between font-bold text-[10px] uppercase text-slate-200">
             <span>Weighted Total:</span>
-            <span className="text-violet-400">{risk_score}</span>
+            <span className={details.scoreColor}>{risk_score}</span>
           </div>
         </div>
       </div>
@@ -186,6 +193,24 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
               <span>{catMeta.icon}</span>
               <span>Category: {catMeta.label}</span>
             </div>
+
+            {/* Security Verdict Modal Button */}
+            {onOpenVerdict && (
+              <button
+                type="button"
+                onClick={onOpenVerdict}
+                className={`px-3 py-1 rounded-full text-xs font-extrabold border uppercase tracking-wider flex items-center space-x-1.5 transition-all hover:scale-105 cursor-pointer ${
+                  isUnsafe 
+                    ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.3)]' 
+                    : isSafe 
+                    ? 'bg-emerald-500/25 border-emerald-500/50 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.3)]' 
+                    : 'bg-amber-500/25 border-amber-500/50 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                }`}
+              >
+                <Sparkles size={13} />
+                <span>Security Verdict</span>
+              </button>
+            )}
           </div>
           
           <p className="text-slate-300 text-sm leading-relaxed mb-4">

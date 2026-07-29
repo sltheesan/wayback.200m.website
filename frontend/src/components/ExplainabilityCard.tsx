@@ -5,47 +5,66 @@ interface ExplainabilityCardProps {
   data: DomainAnalysisResponse;
 }
 
-const CATEGORY_STYLES: Record<string, { color: string; bg: string; icon: string }> = {
-  gambling:  { color: '#c084fc', bg: 'bg-purple-500/10 border-purple-500/20', icon: '🎰' },
-  adult:     { color: '#fb7185', bg: 'bg-rose-500/10 border-rose-500/20',     icon: '🔞' },
-  phishing_scam: { color: '#fbbf24', bg: 'bg-amber-500/10 border-amber-500/20', icon: '🎣' },
-  malware_hacking: { color: '#fb7185', bg: 'bg-rose-500/10 border-rose-500/20',  icon: '💀' },
-  illegal_pharmaceuticals: { color: '#a78bfa', bg: 'bg-violet-500/10 border-violet-500/20', icon: '💊' },
-  gaming: { color: '#22d3ee', bg: 'bg-cyan-500/10 border-cyan-500/20', icon: '🎮' },
-  safe: { color: '#34d399', bg: 'bg-emerald-500/10 border-emerald-500/20', icon: '✅' },
-};
-
-const CONTAINER_STYLES: Record<string, string> = {
-  gambling: 'border-l-4 border-l-purple-500 border-purple-500/20 bg-gradient-to-br from-purple-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(168,85,247,0.03)]',
-  adult: 'border-l-4 border-l-rose-500 border-rose-500/20 bg-gradient-to-br from-rose-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(244,63,94,0.03)]',
-  phishing_scam: 'border-l-4 border-l-amber-500 border-amber-500/20 bg-gradient-to-br from-amber-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(245,158,11,0.03)]',
-  malware_hacking: 'border-l-4 border-l-rose-500 border-rose-500/20 bg-gradient-to-br from-rose-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(244,63,94,0.03)]',
-  illegal_pharmaceuticals: 'border-l-4 border-l-violet-500 border-violet-500/20 bg-gradient-to-br from-violet-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(139,92,246,0.03)]',
-  gaming: 'border-l-4 border-l-cyan-500 border-cyan-500/20 bg-gradient-to-br from-cyan-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(6,182,212,0.03)]',
-  safe: 'border-l-4 border-l-emerald-500 border-emerald-500/20 bg-gradient-to-br from-emerald-950/5 to-slate-900/10 shadow-[0_0_20px_rgba(16,185,129,0.03)]',
-};
-
 export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
   const {
     risk_narrative, evidence_bullets, primary_category,
-    ai_confidence, risk_period, risk_level,
+    ai_confidence, risk_period, risk_level, risk_score,
   } = data;
 
   if (!risk_narrative) return null;
 
   const cat = primary_category || 'safe';
-  const isSafe = cat === 'safe' || risk_level === 'SAFE';
-  const style = CATEGORY_STYLES[cat] || CATEGORY_STYLES['safe'];
-  const containerStyle = CONTAINER_STYLES[cat] || CONTAINER_STYLES['safe'];
+  const isUnsafe = risk_level === 'HIGH' || risk_level === 'UNSAFE' || risk_score >= 65 || (cat !== 'safe' && cat !== 'unknown');
+  const isSafe = risk_level === 'SAFE' || (risk_score < 40 && (cat === 'safe' || cat === 'unknown'));
+
+  const theme = isUnsafe
+    ? {
+        color: '#f43f5e',
+        badgeBg: 'bg-rose-500/20 border-rose-500/40 text-rose-300 shadow-[0_0_14px_rgba(244,63,94,0.35)]',
+        boxBg: 'bg-rose-950/25 border-rose-500/35',
+        containerStyle: 'border-l-4 border-l-rose-500 border-rose-500/40 bg-gradient-to-br from-rose-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(244,63,94,0.18)] relative overflow-hidden',
+        glowColor: 'bg-rose-500/15',
+        iconColor: '#f43f5e',
+        barColor: 'bg-rose-500',
+        checkColor: '#f43f5e',
+        icon: '⚠️',
+      }
+    : isSafe
+    ? {
+        color: '#10b981',
+        badgeBg: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)]',
+        boxBg: 'bg-emerald-950/25 border-emerald-500/35',
+        containerStyle: 'border-l-4 border-l-emerald-500 border-emerald-500/40 bg-gradient-to-br from-emerald-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(16,185,129,0.18)] relative overflow-hidden',
+        glowColor: 'bg-emerald-500/15',
+        iconColor: '#10b981',
+        barColor: 'bg-emerald-500',
+        checkColor: '#10b981',
+        icon: '✅',
+      }
+    : {
+        color: '#f59e0b',
+        badgeBg: 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.35)]',
+        boxBg: 'bg-amber-950/25 border-amber-500/35',
+        containerStyle: 'border-l-4 border-l-amber-500 border-amber-500/40 bg-gradient-to-br from-amber-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(245,158,11,0.18)] relative overflow-hidden',
+        glowColor: 'bg-amber-500/15',
+        iconColor: '#f59e0b',
+        barColor: 'bg-amber-500',
+        checkColor: '#f59e0b',
+        icon: '⚡',
+      };
+
   const confPct = ai_confidence != null ? Math.round(ai_confidence * 100) : (isSafe ? 100 : null);
 
   return (
-    <div className={`glass-panel p-6 sm:p-8 space-y-6 transition-all duration-300 ${containerStyle}`}>
+    <div className={`glass-panel p-6 sm:p-8 space-y-6 transition-all duration-300 ${theme.containerStyle}`}>
+      {/* Background ambient glow blob */}
+      <div className={`absolute -top-24 -right-24 w-64 h-64 ${theme.glowColor} rounded-full blur-3xl pointer-events-none`} />
+
       {/* Header */}
-      <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+      <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4 relative z-10">
         <div className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-xl border shrink-0 ${style.bg}`}>
-            <Brain size={20} style={{ color: style.color }} />
+          <div className={`p-2.5 rounded-xl border shrink-0 ${theme.badgeBg}`}>
+            <Brain size={20} style={{ color: theme.color }} />
           </div>
           <div className="text-left">
             <h3 className="text-base sm:text-lg font-bold text-white">AI Risk Explanation</h3>
@@ -55,14 +74,14 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
           </div>
         </div>
         {confPct != null && (
-          <span className="px-3 py-1 rounded-full text-xs font-bold border shrink-0" style={{ backgroundColor: `${style.color}15`, borderColor: `${style.color}30`, color: style.color }}>
+          <span className={`px-3.5 py-1 rounded-full text-xs font-extrabold border shrink-0 uppercase tracking-wider ${theme.badgeBg}`}>
             {confPct}% confidence
           </span>
         )}
       </div>
 
-      {/* Two Column Grid layout to use full screen width creatively */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch">
+      {/* Two Column Grid layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch relative z-10">
         
         {/* Left Column: AI explanation narrative & metadata */}
         <div className="flex flex-col justify-between space-y-4">
@@ -70,9 +89,9 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
             <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
               Analysis Narrative
             </h4>
-            <div className={`p-5 rounded-xl border ${style.bg} relative overflow-hidden min-h-[140px] flex flex-col justify-center`}>
-              <div className="absolute top-0 left-0 h-full w-1 rounded-l-xl" style={{ backgroundColor: style.color }} />
-              <p className="text-sm text-slate-200 leading-relaxed pl-2 font-medium">
+            <div className={`p-5 rounded-xl border ${theme.boxBg} relative overflow-hidden min-h-[140px] flex flex-col justify-center`}>
+              <div className="absolute top-0 left-0 h-full w-1.5 rounded-l-xl" style={{ backgroundColor: theme.color }} />
+              <p className="text-sm text-slate-100 leading-relaxed pl-2 font-medium">
                 {risk_narrative}
               </p>
             </div>
@@ -83,32 +102,32 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
             {confPct != null && (
               <div className="space-y-1.5 text-left">
                 <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-slate-400">{isSafe ? 'AI Safety Confidence' : 'AI Risk Confidence'}</span>
-                  <span style={{ color: style.color }}>{confPct}%</span>
+                  <span className="text-slate-300">{isSafe ? 'AI Safety Confidence' : 'AI Risk Confidence'}</span>
+                  <span style={{ color: theme.color }} className="font-extrabold">{confPct}%</span>
                 </div>
                 <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-900">
-                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${confPct}%`, backgroundColor: style.color }} />
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${confPct}%`, backgroundColor: theme.color }} />
                 </div>
               </div>
             )}
 
-              {/* Meta chips row */}
-              <div className="flex flex-wrap gap-2">
-                {risk_period && risk_period !== 'recently' && (
-                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-                    <Clock size={12} className="text-slate-500" />
-                    <span className="font-semibold">Risk Period:</span>
-                    <span className="font-mono text-violet-400">{risk_period}</span>
-                  </div>
-                )}
-                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold" style={{ backgroundColor: `${style.color}15`, borderColor: `${style.color}30`, color: style.color }}>
-                  <span>{isSafe && data.content_niche ? data.content_niche.icon : style.icon}</span>
-                  <span>{isSafe && data.content_niche ? data.content_niche.title : cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+            {/* Meta chips row */}
+            <div className="flex flex-wrap gap-2">
+              {risk_period && risk_period !== 'recently' && (
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+                  <Clock size={12} className="text-slate-400" />
+                  <span className="font-semibold">Risk Period:</span>
+                  <span className="font-mono text-violet-400">{risk_period}</span>
                 </div>
-                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-xs text-slate-300 font-semibold uppercase tracking-wider">
-                  {risk_level}
-                </div>
+              )}
+              <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-extrabold uppercase tracking-wider ${theme.badgeBg}`}>
+                <span>{isSafe && data.content_niche ? data.content_niche.icon : theme.icon}</span>
+                <span>{isSafe && data.content_niche ? data.content_niche.title : cat.replace(/_/g, ' ')}</span>
               </div>
+              <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-200 font-extrabold uppercase tracking-wider">
+                {risk_level}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -117,13 +136,13 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
           <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
             Detected Evidence
           </h4>
-          <div className="p-5 bg-slate-950/40 border border-slate-900 rounded-xl flex-1 flex flex-col justify-start">
+          <div className="p-5 bg-slate-950/60 border border-slate-800/80 rounded-xl flex-1 flex flex-col justify-start">
             {Array.isArray(evidence_bullets) && evidence_bullets.length > 0 ? (
               <div className="space-y-3 w-full">
                 {evidence_bullets.map((bullet, i) => (
-                  <div key={i} className="flex items-start space-x-3 text-xs text-slate-300 bg-slate-900/20 p-3 rounded-lg border border-slate-800/40 hover:border-slate-800/80 transition-colors">
-                    <CheckCircle size={15} style={{ color: style.color }} className="mt-0.5 shrink-0" />
-                    <span className="leading-relaxed">{bullet}</span>
+                  <div key={i} className={`flex items-start space-x-3 text-xs text-slate-200 p-3 rounded-lg border ${theme.boxBg} transition-colors`}>
+                    <CheckCircle size={15} style={{ color: theme.color }} className="mt-0.5 shrink-0" />
+                    <span className="leading-relaxed font-medium">{bullet}</span>
                   </div>
                 ))}
               </div>
