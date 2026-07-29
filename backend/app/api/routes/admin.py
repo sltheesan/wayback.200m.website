@@ -571,7 +571,7 @@ async def mark_all_notifications_read(
     role_val = str(getattr(current_user.role, "value", current_user.role)).lower()
     is_admin = role_val in ("admin", "super_admin", "superadmin")
 
-    stmt = update(Notification).where(Notification.is_read == False)
+    stmt = update(Notification).where(Notification.is_read == False).values(is_read=True)
     if not is_admin:
         stmt = stmt.where(
             (Notification.recipient_user_id == current_user.id) |
