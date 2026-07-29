@@ -130,6 +130,9 @@ def find_keyword_locations(html: str, keywords_list: List[str]) -> List[Dict[str
     seen_keys = set()
     try:
         soup = BeautifulSoup(html, "html.parser")
+        # Remove non-content, code blocks, scripts, and styling tags before locating keywords
+        for el in soup(["script", "style", "code", "pre", "template", "svg", "noscript", "iframe"]):
+            el.decompose()
     except Exception:
         return []
 

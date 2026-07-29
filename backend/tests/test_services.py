@@ -414,3 +414,35 @@ def test_strip_wayback_toolbar_and_http_error_snapshot_safety():
     assert "wm-ipp-base" not in cleaned
     assert "Wayback Machine error" not in cleaned
     assert "Clean Original Web Content" in cleaned
+
+
+def test_html_code_and_dev_tags_ignored_in_cleaner_and_analyzer():
+    """Verify HTML tags (div, dev, span, code), script/style/code blocks are ignored by keyword scanner."""
+    raw_html = """
+    <html>
+      <head>
+        <script>var bet = "place a bet"; function devCode() { return 123; }</script>
+        <style>.dev-class { font-family: code; }</style>
+      </head>
+      <body>
+        <div class="dev-container" id="main-dev">
+          <code>const casino = "online casino";</code>
+          <pre>class BettingEngine { bet() {} }</pre>
+          <!-- <div>dev tags markup</div> -->
+          <p>Welcome to our software developer blog. We write clean web code.</p>
+        </div>
+      </body>
+    </html>
+    """
+    cleaned = clean_html_content(raw_html)
+    # Ensure code blocks, script code, style code, and HTML tags are not included as text
+    assert "const casino" not in cleaned
+    assert "BettingEngine" not in cleaned
+    assert "dev-container" not in cleaned
+    assert "Welcome to our software developer blog" in cleaned
+
+    score, cat_scores, flags = analyze_snapshot_content(raw_html)
+    # Should be 0 risk score because keywords inside <code>, <script>, <pre>, and HTML attributes were ignored
+    assert score == 0
+    assert len(flags) == 0
+

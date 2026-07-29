@@ -69,18 +69,25 @@ def normalize_obfuscated_text(text: str) -> str:
 
 def clean_html_content(html_content: str) -> str:
     """
-    Cleans raw HTML by removing scripts, styling, and HTML tags,
-    returning a clean text string for keyword analysis.
+    Cleans raw HTML by removing scripts, styling, code blocks, and HTML tags,
+    returning a clean visible text string for keyword analysis.
     """
     if not html_content:
         return ""
 
     try:
-        # Use bs4 with lxml or html.parser to parse the HTML structure
         soup = BeautifulSoup(html_content, "html.parser")
+
+        # Decompose HTML comments
+        from bs4 import Comment
+        for comment in soup.find_all(string=lambda t: isinstance(t, Comment)):
+            comment.extract()
 
         attribute_text = []
         for tag in soup.find_all(True):
+            # Skip code, script, style, markup, and layout metadata tags when gathering image/link hints
+            if tag.name in ("script", "style", "head", "iframe", "noscript", "meta", "link", "code", "pre", "template", "svg", "xml"):
+                continue
             for attr in HIGH_SIGNAL_ATTRIBUTES:
                 value = tag.get(attr)
                 if isinstance(value, list):
@@ -88,12 +95,11 @@ def clean_html_content(html_content: str) -> str:
                 if value:
                     attribute_text.append(_tokenise_attribute_value(value))
 
-        # Remove noisy executable/layout tags before extracting visible text.
-        # Metadata was captured above so head/meta image hints are not lost.
-        for element in soup(["script", "style", "head", "iframe", "noscript", "meta", "link"]):
+        # Remove executable, styling, and code block tags before extracting visible plain text.
+        for element in soup(["script", "style", "head", "iframe", "noscript", "meta", "link", "code", "pre", "template", "svg", "xml"]):
             element.decompose()
 
-        # Get plain text
+        # Get plain visible text
         text = soup.get_text(separator=" ")
         if attribute_text:
             text = f"{text} {' '.join(attribute_text)}"
@@ -102,9 +108,10 @@ def clean_html_content(html_content: str) -> str:
         text = re.sub(r'\s+', ' ', text)
         return text.strip()
     except Exception:
-        # Fallback to a regex tag stripper if BeautifulSoup fails
-        clean_re = re.compile('<.*?>')
-        text = re.sub(clean_re, ' ', html_content)
+        # Fallback to regex tag and code stripper if BeautifulSoup fails
+        content = re.sub(r'<(script|style|code|pre|template|svg|noscript|head)[^>]*>.*?</\1>', ' ', html_content, flags=re.DOTALL | re.IGNORECASE)
+        clean_re = re.compile(r'<[^>]+>')
+        text = re.sub(clean_re, ' ', content)
         text = re.sub(r'\s+', ' ', text)
         return text.strip()
 
