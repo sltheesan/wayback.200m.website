@@ -303,10 +303,15 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             is_verified, target_status = await RedirectEngine.verify_redirect_target(redirect_eval.redirect_target)
             redirect_eval.redirect_verified = is_verified
             redirect_eval.redirect_target_status = target_status
-            if "web.archive.org" in redirect_eval.redirect_target:
+            if "web.archive.org" in redirect_eval.redirect_target or redirect_eval.redirect_target:
                 target_html = await fetch_snapshot_html(timestamp, redirect_eval.redirect_target, domain_clean)
                 if target_html:
                     target_html = strip_wayback_toolbar(target_html)
+                    try:
+                        from backend.app.services.wayback import wayback_service
+                        await wayback_service.cache.set_snapshot(timestamp, redirect_eval.redirect_target, target_html)
+                    except Exception as _c_err:
+                        logger.debug(f"Pre-cache redirect target HTML skipped: {_c_err}")
 
         # If download failed and no redirect detected, return unavailable (0 Risk)
         if not html_content and not redirect_eval.redirect_detected:

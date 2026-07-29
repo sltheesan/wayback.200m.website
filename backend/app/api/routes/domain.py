@@ -85,12 +85,42 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
         if redirect_url:
             resolved_redirect_url = urllib.parse.urljoin(url, redirect_url)
 
-        # 1. Fetch initial snapshot content with fast 4.0s timeout (hits Redis cache instantly if pre-cached)
-        try:
-            html_content = await asyncio.wait_for(wayback_service.get_snapshot_content(timestamp=timestamp, url=url), timeout=4.0)
-        except (asyncio.TimeoutError, Exception) as fetch_err:
-            logger.warning(f"Proxy snapshot: Fast fetch timeout/failed for {url} at {timestamp}: {fetch_err}")
-            wayback_direct = f"https://web.archive.org/web/{timestamp}id_/{url}"
+        # 1. First check if redirect target or original URL is cached in Redis (0ms response)
+        html_content = None
+        if resolved_redirect_url and resolved_redirect_url != url:
+            try:
+                html_content = await wayback_service.cache.get_snapshot(timestamp, resolved_redirect_url)
+                if html_content:
+                    target_url = resolved_redirect_url
+            except Exception:
+                pass
+
+        if not html_content:
+            try:
+                html_content = await wayback_service.cache.get_snapshot(timestamp, url)
+            except Exception:
+                pass
+
+        # 2. Fetch with fast 2.5s timeout if not pre-cached
+        if not html_content:
+            try:
+                fetch_url = resolved_redirect_url if (resolved_redirect_url and resolved_redirect_url != url) else url
+                html_content = await asyncio.wait_for(wayback_service.get_snapshot_content(timestamp=timestamp, url=fetch_url), timeout=2.5)
+                if resolved_redirect_url:
+                    target_url = resolved_redirect_url
+            except Exception as fetch_err:
+                logger.warning(f"Proxy snapshot: Fast fetch timeout/failed for {url} at {timestamp}: {fetch_err}")
+                # Try original URL fallback if redirect fetch timed out
+                if resolved_redirect_url:
+                    try:
+                        html_content = await asyncio.wait_for(wayback_service.get_snapshot_content(timestamp=timestamp, url=url), timeout=1.5)
+                    except Exception:
+                        pass
+
+        # 3. If snapshot HTML failed to fetch or timed out, render direct Wayback inline fallback iframe immediately
+        if not html_content:
+            final_target = resolved_redirect_url or url
+            wayback_direct = f"https://web.archive.org/web/{timestamp}id_/{final_target}"
             fallback_html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -106,19 +136,6 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
 </body>
 </html>"""
             return HTMLResponse(content=fallback_html)
-
-        # 2. Check if original snapshot returned a 404 / Not Found page or minimal redirect shell
-        is_not_found = ("not found" in html_content.lower()[:500] and "404" in html_content.lower()[:500]) or len(html_content.strip()) < 200
-        
-        # 3. If redirect target exists and original is 404 or a redirect shell, fetch the destination snapshot HTML
-        if (is_not_found or redirect_url) and resolved_redirect_url and resolved_redirect_url != url:
-            try:
-                dest_html = await wayback_service.get_snapshot_content(timestamp=timestamp, url=resolved_redirect_url)
-                if dest_html and not ("not found" in dest_html.lower()[:500] and "404" in dest_html.lower()[:500]):
-                    html_content = dest_html
-                    target_url = resolved_redirect_url
-            except Exception as ex:
-                logger.warning(f"Proxy snapshot: Could not fetch redirect destination snapshot {resolved_redirect_url}: {ex}")
 
         # 4. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
         html_content = re.sub(r'<meta\s+http-equiv=["\']?refresh["\']?[^>]*>', '', html_content, flags=re.IGNORECASE)
