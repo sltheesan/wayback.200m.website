@@ -23,8 +23,8 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     : [];
   const primaryCat = data.primary_category || (activeCategories.length > 0 ? activeCategories[0][0] : 'safe');
 
-  const isSafe = (risk_level === 'SAFE' || !risk_level) && risk_score < 40 && (primaryCat === 'safe' || primaryCat === 'unknown');
-  const isUnsafe = !isSafe;
+  const isUnsafe = risk_level === 'HIGH' || risk_level === 'UNSAFE' || risk_score >= 65 || (primaryCat !== 'safe' && primaryCat !== 'unknown');
+  const isSafe = risk_level === 'SAFE' || (risk_score < 40 && (primaryCat === 'safe' || primaryCat === 'unknown'));
 
   // Configuration for threat colors
   const getRiskDetails = () => {
@@ -92,36 +92,22 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
   };
 
   const getCategoryMeta = (cat: string) => {
-    const cleanCat = (cat || '').toLowerCase().trim();
-    switch (cleanCat) {
+    switch (cat) {
       case 'gambling':
         return { label: 'Gambling & Betting', icon: '🎰', style: 'text-purple-300 border-purple-500/30 bg-purple-500/10' };
       case 'adult':
-      case 'explicit':
-      case 'porn':
         return { label: 'Adult Content', icon: '🔞', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
       case 'phishing_scam':
-      case 'phishing':
-      case 'scam':
         return { label: 'Phishing & Scam', icon: '🎣', style: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
       case 'malware_hacking':
-      case 'malware':
-      case 'hacking':
         return { label: 'Malware & Hacking', icon: '💀', style: 'text-rose-400 border-rose-500/30 bg-rose-500/10' };
       case 'illegal_pharmaceuticals':
-      case 'pharma':
         return { label: 'Illegal Pharmaceuticals', icon: '💊', style: 'text-violet-300 border-violet-500/30 bg-violet-500/10' };
       case 'gaming':
         return { label: 'Online Gaming', icon: '🎮', style: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10' };
       case 'unknown':
-      case 'unavailable':
-      case 'unarchived':
         return { label: 'Unknown / Insufficient Data', icon: '❓', style: 'text-slate-400 border-slate-500/30 bg-slate-500/10' };
       default:
-        if (isUnsafe) {
-          const displayLabel = cleanCat && cleanCat !== 'safe' ? cleanCat.replace(/_/g, ' ').toUpperCase() : 'HIGH RISK CONTENT';
-          return { label: displayLabel, icon: '⚠️', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
-        }
         return { label: 'Safe / Legitimate Domain', icon: '✅', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
     }
   };
@@ -246,19 +232,15 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
               <div className="grid grid-cols-1 gap-y-2">
                 <div className="space-y-1">
                   <div className="flex justify-between text-[10px] font-bold">
-                    <span className={isUnsafe ? "text-rose-400 font-extrabold uppercase" : "text-emerald-400 font-extrabold uppercase"}>
-                      {isUnsafe
-                        ? '⚠️ HIGH RISK / THREAT CONTENT'
-                        : niche ? `${niche.icon} ${niche.title}` : 'SAFE / LEGITIMATE CONTENT'}
+                    <span className="text-emerald-400 font-extrabold uppercase">
+                      {niche ? `${niche.icon} ${niche.title}` : 'SAFE / LEGITIMATE CONTENT'}
                     </span>
-                    <span className="text-slate-400 font-mono">
-                      {isUnsafe ? `${risk_score}% Threat Confidence` : '100% Safety Confidence'}
-                    </span>
+                    <span className="text-slate-400 font-mono">100% Safety Confidence</span>
                   </div>
                   <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/40">
-                    <div className={isUnsafe ? "bg-rose-500 h-full rounded-full transition-all duration-500" : "bg-emerald-500 h-full rounded-full transition-all duration-500"} style={{ width: `${isUnsafe ? Math.max(risk_score, 75) : 100}%` }} />
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '100%' }} />
                   </div>
-                  {niche && isSafe && (
+                  {niche && (
                     <p className="text-xs text-slate-300 font-medium pt-1">
                       {niche.desc}
                     </p>

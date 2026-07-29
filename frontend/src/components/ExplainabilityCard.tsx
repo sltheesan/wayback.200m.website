@@ -14,8 +14,8 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
   if (!risk_narrative) return null;
 
   const cat = primary_category || 'safe';
-  const isSafe = (risk_level === 'SAFE' || !risk_level) && risk_score < 40 && (cat === 'safe' || cat === 'unknown');
-  const isUnsafe = !isSafe;
+  const isUnsafe = risk_level === 'HIGH' || risk_level === 'UNSAFE' || risk_score >= 65 || (cat !== 'safe' && cat !== 'unknown');
+  const isSafe = risk_level === 'SAFE' || (risk_score < 40 && (cat === 'safe' || cat === 'unknown'));
 
   const theme = isUnsafe
     ? {
