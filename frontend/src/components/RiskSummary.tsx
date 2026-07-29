@@ -1,12 +1,11 @@
-import { ShieldCheck, ShieldAlert, Calendar, Layers, Sparkles } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Calendar, Layers } from 'lucide-react';
 import { DomainAnalysisResponse } from '../types';
 
 interface RiskSummaryProps {
   data: DomainAnalysisResponse;
-  onOpenVerdict?: () => void;
 }
 
-export default function RiskSummary({ data, onOpenVerdict }: RiskSummaryProps) {
+export default function RiskSummary({ data }: RiskSummaryProps) {
   const {
     domain,
     risk_score,
@@ -193,24 +192,6 @@ export default function RiskSummary({ data, onOpenVerdict }: RiskSummaryProps) {
               <span>{catMeta.icon}</span>
               <span>Category: {catMeta.label}</span>
             </div>
-
-            {/* Security Verdict Modal Button */}
-            {onOpenVerdict && (
-              <button
-                type="button"
-                onClick={onOpenVerdict}
-                className={`px-3 py-1 rounded-full text-xs font-extrabold border uppercase tracking-wider flex items-center space-x-1.5 transition-all hover:scale-105 cursor-pointer ${
-                  isUnsafe 
-                    ? 'bg-rose-500/25 border-rose-500/50 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.3)]' 
-                    : isSafe 
-                    ? 'bg-emerald-500/25 border-emerald-500/50 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.3)]' 
-                    : 'bg-amber-500/25 border-amber-500/50 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
-                }`}
-              >
-                <Sparkles size={13} />
-                <span>Security Verdict</span>
-              </button>
-            )}
           </div>
           
           <p className="text-slate-300 text-sm leading-relaxed mb-4">

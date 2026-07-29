@@ -14,7 +14,6 @@ import SystemHealth from './components/SystemHealth';
 import ReportsPanel from './components/ReportsPanel';
 import BatchUpload from './components/BatchUpload';
 import UniqueDomainLoader from './components/UniqueDomainLoader';
-import VerdictModal from './components/VerdictModal';
 
 // Admin Dashboard
 import LoginPage from './pages/LoginPage';
@@ -51,7 +50,6 @@ function ScanApp() {
   const [stats, setStats] = useState<GlobalStats>(DEFAULT_STATS);
   const [timelineModalOpen, setTimelineModalOpen] = useState<boolean>(false);
   const [threatIntelModalOpen, setThreatIntelModalOpen] = useState<boolean>(false);
-  const [verdictModalOpen, setVerdictModalOpen] = useState<boolean>(false);
   const [batchHistory, setBatchHistory] = useState<any[]>(() => {
     const saved = localStorage.getItem('dhr_batch_history');
     return saved ? JSON.parse(saved) : [];
@@ -104,7 +102,6 @@ function ScanApp() {
         // Default to the first (earliest) snapshot
         setActiveSnapshot(result.snapshots[0]);
       }
-      setVerdictModalOpen(true);
       await fetchStats();
     } catch (err: unknown) {
       console.error(err);
@@ -188,7 +185,7 @@ function ScanApp() {
               {/* Active Result View */}
               {activeData && !loading && (
                 <div className="space-y-8">
-                  <RiskSummary data={activeData} onOpenVerdict={() => setVerdictModalOpen(true)} />
+                  <RiskSummary data={activeData} />
 
                   {/* Quick Navigation Panels */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -633,18 +630,6 @@ function ScanApp() {
           </div>
         </div>
       )}
-
-      {/* Security Verdict Popup Modal */}
-      <VerdictModal
-        data={activeData}
-        isOpen={verdictModalOpen}
-        onClose={() => setVerdictModalOpen(false)}
-        onExploreTimeline={() => {
-          setVerdictModalOpen(false);
-          const el = document.getElementById('snapshot-details-section') || document.getElementById('snapshot-timeline-section');
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
     </div>
   );
 }
