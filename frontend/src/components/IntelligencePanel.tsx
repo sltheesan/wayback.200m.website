@@ -12,6 +12,9 @@ const CATEGORY_STYLES: Record<string, { label: string; bar: string; text: string
   malware_hacking: { label: 'Malware / Hacking', bar: 'bg-rose-500', text: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/20' },
   illegal_pharmaceuticals: { label: 'Illegal Pharmaceuticals', bar: 'bg-violet-500', text: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
   gaming: { label: 'Gaming / Betting Like', bar: 'bg-cyan-500', text: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+  unavailable: { label: 'Snapshot Unavailable', bar: 'bg-slate-500', text: 'text-slate-400', bg: 'bg-slate-500/10 border-slate-500/20' },
+  server_error: { label: 'Server Error Page', bar: 'bg-slate-500', text: 'text-slate-400', bg: 'bg-slate-500/10 border-slate-500/20' },
+  error_page: { label: 'Error Page', bar: 'bg-slate-500', text: 'text-slate-400', bg: 'bg-slate-500/10 border-slate-500/20' },
   safe: { label: 'Safe / Benign', bar: 'bg-emerald-500', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
 };
 

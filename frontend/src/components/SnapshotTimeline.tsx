@@ -24,6 +24,16 @@ interface ChartDataPoint {
 
 /* Colour helpers */
 const getRiskPalette = (score: number, category?: string | null) => {
+  const cat = (category || '').toLowerCase();
+  if (cat === 'unavailable' || cat === 'unarchived' || cat === 'unknown') {
+    return {
+      accent: '#94a3b8',
+      dim: 'rgba(148,163,184,0.12)',
+      border: 'rgba(148,163,184,0.28)',
+      text: '#cbd5e1',
+      glow: '0 0 14px rgba(148,163,184,0.15)',
+    };
+  }
   const isSafe = !category || category === 'safe';
   if (isSafe && score < 70) {
     return { accent: '#10b981', dim: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', text: '#10b981', glow: '0 0 16px rgba(16,185,129,0.2)' };
@@ -35,7 +45,7 @@ const getRiskPalette = (score: number, category?: string | null) => {
 const CATEGORY_ICONS: Record<string, string> = {
   gambling: 'GAMBLING', adult: 'ADULT', phishing_scam: 'PHISHING',
   malware_hacking: 'MALWARE', illegal_pharmaceuticals: 'PHARMA', safe: 'SAFE',
-  gaming: 'GAMING',
+  gaming: 'GAMING', unavailable: 'UNARCHIVED', unarchived: 'UNARCHIVED',
 };
 
 const formatDate = (timestamp: string) =>
@@ -87,8 +97,12 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
   const apiBase = (import.meta.env.VITE_API_URL as string) || '/api/v1';
   const proxyUrl = `${apiBase}/domains/proxy-snapshot?timestamp=${s.timestamp}&url=${encodeURIComponent(s.original_url)}${s.redirect_url ? `&redirect_url=${encodeURIComponent(s.redirect_url)}` : ''}`;
   const directUrl = `https://web.archive.org/web/${s.timestamp}/${s.original_url}`;
-  const catLabel = (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
-  const catIcon = CATEGORY_ICONS[s.content_category || 'safe'] || 'UNKNOWN';
+  
+  const isUnavailable = s.content_category === 'unavailable' || s.content_category === 'unarchived';
+  const catLabel = isUnavailable
+    ? 'UNARCHIVED PAYLOAD'
+    : (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
+  const catIcon = isUnavailable ? '📦' : (CATEGORY_ICONS[s.content_category || 'safe'] || 'SAFE');
 
   // Instant preview loading timer: preview resolves within 400ms for instant pre-cached rendering
   useEffect(() => {
@@ -231,78 +245,114 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
           </div>
         )}
 
-        {/* Preview iframe */}
-        <div style={{
-          borderRadius: 12, border: `1px solid ${pal.border}`,
-          background: 'rgba(0,0,0,0.3)', overflow: 'hidden',
-        }}>
+        {/* Preview iframe or Creative Unretrieved Payload Card */}
+        {isUnavailable ? (
           <div style={{
-            padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderBottom: `1px solid rgba(255,255,255,0.04)`, background: 'rgba(255,255,255,0.02)',
-            flexWrap: 'wrap', gap: 6,
+            borderRadius: 14, border: '1px solid rgba(148,163,184,0.25)',
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.6) 100%)',
+            padding: '28px 22px', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            textAlign: 'center', gap: 12, position: 'relative', overflow: 'hidden',
+            boxShadow: 'inset 0 0 20px rgba(0,0,0,0.3)',
           }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: pal.text }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: pal.accent, display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-              Visual Evidence Preview
-            </span>
-            {s.redirect_url && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#f43f5e', background: 'rgba(244,63,94,0.1)', padding: '2px 8px', borderRadius: 6, border: '1px solid rgba(244,63,94,0.2)' }}>
-                <ExternalLink size={10} style={{ flexShrink: 0 }} />
-                <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 9 }}>Redirect Target:</span>
-                <a href={s.redirect_url} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'underline', fontWeight: 600, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {s.redirect_url}
-                </a>
-              </div>
-            )}
+            <div style={{
+              width: 48, height: 48, borderRadius: 14,
+              background: 'rgba(148,163,184,0.15)', border: '1px solid rgba(148,163,184,0.3)',
+              color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Layers size={24} />
+            </div>
+            <div>
+              <h4 style={{ color: '#f1f5f9', fontSize: 14, fontWeight: 700, margin: '0 0 4px' }}>
+                Historical Payload Unretrieved
+              </h4>
+              <p style={{ color: '#94a3b8', fontSize: 12, margin: 0, maxWidth: 440, lineHeight: 1.5 }}>
+                This capture timestamp exists in CDX archive records, but its HTML body payload was unavailable during scan. No risk flags were triggered (Score: 0).
+              </p>
+            </div>
+            <a
+              href={directUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 15px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                background: 'rgba(148,163,184,0.15)', border: '1px solid rgba(148,163,184,0.3)',
+                color: '#e2e8f0', textDecoration: 'none', marginTop: 4, transition: 'all 0.15s',
+              }}
+            >
+              <ExternalLink size={12} /> Inspect Direct Archive Record
+            </a>
           </div>
-          <div style={{ height: 200, background: '#0a0e1a', position: 'relative', overflow: 'hidden' }}>
-            {/* Shimmer skeleton loader */}
-            {!iframeLoaded && (
-              <div style={{
-                position: 'absolute', inset: 0, zIndex: 10,
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
-              }}>
-                {/* Shimmer strip rows */}
-                <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.6 }}>
-                  {[0.08, 0.22, 0.36, 0.5, 0.64, 0.78].map((top, i) => (
-                    <div key={i} style={{
-                      position: 'absolute', left: '5%',
-                      top: `${top * 100}%`, height: 10, borderRadius: 6,
-                      width: `${[75, 55, 85, 45, 65, 40][i]}%`,
-                      background: 'rgba(148,163,184,0.08)',
-                      overflow: 'hidden',
-                    }}>
-                      <div className="shimmer-bar" />
-                    </div>
-                  ))}
+        ) : (
+          <div style={{
+            borderRadius: 12, border: `1px solid ${pal.border}`,
+            background: 'rgba(0,0,0,0.3)', overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              borderBottom: `1px solid rgba(255,255,255,0.04)`, background: 'rgba(255,255,255,0.02)',
+              flexWrap: 'wrap', gap: 6,
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: pal.text }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: pal.accent, display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
+                Visual Evidence Preview
+              </span>
+              {s.redirect_url && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#f43f5e', background: 'rgba(244,63,94,0.1)', padding: '2px 8px', borderRadius: 6, border: '1px solid rgba(244,63,94,0.2)' }}>
+                  <ExternalLink size={10} style={{ flexShrink: 0 }} />
+                  <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 9 }}>Redirect Target:</span>
+                  <a href={s.redirect_url} target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8', textDecoration: 'underline', fontWeight: 600, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.redirect_url}
+                  </a>
                 </div>
-                {/* Central spinner */}
-                <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                  <div className="preview-spinner" style={{
-                    width: 36, height: 36, borderRadius: '50%',
-                    border: `3px solid ${pal.dim}`,
-                    borderTopColor: pal.accent,
-                  }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.05em' }}>Loading Preview…</span>
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-                    color: pal.text, opacity: 0.7,
-                  }}>Fetching Wayback Snapshot</span>
+              )}
+            </div>
+            <div style={{ height: 200, background: '#0a0e1a', position: 'relative', overflow: 'hidden' }}>
+              {!iframeLoaded && (
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 10,
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+                }}>
+                  <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', opacity: 0.6 }}>
+                    {[0.08, 0.22, 0.36, 0.5, 0.64, 0.78].map((top, i) => (
+                      <div key={i} style={{
+                        position: 'absolute', left: '5%',
+                        top: `${top * 100}%`, height: 10, borderRadius: 6,
+                        width: `${[75, 55, 85, 45, 65, 40][i]}%`,
+                        background: 'rgba(148,163,184,0.08)',
+                        overflow: 'hidden',
+                      }}>
+                        <div className="shimmer-bar" />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <div className="preview-spinner" style={{
+                      width: 36, height: 36, borderRadius: '50%',
+                      border: `3px solid ${pal.dim}`,
+                      borderTopColor: pal.accent,
+                    }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#475569', letterSpacing: '0.05em' }}>Loading Preview…</span>
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                      color: pal.text, opacity: 0.7,
+                    }}>Fetching Wayback Snapshot</span>
+                  </div>
                 </div>
-              </div>
-            )}
-            <iframe
-              src={proxyUrl}
-              title={`Preview: ${s.original_url}`}
-              sandbox="allow-scripts"
-              style={{ width: '100%', height: '100%', border: 'none', opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.4s ease' }}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              onLoad={() => setIframeLoaded(true)}
-            />
+              )}
+              <iframe
+                src={proxyUrl}
+                title={`Preview: ${s.original_url}`}
+                sandbox="allow-scripts"
+                style={{ width: '100%', height: '100%', border: 'none', opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.4s ease' }}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onLoad={() => setIframeLoaded(true)}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Content summary */}
         {s.content_summary && (
@@ -416,14 +466,18 @@ interface SnapshotTabProps {
 }
 
 function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
-  const isUnsafe = (s.content_category && s.content_category !== 'safe') || s.risk_score >= 70;
+  const isUnavailable = s.content_category === 'unavailable' || s.content_category === 'unarchived';
+  const isUnsafe = !isUnavailable && ((s.content_category && s.content_category !== 'safe') || s.risk_score >= 70);
   const pal = getRiskPalette(s.risk_score, s.content_category);
-  const catLabel = (s.content_category || 'safe').replace(/_/g, ' ');
+  const catLabel = isUnavailable ? 'UNARCHIVED' : (s.content_category || 'safe').replace(/_/g, ' ');
   const dateStr = formatDate(s.timestamp);
   const rawDate = `${s.timestamp.slice(0, 4)}/${s.timestamp.slice(4, 6)}/${s.timestamp.slice(6, 8)}`;
 
   const getCatStyle = (cat: string | null) => {
-    switch (cat || 'safe') {
+    switch ((cat || 'safe').toLowerCase()) {
+      case 'unavailable':
+      case 'unarchived':
+        return { bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.3)', color: '#94a3b8' };
       case 'adult':
         return { bg: 'rgba(244,63,94,0.15)', border: 'rgba(244,63,94,0.35)', color: '#f87171' };
       case 'gambling':
@@ -450,54 +504,31 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
       onClick={() => onSelect(s)}
       style={{
         width: '100%',
-        minHeight: 112,
-        padding: '14px 16px',
-        borderRadius: 12,
-        background: cardBg,
-        border: `1px solid ${isSelected ? pal.accent + 'cc' : 'rgba(255,255,255,0.08)'}`,
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: isSelected
-          ? `${pal.glow}, 0 8px 28px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)`
-          : '0 4px 16px rgba(0,0,0,0.35)',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
         gap: 12,
+        padding: '15px 16px',
+        borderRadius: 14,
+        background: cardBg,
+        border: isSelected ? `1.5px solid ${pal.accent}` : '1px solid rgba(255,255,255,0.06)',
+        boxShadow: isSelected ? `0 8px 30px ${pal.dim}, inset 0 0 15px ${pal.dim}` : 'none',
+        cursor: 'pointer',
+        textAlign: 'left',
+        transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         position: 'relative',
-        overflow: 'hidden',
-        transform: isSelected ? 'translateY(-2px)' : 'translateY(0)',
-        userSelect: 'none',
         outline: 'none',
-        color: '#f1f5f9',
-        font: 'inherit',
-      }}
-      onMouseEnter={e => {
-        if (!isSelected) {
-          const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = `linear-gradient(145deg, rgba(20,28,48,0.95) 0%, rgba(15,22,40,0.9) 100%)`;
-          el.style.borderColor = `${pal.accent}60`;
-          el.style.transform = 'translateY(-2px)';
-          el.style.boxShadow = `0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px ${pal.accent}20`;
-        }
-      }}
-      onMouseLeave={e => {
-        if (!isSelected) {
-          const el = e.currentTarget as HTMLButtonElement;
-          el.style.background = cardBg;
-          el.style.borderColor = 'rgba(255,255,255,0.08)';
-          el.style.transform = 'translateY(0)';
-          el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.35)';
-        }
       }}
     >
       {isSelected && (
         <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
-          background: `linear-gradient(180deg, ${pal.accent}, ${pal.accent}80)`,
-          boxShadow: `0 0 12px ${pal.accent}`,
-          borderRadius: '12px 0 0 12px',
+          position: 'absolute',
+          left: 0,
+          top: 12,
+          bottom: 12,
+          width: 4,
+          background: pal.accent,
+          borderRadius: '0 4px 4px 0',
+          boxShadow: `0 0 10px ${pal.accent}`,
         }} />
       )}
 
@@ -532,8 +563,8 @@ function SnapshotTab({ s, index, isSelected, onSelect }: SnapshotTabProps) {
           boxShadow: isSelected ? `0 0 10px ${pal.accent}50` : 'none',
           flexShrink: 0,
         }}>
-          {isUnsafe ? <AlertTriangle size={12} /> : <Shield size={12} />}
-          {isUnsafe ? 'UNSAFE' : 'SAFE'}
+          {isUnavailable ? <Layers size={12} /> : isUnsafe ? <AlertTriangle size={12} /> : <Shield size={12} />}
+          {isUnavailable ? 'UNARCHIVED' : isUnsafe ? 'UNSAFE' : 'SAFE'}
         </span>
       </div>
 
