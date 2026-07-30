@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { ExternalLink, Calendar, Shield, AlertTriangle, CheckCircle, Layers, Hash, Eye, Flag, Maximize2, Minimize2 } from 'lucide-react';
+import { ExternalLink, Calendar, Shield, AlertTriangle, CheckCircle, Layers, Hash, Eye, Flag } from 'lucide-react';
 import { Snapshot } from '../types';
 
 interface SnapshotTimelineProps {
@@ -93,7 +93,6 @@ const highlightKeyword = (text: string | null | undefined, keyword: string) => {
 /* Right panel: full snapshot detail */
 function SnapshotDetailPanel({ s }: { s: Snapshot }) {
   const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
   const pal = getRiskPalette(s.risk_score, s.content_category);
   const apiBase = (import.meta.env.VITE_API_URL as string) || '/api/v1';
   const proxyUrl = `${apiBase}/domains/proxy-snapshot?timestamp=${s.timestamp}&url=${encodeURIComponent(s.original_url)}${s.redirect_url ? `&redirect_url=${encodeURIComponent(s.redirect_url)}` : ''}`;
@@ -123,15 +122,14 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
 
   return (
     <div style={{
-      background: 'rgba(10,14,26,0.9)',
+      background: 'rgba(10,14,26,0.85)',
       border: `1px solid ${pal.border}`,
       borderRadius: 18,
       overflow: 'hidden',
       boxShadow: pal.glow,
-      maxHeight: isExpanded ? 'none' : 'calc(88vh - 80px)',
+      height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     }}>
       {/* Panel Header */}
       <div style={{
@@ -173,21 +171,8 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
             </div>
           </div>
         </div>
-        {/* Quick links & Expand toggle */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            title={isExpanded ? "Collapse card height" : "Expand full snapshot card height"}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
-              borderRadius: 8, background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)',
-              color: '#a78bfa', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {isExpanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-            <span>{isExpanded ? 'Fit Height' : 'Expand'}</span>
-          </button>
+        {/* Quick links */}
+        <div style={{ display: 'flex', gap: 8 }}>
           <a href={proxyUrl} target="_blank" rel="noreferrer" style={{
             display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
             borderRadius: 8, background: pal.dim, border: `1px solid ${pal.border}`,
@@ -828,7 +813,7 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
-            maxHeight: 'calc(88vh - 60px)',
+            maxHeight: 820,
             overflowY: 'auto',
             paddingRight: 10,
           }}>
@@ -854,7 +839,7 @@ export default function SnapshotTimeline({ snapshots, activeSnapshot, onSelectSn
           </div>
 
           {/* RIGHT: Detail panel */}
-          <div className="snapshot-detail-pane" style={{ position: 'sticky', top: 20, display: 'flex', flexDirection: 'column' }}>
+          <div className="snapshot-detail-pane" style={{ minHeight: 680, position: 'sticky', top: 20 }}>
             {selected ? (
               <div key={animKey} className="snapshot-detail-animate">
                 <SnapshotDetailPanel s={selected} />
