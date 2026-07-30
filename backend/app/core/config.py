@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # External API Configuration
     WAYBACK_CDX_URL: str = "https://web.archive.org/cdx/search/cdx"
     WAYBACK_SNAPSHOT_URL: str = "https://web.archive.org/web"
-    WAYBACK_CDX_LIMIT: int = 1000
+    WAYBACK_CDX_LIMIT: int = 200
     MAX_SNAPSHOTS_TO_ANALYZE: int = 20  # Cap on unique snapshots to fetch/analyze per domain
     MOCK_WAYBACK: bool = False
 
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     # Proxy settings for bypassing rate limits / blocks
     # Toggle to dynamically scrape free proxies from sslproxies.org on failure
-    ENABLE_PROXY_SCRAPER: bool = False
+    ENABLE_PROXY_SCRAPER: bool = True
     
     # Single default proxy (used as first attempt)
     HTTP_PROXY: str = ""

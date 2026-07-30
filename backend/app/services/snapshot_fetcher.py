@@ -92,7 +92,11 @@ async def fetch_live_domain_html(domain: str) -> tuple[str, str | None]:
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout fetching live homepage for {url} via {label}")
             except Exception as e:
+                err_str = str(e).lower()
                 logger.warning(f"Error fetching live homepage for {url} via {label}: {e}")
+                if "getaddrinfo" in err_str or "name or service not known" in err_str or "nodename nor servname provided" in err_str:
+                    logger.info(f"Domain DNS resolution failed for {domain_clean}; skipping further proxy attempts.")
+                    return "", None
 
         logger.warning(f"Live homepage fetch failed via {label}; trying next proxy for {domain_clean}")
 

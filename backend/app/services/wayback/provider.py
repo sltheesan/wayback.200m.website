@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import Protocol, List, Dict, Any, Optional
 from backend.app.core.config import settings
 from backend.app.utils.logger import logger
@@ -22,9 +23,9 @@ class WaybackProvider(ArchiveProvider):
         self.client = client
 
     async def _query_cdx_raw(self, target_url: str) -> List[List[str]]:
-        limit_val = getattr(settings, "WAYBACK_CDX_LIMIT", 1000)
+        limit_val = getattr(settings, "WAYBACK_CDX_LIMIT", 200)
         query_url = f"{settings.WAYBACK_CDX_URL}?url={target_url}&output=json&limit={limit_val}"
-        res_text = await self.client.get(query_url, timeout=8)
+        res_text = await self.client.get(query_url, timeout=12)
         if not res_text.strip():
             return []
         try:
@@ -64,17 +65,16 @@ class WaybackProvider(ArchiveProvider):
 
         domain_bare = domain_clean.removeprefix("http://").removeprefix("https://").split("/")[0]
 
-        # Query subpath wildcards first to capture all root and subpage historical snapshots
-        primary_candidates = [f"{domain_bare}/*"]
+        # Order candidates: try root domain first for instant CDX responses, then subpath wildcard
+        primary_candidates = [domain_bare, f"{domain_bare}/*"]
         if domain_bare.startswith("www."):
             bare_no_www = domain_bare.removeprefix("www.")
-            primary_candidates.extend([f"{bare_no_www}/*", bare_no_www])
+            primary_candidates.extend([bare_no_www, f"{bare_no_www}/*"])
         else:
-            primary_candidates.extend([f"www.{domain_bare}/*", f"www.{domain_bare}"])
-        primary_candidates.append(domain_bare)
+            primary_candidates.extend([f"www.{domain_bare}", f"www.{domain_bare}/*"])
 
         collected_snapshots: Dict[str, Dict[str, Any]] = {}
-        
+
         for candidate_url in primary_candidates:
             try:
                 logger.info(f"WaybackProvider: Querying CDX for target pattern: {candidate_url}")
@@ -103,11 +103,13 @@ class WaybackProvider(ArchiveProvider):
                                     "mime": mime_val or "text/html",
                                     "digest": snapshot_dict.get("digest", "")
                                 }
-                    # Stop querying further candidates if we have accumulated substantial snapshots (>= 20)
-                    if len(collected_snapshots) >= 20:
+                    # If we got valid snapshots from primary pattern, stop querying remaining candidates
+                    if len(collected_snapshots) > 0:
+                        logger.info(f"WaybackProvider: Retrieved {len(collected_snapshots)} snapshots from '{candidate_url}'.")
                         break
             except Exception as candidate_err:
                 logger.warning(f"WaybackProvider: CDX query for '{candidate_url}' failed: {candidate_err}")
+                await asyncio.sleep(0.5)
                 continue
 
         # Wildcard subdomain fallback only if primary queries returned zero snapshots
@@ -148,6 +150,7 @@ class WaybackProvider(ArchiveProvider):
                             break
                 except Exception as candidate_err:
                     logger.warning(f"WaybackProvider: Wildcard CDX query for '{w_candidate}' failed: {candidate_err}")
+                    await asyncio.sleep(0.5)
                     continue
 
         return list(collected_snapshots.values())

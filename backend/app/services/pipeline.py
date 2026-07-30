@@ -486,8 +486,8 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
             "redirect_evidence": redirect_eval.evidence,
         }
 
-    # Fetch HTML contents in parallel batches with strict timeout (Semaphore cap = 10)
-    sem = asyncio.Semaphore(10)
+    # Fetch HTML contents in parallel batches with strict timeout (Semaphore cap = 5 for stability)
+    sem = asyncio.Semaphore(5)
 
     async def fetch_html_only(s: dict) -> dict:
         async with sem:

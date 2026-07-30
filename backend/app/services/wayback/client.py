@@ -42,9 +42,9 @@ class WaybackHTTPClient:
                 current_timeout = 2.0
                 current_retries = 1
             elif proxy is None:
-                # Direct connection: cap at 6 second timeout per request attempt for fast pipeline execution
-                current_timeout = min(timeout, 6)
-                current_retries = 1
+                # Direct connection: cap at 8 second timeout per attempt with 2 retries for resilience
+                current_timeout = min(timeout, 8)
+                current_retries = 2
             else:
                 # Explicitly configured trusted proxy: cap at 8s timeout
                 current_timeout = min(timeout, 8)
