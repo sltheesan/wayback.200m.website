@@ -137,21 +137,42 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
 </html>"""
             return HTMLResponse(content=fallback_html)
 
-        # 4. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
+        # 4. Inject CSP upgrade-insecure-requests tag to fix Mixed Content on HTTPS deployment origins
+        csp_tag = '<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">'
+
+        # 5. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
         html_content = re.sub(r'<meta\s+http-equiv=["\']?refresh["\']?[^>]*>', '', html_content, flags=re.IGNORECASE)
 
-        # 5. Strip defunct 10-year-old analytics and tracking scripts that hang connection pools
-        defunct_trackers_pattern = r'<script[^>]*src=["\']?https?://[^"\'>]*(?:quantserve|socialtwist|addthis|scorecardresearch|chartbeat|googletagservices|outbrain|taboola)[^"\'>]*["\']?[^>]*>\s*</script>'
+        # 6. Strip defunct analytics, tracking scripts, and Archive.org RUM telemetry that cause CORS errors
+        defunct_trackers_pattern = r'<script[^>]*src=["\']?https?://[^"\'>]*(?:quantserve|socialtwist|addthis|scorecardresearch|chartbeat|googletagservices|outbrain|taboola|cdn-cgi/rum)[^"\'>]*["\']?[^>]*>\s*</script>'
         html_content = re.sub(defunct_trackers_pattern, '', html_content, flags=re.IGNORECASE)
 
-        # 6. Upgrade insecure http:// image and media URLs to https:// to prevent Mixed Content warnings
-        html_content = re.sub(r'src=["\']http://', 'src="https://', html_content, flags=re.IGNORECASE)
-
-        # 7. Build the Wayback base URL for this target snapshot so relative links resolve correctly
-        wayback_base = f"https://web.archive.org/web/{timestamp}id_/{target_url}"
+        # 7. Build the Wayback prefix & base URL for this snapshot so relative and absolute links resolve correctly
+        wayback_prefix = f"https://web.archive.org/web/{timestamp}id_/"
+        wayback_base = f"{wayback_prefix}{target_url}"
         base_tag = f'<base href="{wayback_base}" target="_blank">'
 
-        # 8. Inject anti-breakout security script & global error handler to suppress uncaught errors from dead scripts
+        # 8. Rewrite absolute original domain URLs (href="http...", src="http...") to route through Wayback Machine
+        # This prevents direct requests to dead/closed 2016 domain IPs that cause ERR_CONNECTION_CLOSED
+        def _rewrite_asset_url(match):
+            attr = match.group(1)
+            quote = match.group(2) or ''
+            url_val = match.group(3)
+            
+            if "web.archive.org" in url_val or "data:" in url_val or url_val.startswith("#"):
+                return match.group(0)
+            
+            rewritten_url = f"{wayback_prefix}{url_val}"
+            return f'{attr}={quote}{rewritten_url}{quote}'
+
+        html_content = re.sub(
+            r'\b(src|href|action)=(["\']?)(https?://[^"\'\s>]+)\2',
+            _rewrite_asset_url,
+            html_content,
+            flags=re.IGNORECASE
+        )
+
+        # 9. Inject anti-breakout security script & global error handler to suppress uncaught errors from dead scripts
         security_script = """<script>
 (function() {
     window.onerror = function() { return true; };
@@ -161,7 +182,7 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
 })();
 </script>"""
 
-        # 9. Optional Redirect Target Banner injection
+        # 10. Optional Redirect Target Banner injection
         redirect_banner = ""
         display_target = redirect_url or (target_url if target_url != url else None)
         if display_target:
@@ -173,7 +194,7 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
     </div>
 </div>"""
 
-        injection = base_tag + security_script
+        injection = csp_tag + base_tag + security_script
 
         if "<head>" in html_content.lower():
             idx = html_content.lower().find("<head>")
