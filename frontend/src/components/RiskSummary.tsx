@@ -36,41 +36,41 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
   const getRiskDetails = () => {
     if (isUnsafe) {
       return {
-        color: 'text-rose-300 border-rose-500/40 bg-rose-500/20 shadow-[0_0_14px_rgba(244,63,94,0.35)]',
+        color: 'text-rose-300 border-rose-500/30 bg-rose-500/10 shadow-[0_0_12px_rgba(244,63,94,0.2)]',
         fill: '#f43f5e',
-        icon: <ShieldAlert className="text-rose-400" size={28} />,
+        icon: <ShieldAlert className="text-rose-400" size={18} />,
         bg: 'bg-rose-500',
-        desc: 'Threat detected. Historical snapshots contain gambling, adult, or fraudulent/phishing content.',
-        containerStyle: 'border-l-4 border-l-rose-500 border-rose-500/40 bg-gradient-to-br from-rose-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(244,63,94,0.18)] relative overflow-hidden',
-        glowColor: 'bg-rose-500/15',
+        desc: 'Threat detected. Historical snapshots contain gambling, adult, malware, or fraudulent/phishing content.',
+        topGradient: 'bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 shadow-[0_2px_14px_rgba(244,63,94,0.4)]',
+        glowColor: 'bg-rose-500/10',
         scoreColor: 'text-rose-400',
-        boxStyle: 'border-rose-500/30 bg-rose-950/30',
+        boxStyle: 'border-slate-800/80 bg-slate-950/50',
       };
     }
     if (isSafe) {
       return {
-        color: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/20 shadow-[0_0_14px_rgba(16,185,129,0.35)]',
+        color: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(16,185,129,0.2)]',
         fill: '#10b981',
-        icon: <ShieldCheck className="text-emerald-400" size={28} />,
+        icon: <ShieldCheck className="text-emerald-400" size={18} />,
         bg: 'bg-emerald-500',
         desc: 'No significant risk patterns detected. Historical content matches safe category signatures.',
-        containerStyle: 'border-l-4 border-l-emerald-500 border-emerald-500/40 bg-gradient-to-br from-emerald-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(16,185,129,0.18)] relative overflow-hidden',
-        glowColor: 'bg-emerald-500/15',
+        topGradient: 'bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 shadow-[0_2px_14px_rgba(16,185,129,0.4)]',
+        glowColor: 'bg-emerald-500/10',
         scoreColor: 'text-emerald-400',
-        boxStyle: 'border-emerald-500/30 bg-emerald-950/30',
+        boxStyle: 'border-slate-800/80 bg-slate-950/50',
       };
     }
     // Medium / Unknown Risk
     return {
-      color: 'text-amber-300 border-amber-500/40 bg-amber-500/20 shadow-[0_0_14px_rgba(245,158,11,0.35)]',
+      color: 'text-amber-300 border-amber-500/30 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.2)]',
       fill: '#f59e0b',
-      icon: <ShieldAlert className="text-amber-400" size={28} />,
+      icon: <ShieldAlert className="text-amber-400" size={18} />,
       bg: 'bg-amber-500',
       desc: 'Moderate risk. Detected some flagged categories or irregular historical content changes.',
-      containerStyle: 'border-l-4 border-l-amber-500 border-amber-500/40 bg-gradient-to-br from-amber-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(245,158,11,0.18)] relative overflow-hidden',
-      glowColor: 'bg-amber-500/15',
+      topGradient: 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 shadow-[0_2px_14px_rgba(245,158,11,0.4)]',
+      glowColor: 'bg-amber-500/10',
       scoreColor: 'text-amber-400',
-      boxStyle: 'border-amber-500/30 bg-amber-950/30',
+      boxStyle: 'border-slate-800/80 bg-slate-950/50',
     };
   };
 
@@ -125,70 +125,140 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     : getCategoryMeta(primaryCat);
 
   return (
-    <div className={`glass-panel p-5 sm:p-8 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8 ${details.containerStyle}`}>
+    <div className="glass-panel p-6 sm:p-8 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8 relative overflow-hidden transition-all duration-300 border border-slate-800/80 bg-slate-900/60 shadow-2xl">
+      {/* Top ambient glowing accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-1.5 ${details.topGradient}`} />
+
       {/* Background ambient glow blob */}
-      <div className={`absolute -top-24 -right-24 w-64 h-64 ${details.glowColor} rounded-full blur-3xl pointer-events-none`} />
+      <div className={`absolute -top-28 -right-28 w-72 h-72 ${details.glowColor} rounded-full blur-3xl pointer-events-none`} />
 
       {/* Circle Gauge Component */}
-      <div className="flex flex-col items-center justify-center w-full md:min-w-[180px] md:w-auto relative z-10">
-        <div className="relative">
-          <svg className="w-32 h-32 sm:w-36 sm:h-36">
-            {/* Background Circle */}
+      <div className="flex flex-col items-center justify-center w-full md:min-w-[210px] md:w-auto relative z-10">
+        <div className="relative flex items-center justify-center">
+          <svg className="w-36 h-36 sm:w-40 sm:h-40 overflow-visible">
+            <defs>
+              <linearGradient id="safeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="50%" stopColor="#14b8a6" />
+                <stop offset="100%" stopColor="#06b6d4" />
+              </linearGradient>
+              <linearGradient id="mediumGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f59e0b" />
+                <stop offset="50%" stopColor="#eab308" />
+                <stop offset="100%" stopColor="#f97316" />
+              </linearGradient>
+              <linearGradient id="unsafeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f43f5e" />
+                <stop offset="50%" stopColor="#fb7185" />
+                <stop offset="100%" stopColor="#ff4500" />
+              </linearGradient>
+              <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor={details.fill} floodOpacity="0.7" />
+              </filter>
+            </defs>
+
+            {/* Outer Decorative Radar Ticker Ring */}
             <circle
-              className="text-slate-800/80"
+              className="text-slate-800/80 stroke-slate-700/50 opacity-60"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              strokeDasharray="3 5"
+              fill="transparent"
+              r="72"
+              cx="80"
+              cy="80"
+            />
+
+            {/* Inner Track Circle */}
+            <circle
+              className="text-slate-900/90"
               strokeWidth={strokeWidth}
               stroke="currentColor"
               fill="transparent"
               r={radius}
-              cx="72"
-              cy="72"
+              cx="80"
+              cy="80"
             />
-            {/* Progress Circle */}
+
+            {/* Glowing Dynamic Progress Arc */}
             <circle
               className="progress-ring__circle"
               strokeWidth={strokeWidth}
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              stroke={details.fill}
+              stroke={`url(#${isUnsafe ? 'unsafeGradient' : isSafe ? 'safeGradient' : 'mediumGradient'})`}
+              filter="url(#neonGlow)"
               fill="transparent"
               r={radius}
-              cx="72"
-              cy="72"
+              cx="80"
+              cy="80"
             />
           </svg>
-          {/* Centered Score Text */}
+
+          {/* Centered Score Matrix */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`text-3xl font-black tracking-tight ${details.scoreColor}`}>{risk_score}</span>
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Risk Score</span>
+            <span className={`text-4xl font-black tracking-tight ${details.scoreColor} drop-shadow-[0_0_12px_rgba(0,0,0,0.8)]`}>
+              {risk_score}
+            </span>
+            <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-widest mt-0.5">
+              Risk Index
+            </span>
+            <div className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider flex items-center space-x-1 ${details.color} backdrop-blur-md`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${details.bg} animate-pulse`} />
+              <span>{isSafe ? 'SECURE' : isUnsafe ? 'CRITICAL' : 'ELEVATED'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Threat Spectrum Continuum Bar */}
+        <div className="mt-3.5 w-full space-y-1 px-1">
+          <div className="flex justify-between text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+            <span className="text-emerald-400">Safe (0-30)</span>
+            <span className="text-amber-400">Mod (31-60)</span>
+            <span className="text-rose-400 font-extrabold">Threat (61+)</span>
+          </div>
+          <div className="relative w-full h-2 rounded-full bg-slate-950 border border-slate-800/80 overflow-hidden flex shadow-inner">
+            <div className="w-[35%] bg-emerald-500/25 border-r border-slate-900" />
+            <div className="w-[30%] bg-amber-500/25 border-r border-slate-900" />
+            <div className="w-[35%] bg-rose-500/25" />
+            
+            {/* Dynamic Sliding Needle Indicator */}
+            <div
+              className="absolute top-0 bottom-0 w-2.5 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.9)] transition-all duration-700 -ml-1 border border-white/50"
+              style={{
+                left: `${Math.min(Math.max(risk_score, 3), 97)}%`,
+                backgroundColor: details.fill
+              }}
+            />
           </div>
         </div>
 
         {/* Score Composition Sub-panel */}
-        <div className={`mt-4 w-full border ${details.boxStyle} p-3 rounded-xl flex flex-col space-y-1.5 text-[11px] font-medium text-slate-300`}>
-          <div className="flex justify-between">
-            <span>Peak Score ({peak_score >= 65 ? '80%' : '60%'}):</span>
-            <span className="font-bold text-white">{peak_score}</span>
+        <div className={`mt-3.5 w-full border ${details.boxStyle} p-3 rounded-xl flex flex-col space-y-1.5 text-[11px] font-medium text-slate-300 backdrop-blur-md shadow-lg`}>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400 text-[10px] font-semibold">Peak Score ({peak_score >= 65 ? '80%' : '60%'}):</span>
+            <span className="font-extrabold text-white font-mono">{peak_score}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Avg Score ({peak_score >= 65 ? '20%' : '40%'}):</span>
-            <span className="font-bold text-white">{avg_score}</span>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-400 text-[10px] font-semibold">Average ({peak_score >= 65 ? '20%' : '40%'}):</span>
+            <span className="font-extrabold text-white font-mono">{avg_score}</span>
           </div>
-          <div className="border-t border-slate-700/50 my-1 pt-1 flex justify-between font-bold text-[10px] uppercase text-slate-200">
+          <div className="border-t border-slate-800/80 my-1 pt-1 flex justify-between font-bold text-[10px] uppercase text-slate-200">
             <span>Weighted Total:</span>
-            <span className={details.scoreColor}>{risk_score}</span>
+            <span className={`${details.scoreColor} font-mono font-black text-xs`}>{risk_score} / 100</span>
           </div>
         </div>
       </div>
 
       {/* Domain Details */}
-      <div className="flex-1 flex flex-col justify-between">
+      <div className="flex-1 flex flex-col justify-between relative z-10 w-full">
         <div>
-          <div className="flex flex-wrap items-center gap-2.5 mb-2">
-            <h2 className="text-2xl font-black tracking-tight text-white">{domain}</h2>
+          <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">{domain}</h2>
             
             {/* Risk Level Badge */}
-            <div className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider flex items-center space-x-1.5 ${details.color}`}>
+            <div className={`px-3 py-1 rounded-full text-xs font-extrabold border uppercase tracking-wider flex items-center space-x-1.5 ${details.color}`}>
               {details.icon}
               <span>{risk_level} RISK</span>
             </div>
@@ -227,7 +297,7 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
                         <span className="text-slate-300">{catLabel}</span>
                         <span className="text-slate-400">{score}%</span>
                       </div>
-                      <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/40">
+                      <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/40">
                         <div className={`${barColor} h-full rounded-full transition-all duration-500`} style={{ width: `${score}%` }} />
                       </div>
                     </div>
@@ -243,7 +313,7 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
                     </span>
                     <span className="text-slate-400 font-mono">100% Safety Confidence</span>
                   </div>
-                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-800/40">
+                  <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/40">
                     <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '100%' }} />
                   </div>
                   {niche && (

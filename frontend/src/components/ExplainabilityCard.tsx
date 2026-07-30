@@ -26,10 +26,10 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
   const theme = isUnsafe
     ? {
         color: '#f43f5e',
-        badgeBg: 'bg-rose-500/20 border-rose-500/40 text-rose-300 shadow-[0_0_14px_rgba(244,63,94,0.35)]',
-        boxBg: 'bg-rose-950/25 border-rose-500/35',
-        containerStyle: 'border-l-4 border-l-rose-500 border-rose-500/40 bg-gradient-to-br from-rose-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(244,63,94,0.18)] relative overflow-hidden',
-        glowColor: 'bg-rose-500/15',
+        badgeBg: 'bg-rose-500/10 border-rose-500/30 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.18)]',
+        boxBg: 'bg-slate-950/60 border-slate-800/80',
+        topGradient: 'bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 shadow-[0_2px_14px_rgba(244,63,94,0.4)]',
+        glowColor: 'bg-rose-500/10',
         iconColor: '#f43f5e',
         barColor: 'bg-rose-500',
         checkColor: '#f43f5e',
@@ -38,10 +38,10 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
     : isSafe
     ? {
         color: '#10b981',
-        badgeBg: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)]',
-        boxBg: 'bg-emerald-950/25 border-emerald-500/35',
-        containerStyle: 'border-l-4 border-l-emerald-500 border-emerald-500/40 bg-gradient-to-br from-emerald-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(16,185,129,0.18)] relative overflow-hidden',
-        glowColor: 'bg-emerald-500/15',
+        badgeBg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.18)]',
+        boxBg: 'bg-slate-950/60 border-slate-800/80',
+        topGradient: 'bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 shadow-[0_2px_14px_rgba(16,185,129,0.4)]',
+        glowColor: 'bg-emerald-500/10',
         iconColor: '#10b981',
         barColor: 'bg-emerald-500',
         checkColor: '#10b981',
@@ -49,10 +49,10 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
       }
     : {
         color: '#f59e0b',
-        badgeBg: 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.35)]',
-        boxBg: 'bg-amber-950/25 border-amber-500/35',
-        containerStyle: 'border-l-4 border-l-amber-500 border-amber-500/40 bg-gradient-to-br from-amber-950/30 via-slate-900/85 to-slate-900/95 shadow-[0_0_40px_rgba(245,158,11,0.18)] relative overflow-hidden',
-        glowColor: 'bg-amber-500/15',
+        badgeBg: 'bg-amber-500/10 border-amber-500/30 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.18)]',
+        boxBg: 'bg-slate-950/60 border-slate-800/80',
+        topGradient: 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 shadow-[0_2px_14px_rgba(245,158,11,0.4)]',
+        glowColor: 'bg-amber-500/10',
         iconColor: '#f59e0b',
         barColor: 'bg-amber-500',
         checkColor: '#f59e0b',
@@ -62,9 +62,12 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
   const confPct = ai_confidence != null ? Math.round(ai_confidence * 100) : (isSafe ? 100 : null);
 
   return (
-    <div className={`glass-panel p-6 sm:p-8 space-y-6 transition-all duration-300 ${theme.containerStyle}`}>
+    <div className="glass-panel p-6 sm:p-8 space-y-6 transition-all duration-300 border border-slate-800/80 bg-slate-900/60 shadow-2xl relative overflow-hidden">
+      {/* Top ambient glowing accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-1.5 ${theme.topGradient}`} />
+
       {/* Background ambient glow blob */}
-      <div className={`absolute -top-24 -right-24 w-64 h-64 ${theme.glowColor} rounded-full blur-3xl pointer-events-none`} />
+      <div className={`absolute -top-28 -right-28 w-72 h-72 ${theme.glowColor} rounded-full blur-3xl pointer-events-none`} />
 
       {/* Header */}
       <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4 relative z-10">
@@ -95,7 +98,7 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
             <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
               Analysis Narrative
             </h4>
-            <div className={`p-5 rounded-xl border ${theme.boxBg} relative overflow-hidden min-h-[140px] flex flex-col justify-center`}>
+            <div className={`p-5 rounded-xl border ${theme.boxBg} relative overflow-hidden min-h-[140px] flex flex-col justify-center shadow-inner`}>
               <div className="absolute top-0 left-0 h-full w-1.5 rounded-l-xl" style={{ backgroundColor: theme.color }} />
               <p className="text-sm text-slate-100 leading-relaxed pl-2 font-medium">
                 {risk_narrative}
@@ -146,7 +149,7 @@ export default function ExplainabilityCard({ data }: ExplainabilityCardProps) {
             {Array.isArray(evidence_bullets) && evidence_bullets.length > 0 ? (
               <div className="space-y-3 w-full">
                 {evidence_bullets.map((bullet, i) => (
-                  <div key={i} className={`flex items-start space-x-3 text-xs text-slate-200 p-3 rounded-lg border ${theme.boxBg} transition-colors`}>
+                  <div key={i} className="flex items-start space-x-3 text-xs text-slate-200 p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/50 transition-colors">
                     <CheckCircle size={15} style={{ color: theme.color }} className="mt-0.5 shrink-0" />
                     <span className="leading-relaxed font-medium">{bullet}</span>
                   </div>
