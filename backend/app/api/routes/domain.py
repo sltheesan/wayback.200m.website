@@ -143,9 +143,11 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
         # 5. Strip meta-refresh auto-redirect tags to prevent automatic browser navigation
         html_content = re.sub(r'<meta\s+http-equiv=["\']?refresh["\']?[^>]*>', '', html_content, flags=re.IGNORECASE)
 
-        # 6. Strip defunct analytics, tracking scripts, and Archive.org RUM telemetry that cause CORS errors
-        defunct_trackers_pattern = r'<script[^>]*src=["\']?https?://[^"\'>]*(?:quantserve|socialtwist|addthis|scorecardresearch|chartbeat|googletagservices|outbrain|taboola|cdn-cgi/rum)[^"\'>]*["\']?[^>]*>\s*</script>'
+        # 6. Strip defunct analytics, tracking scripts, WordPress emoji scripts, and Archive.org/Cloudflare RUM telemetry
+        defunct_trackers_pattern = r'<script[^>]*src=["\']?[^"\'>]*(?:quantserve|socialtwist|addthis|scorecardresearch|chartbeat|googletagservices|outbrain|taboola|cdn-cgi/rum|wp-emoji|s\.w\.org)[^"\'>]*["\']?[^>]*>\s*</script>'
         html_content = re.sub(defunct_trackers_pattern, '', html_content, flags=re.IGNORECASE)
+        # Strip inline RUM beacon calls
+        html_content = re.sub(r'https?://[^"\'\s>]*cdn-cgi/rum[^"\'\s>]*', 'about:blank', html_content, flags=re.IGNORECASE)
 
         # 7. Build the Wayback prefix & base URL for this snapshot so relative and absolute links resolve correctly
         wayback_prefix = f"https://web.archive.org/web/{timestamp}id_/"
