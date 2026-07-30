@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Shield, Eye, EyeOff, AlertCircle, Lock, User, Loader2, ArrowLeft, KeyRound, CheckCircle2 } from 'lucide-react';
-import cyberSecurityBg from '../assets/cyber_security_bg.png';
+import logo200M from '../assets/logo_200m.png';
 
 export default function LoginPage() {
   const { login, isLoading, currentUser, isAuthenticated } = useAuth();
@@ -162,7 +162,7 @@ export default function LoginPage() {
       {/* LEFT SIDE: CYBERSECURITY IMAGE BANNER (Hidden on Mobile) */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden select-none">
         <img 
-          src={cyberSecurityBg} 
+          src={logo200M} 
           alt="Cybersecurity Portal Banner" 
           className="absolute inset-0 h-full w-full object-cover opacity-60 mix-blend-luminosity scale-[1.02] filter blur-[0.5px]"
         />
@@ -171,10 +171,11 @@ export default function LoginPage() {
         
         <div className="relative z-10 m-auto max-w-lg px-8 py-12 flex flex-col justify-between h-[85%] text-left">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-linear-to-r from-violet-600 to-indigo-600 rounded-xl shadow-[0_0_30px_rgba(99,102,241,0.4)]">
-              <Shield size={28} className="text-white" />
+            <img src={logo200M} alt="200M Cyber Dragon Logo" className="h-12 w-auto rounded-xl shadow-[0_0_24px_rgba(139,92,246,0.5)] border border-violet-500/40 object-contain" />
+            <div>
+              <span className="text-xl font-black tracking-wider uppercase text-white block">200M ChronoSentinel</span>
+              <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest block">AI Threat Intelligence Portal</span>
             </div>
-            <span className="text-lg font-black tracking-wider uppercase text-white font-mono">ChronoSentinel AI</span>
           </div>
           
           <div className="space-y-6 my-auto pt-16">

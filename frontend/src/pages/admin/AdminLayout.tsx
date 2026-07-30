@@ -4,9 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import NotificationDropdown from '../../components/admin/NotificationDropdown';
 import {
   LayoutDashboard, Users, Globe, BarChart3, ClipboardList,
-  LogIn, Activity, Settings, LogOut, Shield, ChevronLeft, ChevronRight,
+  LogIn, Activity, Settings, LogOut, ChevronLeft, ChevronRight,
   Menu,
 } from 'lucide-react';
+
+import logo200M from '../../assets/logo_200m.png';
 
 const NAV_ITEMS = [
   { label: 'Dashboard',     path: '/admin/dashboard',      icon: LayoutDashboard, roles: ['admin', 'super_admin'] },
@@ -57,20 +59,21 @@ export default function AdminLayout() {
         display: 'flex', alignItems: 'center', gap: 12,
         minHeight: 72,
       }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 0 20px rgba(99,102,241,0.35)',
-        }}>
-          <Shield size={18} color="white" />
-        </div>
+        <img
+          src={logo200M}
+          alt="200M Cyber Dragon Logo"
+          style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            objectFit: 'contain', border: '1px solid rgba(139,92,246,0.3)',
+            boxShadow: '0 0 15px rgba(139,92,246,0.35)',
+          }}
+        />
         {!collapsed && (
           <div>
-            <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 14, lineHeight: 1.2 }}>
-              ChronoSentinel
+            <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: 13, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
+              200M ChronoSentinel
             </div>
-            <div style={{ color: '#475569', fontSize: 11, fontWeight: 500 }}>Admin Panel</div>
+            <div style={{ color: '#a78bfa', fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }}>ADMIN PORTAL</div>
           </div>
         )}
       </div>

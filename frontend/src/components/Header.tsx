@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ShieldAlert, Activity, Database, Server, LogOut, User } from 'lucide-react';
+import { Activity, Database, Server, LogOut, User } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+
+import logo200M from '../assets/logo_200m.png';
 
 interface SystemStatusState {
   status: string;
@@ -78,16 +80,17 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
         <div className="flex items-center justify-between h-14 md:h-16 gap-3">
 
           {/* Logo */}
-          <div className="flex items-center space-x-2.5 min-w-0 shrink-0">
-            <div className="p-1.5 sm:p-2 bg-brand-500/10 border border-brand-500/20 rounded-lg text-brand-400">
-              <ShieldAlert size={18} className="stroke-[2]" />
-            </div>
+          <div className="flex items-center space-x-3 min-w-0 shrink-0 cursor-pointer" onClick={() => setActiveTab('scan')}>
+            <img src={logo200M} alt="200M Logo" className="h-9 sm:h-10 w-auto rounded-lg shadow-[0_0_14px_rgba(139,92,246,0.35)] border border-violet-500/30 transition-transform duration-200 hover:scale-105 object-contain" />
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-base lg:text-lg font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-indigo-200 truncate">
-                ChronoSentinel AI
-              </h1>
+              <div className="flex items-center space-x-1.5">
+                <h1 className="text-sm sm:text-base lg:text-lg font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-violet-300 via-purple-300 to-indigo-200 truncate">
+                  200M ChronoSentinel
+                </h1>
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-violet-500/20 border border-violet-500/30 text-violet-300 uppercase tracking-widest hidden xl:inline-block">AI</span>
+              </div>
               <p className="text-[9px] text-slate-400 tracking-wider uppercase font-semibold hidden sm:block">
-                Domain History &amp; Risk Intelligence Platform
+                Web Intelligence &amp; Domain History Platform
               </p>
             </div>
           </div>
