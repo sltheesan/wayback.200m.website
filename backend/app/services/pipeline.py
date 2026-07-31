@@ -422,10 +422,25 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         detector_results = run_all_detectors(html_content, cleaned_text, clf_result, redirect_url=redirect_eval.redirect_target)
         high_signals = high_signal_count(detector_results)
 
+        # Check detector results for repurposed redirect signals
+        repurposed_det = next((d for d in detector_results if d.get("detector") == "repurposed_domain_redirect"), {})
+        if repurposed_det.get("is_repurposed_redirect") or repurposed_det.get("signal") == "high":
+            niche = repurposed_det.get("target_niche", "gambling")
+            if niche in ("gambling", "adult"):
+                dual_risk.primary_category = niche
+                dual_risk.redirect_target_category = niche
+                if not any(f.get("category") == niche for f in flags):
+                    flags.append({
+                        "category": niche,
+                        "evidence": f"Repurposed domain redirect to {niche.upper()} target network: {redirect_eval.redirect_target or 'JS/Meta Redirect'}",
+                        "severity": "HIGH",
+                        "keyword": "redirect_to_spam_niche"
+                    })
+
         # Final risk score calculation combining Dual Risk Engine + verified redirect threats
         final_risk_score = max(risk_score, dual_risk.final_risk_score)
 
-        if redirect_eval.redirect_detected and dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "phishing_scam", "malware", "malware_hacking"):
+        if (redirect_eval.redirect_detected or repurposed_det.get("is_repurposed_redirect")) and (dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "phishing_scam", "malware", "malware_hacking") or repurposed_det.get("signal") == "high"):
             final_risk_score = max(final_risk_score, 85)
 
         evidence_url = build_snapshot_evidence_url(

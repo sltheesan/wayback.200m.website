@@ -81,6 +81,9 @@ class DualRiskEvaluationResult:
     category_scores: Dict[str, float] = None
 
 
+import re
+from backend.app.AI.detectors import _RE_GAMBLING_KEYWORDS, _RE_ADULT_KEYWORDS
+
 class RiskDecisionEngine:
     @staticmethod
     def evaluate_dual_risk(
@@ -91,7 +94,7 @@ class RiskDecisionEngine:
     ) -> DualRiskEvaluationResult:
         """
         Runs independent ML classification on original snapshot HTML and target HTML,
-        and applies the Dual Risk Matrix.
+        and applies the Dual Risk Matrix (including target URL & raw HTML threat scanning).
         """
         # 1. Clean & Classify Original Snapshot
         orig_cleaned = clean_html_content(original_html or "")
@@ -128,6 +131,26 @@ class RiskDecisionEngine:
             if target_category in HIGH_SEVERITY_CATEGORIES:
                 target_risk = max(target_risk, 85)
 
+        # 2b. Secondary Fallback: Scan Redirect Target URL & Raw Original HTML for Threat Signals
+        redirect_target_str = (redirect_eval.redirect_target or "").lower()
+        raw_html_str = (original_html or "").lower()
+        combined_redirect_text = f"{redirect_target_str} {' '.join(redirect_eval.evidence or [])} {raw_html_str}"
+
+        has_gambling_url_signal = bool(_RE_GAMBLING_KEYWORDS.search(combined_redirect_text))
+        has_adult_url_signal = bool(_RE_ADULT_KEYWORDS.search(combined_redirect_text))
+
+        if redirect_eval.redirect_detected and (not target_category or target_category == "safe"):
+            if has_gambling_url_signal:
+                target_category = "gambling"
+                target_risk = max(target_risk, 85)
+            elif has_adult_url_signal:
+                target_category = "adult"
+                target_risk = max(target_risk, 85)
+        elif not redirect_eval.redirect_detected and has_gambling_url_signal and ("location" in raw_html_str or "refresh" in raw_html_str):
+            # Raw HTML has inline redirect script + gambling keywords
+            orig_category = "gambling"
+            orig_risk = max(orig_risk, 85)
+
         # 3. Apply Dual Risk Matrix
         final_risk = orig_risk
         display_category = orig_category
@@ -135,18 +158,21 @@ class RiskDecisionEngine:
         final_confidence = orig_confidence
         final_summary = orig_clf.summary
 
-        if redirect_eval.redirect_detected:
+        if redirect_eval.redirect_detected or (target_category and target_category in HIGH_SEVERITY_CATEGORIES):
             if target_category in HIGH_SEVERITY_CATEGORIES:
                 final_risk = max(orig_risk, target_risk, 85)
-                display_category = f"{orig_category} -> {target_category}"
+                display_category = "gambling" if target_category == "gambling" else f"{orig_category} -> {target_category}"
                 narrative = (
                     f"⚠️ CHRONOSENTINEL WARNING: Snapshot for {domain} redirects to an external "
-                    f"{target_category.upper()} threat network ({redirect_eval.redirect_target}). "
+                    f"{target_category.upper()} threat network ({redirect_eval.redirect_target or 'redirect URL'}). "
                     f"Original page was classified as '{orig_category}'."
                 )
                 if target_clf:
                     final_confidence = target_clf.confidence
                     final_summary = target_clf.summary
+                else:
+                    final_confidence = 0.90
+                    final_summary = f"Redirect target ({redirect_eval.redirect_target}) detected as {target_category.upper()} threat network."
             elif target_category and target_category != "safe":
                 final_risk = max(orig_risk, target_risk, 50)
                 display_category = f"{orig_category} -> {target_category}"
@@ -162,5 +188,5 @@ class RiskDecisionEngine:
             redirect_target_category=target_category,
             redirect_target_risk=target_risk,
             risk_narrative=narrative,
-            category_scores=orig_scores
+            category_scores=orig_scores or {display_category: 0.90}
         )

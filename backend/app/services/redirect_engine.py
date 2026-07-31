@@ -226,8 +226,8 @@ class RedirectEngine:
                 meta_target = meta_match.group(1)
 
         if meta_target:
-            score += 25
-            evidence_items.append(f"✓ Meta Refresh Tag: {meta_target} (+25)")
+            score += 55
+            evidence_items.append(f"✓ Meta Refresh Tag: {meta_target} (+55)")
             if not raw_target:
                 raw_target = meta_target
 
@@ -241,8 +241,8 @@ class RedirectEngine:
                 js_target = js_match.group(1)
 
         if js_target:
-            score += 20
-            evidence_items.append(f"✓ JavaScript Location Script: {js_target} (+20)")
+            score += 55
+            evidence_items.append(f"✓ JavaScript Location Script: {js_target} (+55)")
             if not raw_target:
                 raw_target = js_target
 
