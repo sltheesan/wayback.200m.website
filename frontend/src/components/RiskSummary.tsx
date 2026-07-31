@@ -1,4 +1,4 @@
-import { ShieldCheck, ShieldAlert, AlertTriangle, Calendar, Layers } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, Calendar, Layers, ArrowRight, ExternalLink, RefreshCw } from 'lucide-react';
 import { DomainAnalysisResponse } from '../types';
 
 interface RiskSummaryProps {
@@ -14,11 +14,17 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     last_updated,
     peak_score,
     avg_score,
-    category_confidence
+    category_confidence,
+    snapshots
   } = data;
 
   const THREAT_CATEGORIES = new Set(['gambling', 'adult', 'phishing_scam', 'malware_hacking', 'illegal_pharmaceuticals']);
   
+  // Find redirect telemetry across snapshots
+  const redirectSnapshots = (snapshots || []).filter(s => s.redirect_detected || s.is_redirect || s.redirect_url || s.redirect_target);
+  const hasRedirect = redirectSnapshots.length > 0;
+  const threatRedirectSnap = redirectSnapshots.find(s => s.redirect_target_category && s.redirect_target_category !== 'safe') || redirectSnapshots[0];
+
   // Primary category helper
   const activeCategories = category_confidence
     ? Object.entries(category_confidence).filter(([_, score]) => score > 0)
@@ -40,7 +46,7 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
         fill: '#f43f5e',
         icon: <ShieldAlert className="text-rose-400" size={18} />,
         bg: 'bg-rose-500',
-        desc: 'Threat detected. Historical snapshots contain gambling, adult, malware, or fraudulent/phishing content.',
+        desc: 'Threat detected. Historical snapshots contain gambling, adult, malware, redirect abuse, or fraudulent content.',
         topGradient: 'bg-gradient-to-r from-rose-500 via-red-500 to-amber-500 shadow-[0_2px_14px_rgba(244,63,94,0.4)]',
         glowColor: 'bg-rose-500/10',
         scoreColor: 'text-rose-400',
@@ -66,7 +72,7 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
       fill: '#f59e0b',
       icon: <AlertTriangle className="text-amber-400" size={18} />,
       bg: 'bg-amber-500',
-      desc: 'Moderate risk. Detected some flagged categories or irregular historical content changes.',
+      desc: 'Moderate risk. Detected some flagged categories, redirects, or irregular historical content changes.',
       topGradient: 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 shadow-[0_2px_14px_rgba(245,158,11,0.4)]',
       glowColor: 'bg-amber-500/10',
       scoreColor: 'text-amber-400',
@@ -98,11 +104,13 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
   };
 
   const getCategoryMeta = (cat: string) => {
-    switch (cat) {
+    switch (cat.toLowerCase()) {
       case 'gambling':
-        return { label: 'Gambling & Betting', icon: '🎰', style: 'text-purple-300 border-purple-500/30 bg-purple-500/10' };
+      case 'gambling abuse (historical)':
+        return { label: 'Gambling & Betting Abuse', icon: '🎰', style: 'text-purple-300 border-purple-500/30 bg-purple-500/10' };
       case 'adult':
-        return { label: 'Adult Content', icon: '🔞', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+      case 'adult abuse (historical)':
+        return { label: 'Adult Content Abuse', icon: '🔞', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
       case 'phishing_scam':
         return { label: 'Phishing & Scam', icon: '🎣', style: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
       case 'malware_hacking':
@@ -114,7 +122,7 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
       case 'unknown':
         return { label: 'Unknown / Insufficient Data', icon: '❓', style: 'text-slate-400 border-slate-500/30 bg-slate-500/10' };
       default:
-        return { label: 'Safe / Legitimate Domain', icon: '✅', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
+        return { label: primaryCat || 'Safe / Legitimate Domain', icon: '✅', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
     }
   };
 
@@ -273,6 +281,64 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
           <p className="text-slate-300 text-sm leading-relaxed mb-4">
             {details.desc}
           </p>
+
+          {/* REDIRECT THREAT INTELLIGENCE SUMMARY CARD */}
+          {hasRedirect && threatRedirectSnap && (
+            <div className="mb-5 p-4 rounded-xl border border-rose-500/40 bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-slate-950/60 shadow-lg relative overflow-hidden">
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className="text-rose-400 animate-spin-slow" size={16} />
+                  <span className="text-xs font-black uppercase tracking-wider text-rose-300">
+                    Redirect Intelligence Found
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    {redirectSnapshots.length} Redirect Snapshot{redirectSnapshots.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                {threatRedirectSnap.redirect_confidence !== undefined && (
+                  <span className="text-[10px] font-extrabold bg-purple-500/30 text-purple-200 px-2.5 py-0.5 rounded border border-purple-500/40">
+                    {threatRedirectSnap.redirect_confidence}% Redirect Confidence
+                  </span>
+                )}
+              </div>
+
+              {/* Redirect Flow Path */}
+              <div className="flex items-center space-x-2 text-xs font-mono bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80 overflow-x-auto mb-2.5">
+                <span className="text-slate-300 font-bold">{domain}</span>
+                <ArrowRight size={14} className="text-rose-400 flex-shrink-0" />
+                <span className="text-rose-300 font-extrabold bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">
+                  {threatRedirectSnap.redirect_target || threatRedirectSnap.redirect_url || 'External Redirect Target'}
+                </span>
+                {(threatRedirectSnap.redirect_target || threatRedirectSnap.redirect_url) && (
+                  <a
+                    href={threatRedirectSnap.redirect_target || threatRedirectSnap.redirect_url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyan-400 hover:text-cyan-300 flex items-center space-x-1 text-[11px] font-sans font-bold underline ml-auto"
+                  >
+                    <span>Inspect</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+
+              {/* Dual Category Breakdown (Original Page vs Redirect Target) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-900/60 p-2 rounded border border-slate-800/80 flex items-center justify-between">
+                  <span className="text-slate-400 font-medium">Original Page Category:</span>
+                  <span className="text-slate-200 font-bold uppercase">
+                    {threatRedirectSnap.original_category || 'Safe / Original'}
+                  </span>
+                </div>
+                <div className="bg-rose-950/50 p-2 rounded border border-rose-500/30 flex items-center justify-between">
+                  <span className="text-rose-300 font-medium">Redirect Target Category:</span>
+                  <span className="text-rose-200 font-extrabold uppercase flex items-center space-x-1">
+                    <span>⚠️ {threatRedirectSnap.redirect_target_category?.toUpperCase() || 'Gambling / External Abuse'}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Category Classification & Confidence */}
           <div className="space-y-2.5 mb-6 pt-4 border-t border-slate-800/60">
