@@ -640,6 +640,17 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     timeline_entries = build_timeline(list(snapshot_results))
     primary_category = get_primary_category(timeline_entries)
 
+    # Historical Abuse Override Rule:
+    # If peak snapshot score is >= 70, domain cannot be SAFE
+    if peak_score >= 70:
+        overall_level = "HIGH"
+        overall_score = max(overall_score, peak_score)
+        if primary_category == "safe" or not primary_category:
+            # Find the threat category associated with highest risk snapshot
+            highest_risk_snap = max(snapshot_results, key=lambda s: s["risk_score"])
+            snap_cat = highest_risk_snap.get("content_category") or (highest_risk_snap["flags"][0]["category"] if highest_risk_snap.get("flags") else "Threat Abuse")
+            primary_category = f"{snap_cat.capitalize()} Abuse (Historical)"
+
     # 6c. AI Explanation
     top_confidence = max(
         (s.get("category_confidence") or 0.0 for s in snapshot_results), default=0.0
@@ -654,6 +665,17 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         snapshot_results=list(snapshot_results),
         domain=domain_clean,
     )
+
+    # Append Historical Abuse Narrative if peak score >= 70
+    if peak_score >= 70 and "Historical" not in (explanation.narrative or ""):
+        highest_risk_snap = max(snapshot_results, key=lambda s: s["risk_score"])
+        ts_date = highest_risk_snap.get("timestamp", "")
+        formatted_date = f"{ts_date[:4]}-{ts_date[4:6]}-{ts_date[6:8]}" if len(ts_date) >= 8 else ts_date
+        explanation.narrative = (
+            f"⚠️ CHRONOSENTINEL HISTORICAL ABUSE WARNING: Domain {domain_clean} was previously flagged for severe threat/abuse "
+            f"in snapshot {formatted_date} (Risk Score: {highest_risk_snap['risk_score']}/100). "
+            f"{explanation.narrative or ''}"
+        )
 
     # 6d. Threat Intelligence
     threat_intel_results = await query_all_providers(domain_clean)

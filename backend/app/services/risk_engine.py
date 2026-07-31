@@ -42,20 +42,23 @@ def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int,
         raw_avg = sum(scores) / len(scores) if scores else 0.0
     avg_score = int(round(raw_avg))
 
-    # Weighted calculation: if a severe threat peak exists, retain peak dominance (80% peak + 20% avg)
-    if peak_score >= 65:
-        final_score = max(int(round(0.80 * peak_score + 0.20 * raw_avg)), peak_score - 10)
+    # Historical Snapshot Abuse Policy:
+    # If any historical snapshot shows severe abuse (peak_score >= 70), the domain retains UNSAFE status.
+    if peak_score >= 70:
+        final_score = max(peak_score, int(round(0.85 * peak_score + 0.15 * raw_avg)))
+    elif peak_score >= 50:
+        final_score = max(int(round(0.70 * peak_score + 0.30 * raw_avg)), peak_score - 5)
     else:
         final_score = int(round(0.60 * peak_score + 0.40 * raw_avg))
 
     final_score = min(100, max(0, final_score))
 
-    if final_score <= 30:
-        level = "SAFE"
-    elif final_score <= 60:
+    if final_score >= 70:
+        level = "HIGH"
+    elif final_score > 30:
         level = "MEDIUM"
     else:
-        level = "HIGH"
+        level = "SAFE"
 
     return final_score, level, peak_score, avg_score
 

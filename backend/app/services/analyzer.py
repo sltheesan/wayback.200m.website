@@ -376,11 +376,39 @@ def analyze_snapshot_content(
     # Cap final score at 100
     final_score = min(total_score, 100)
 
+    # Integrate Snapshot Evidence Layer (external scripts, backlinks, redirect abuse)
+    try:
+        from backend.app.services.snapshot_evidence import analyze_snapshot_evidence
+        ev_score, ev_findings, _ev_telemetry = analyze_snapshot_evidence(html_content, domain or "", redirect_url)
+        final_score = max(final_score, ev_score)
+        
+        for finding in ev_findings:
+            cat_key = finding.get("category", "General").lower()
+            if cat_key in category_scores:
+                category_scores[cat_key] = max(category_scores[cat_key], finding.get("risk_score", 50))
+            else:
+                category_scores[cat_key] = finding.get("risk_score", 50)
+                
+            flags.append({
+                "category": finding.get("category", "General").lower(),
+                "keyword": finding.get("finding_type", "evidence"),
+                "weight": finding.get("risk_score", 50),
+                "match_count": 1,
+                "element": finding.get("finding_type", "evidence"),
+                "matched_text": finding.get("evidence", ""),
+                "snippet": finding.get("description", ""),
+                "position": 0
+            })
+    except Exception as ev_err:
+        logger.warning(f"Snapshot evidence analysis failed: {ev_err}")
+
     # Enrich flags with location data
     matched_kws = [f.get("keyword") for f in flags if isinstance(f, dict) and f.get("keyword")]
     locations = find_keyword_locations(html_content, matched_kws)
     for flag in flags:
         if not isinstance(flag, dict) or not flag.get("keyword"):
+            continue
+        if flag.get("snippet") and "detected" in flag.get("snippet", ""):
             continue
         flag_kw = flag.get("keyword", "").lower()
         flag_locs = [loc for loc in locations if loc.get("keyword", "").lower() == flag_kw]
@@ -390,9 +418,9 @@ def analyze_snapshot_content(
             flag["snippet"] = flag_locs[0]["snippet"]
             flag["position"] = flag_locs[0]["position"]
         else:
-            flag["element"] = "<body>"
-            flag["matched_text"] = flag.get("keyword", "")
-            flag["snippet"] = f"Keyword match found ({flag.get('match_count', 1)} times)"
+            flag["element"] = flag.get("element") or "<body>"
+            flag["matched_text"] = flag.get("matched_text") or flag.get("keyword", "")
+            flag["snippet"] = flag.get("snippet") or f"Keyword match found ({flag.get('match_count', 1)} times)"
             flag["position"] = 0
 
     return final_score, category_scores, flags
