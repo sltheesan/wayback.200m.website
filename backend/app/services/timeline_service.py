@@ -74,10 +74,10 @@ def build_timeline(snapshot_results: List[Any]) -> List[Dict[str, Any]]:
         # Dominant category for the year
         categories = [_snap_get(s, "content_category") or SAFE_LABEL for s in snaps]
         cat_counter = Counter(categories)
-        # Prefer non-safe categories if they appear at all
-        non_safe = [(c, n) for c, n in cat_counter.items() if c != SAFE_LABEL]
-        if non_safe:
-            dominant_cat = max(non_safe, key=lambda x: x[1])[0]
+        # Prefer actual threat categories (excluding safe, unavailable, server_error)
+        threat_cats = [(c, n) for c, n in cat_counter.items() if c not in (SAFE_LABEL, "unavailable", "server_error")]
+        if threat_cats:
+            dominant_cat = max(threat_cats, key=lambda x: x[1])[0]
         else:
             dominant_cat = SAFE_LABEL
 
@@ -106,7 +106,7 @@ def get_primary_category(timeline: List[Dict[str, Any]]) -> str:
     cat_counts: Counter = Counter()
     for entry in timeline:
         cat = entry.get("category", SAFE_LABEL)
-        if cat != SAFE_LABEL:
+        if cat not in (SAFE_LABEL, "unavailable", "server_error"):
             cat_counts[cat] += entry.get("snapshot_count", 1)
     if cat_counts:
         return cat_counts.most_common(1)[0][0]

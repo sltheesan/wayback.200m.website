@@ -104,26 +104,43 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
   };
 
   const getCategoryMeta = (cat: string) => {
-    switch (cat.toLowerCase()) {
-      case 'gambling':
-      case 'gambling abuse (historical)':
-        return { label: 'Gambling & Betting Abuse', icon: '🎰', style: 'text-purple-300 border-purple-500/30 bg-purple-500/10' };
-      case 'adult':
-      case 'adult abuse (historical)':
-        return { label: 'Adult Content Abuse', icon: '🔞', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
-      case 'phishing_scam':
-        return { label: 'Phishing & Scam', icon: '🎣', style: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
-      case 'malware_hacking':
-        return { label: 'Malware & Hacking', icon: '💀', style: 'text-rose-400 border-rose-500/30 bg-rose-500/10' };
-      case 'illegal_pharmaceuticals':
-        return { label: 'Illegal Pharmaceuticals', icon: '💊', style: 'text-violet-300 border-violet-500/30 bg-violet-500/10' };
-      case 'gaming':
-        return { label: 'Online Gaming', icon: '🎮', style: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10' };
-      case 'unknown':
-        return { label: 'Unknown / Insufficient Data', icon: '❓', style: 'text-slate-400 border-slate-500/30 bg-slate-500/10' };
-      default:
-        return { label: primaryCat || 'Safe / Legitimate Domain', icon: '✅', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
+    const c = (cat || '').toLowerCase();
+    
+    if (c.includes('gambling')) {
+      return { label: c.includes('historical') ? 'Gambling Abuse (Historical)' : 'Gambling & Betting Abuse', icon: '🎰', style: 'text-purple-300 border-purple-500/30 bg-purple-500/10' };
     }
+    if (c.includes('adult')) {
+      return { label: c.includes('historical') ? 'Adult Abuse (Historical)' : 'Adult Content Abuse', icon: '🔞', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+    }
+    if (c.includes('phishing') || c.includes('scam')) {
+      return { label: 'Phishing & Fraud Scam', icon: '🎣', style: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
+    }
+    if (c.includes('malware') || c.includes('hack')) {
+      return { label: 'Malware & Hacking Signals', icon: '💀', style: 'text-rose-400 border-rose-500/30 bg-rose-500/10' };
+    }
+    if (c.includes('pharma') || c.includes('illegal')) {
+      return { label: 'Illegal Pharmaceuticals', icon: '💊', style: 'text-violet-300 border-violet-500/30 bg-violet-500/10' };
+    }
+    if (c.includes('gaming') || c.includes('game')) {
+      return { label: 'Online Gaming & Entertainment', icon: '🎮', style: 'text-cyan-300 border-cyan-500/30 bg-cyan-500/10' };
+    }
+    if (c.includes('crypto')) {
+      return { label: 'Crypto & High Risk Finance', icon: '🪙', style: 'text-amber-300 border-amber-500/30 bg-amber-500/10' };
+    }
+    if (c.includes('redirect')) {
+      return { label: 'Cross-Domain Redirect Abuse', icon: '🔄', style: 'text-rose-300 border-rose-500/30 bg-rose-500/10' };
+    }
+    if (c.includes('seo') || c.includes('spam')) {
+      return { label: 'Injected SEO Link Spam', icon: '🔗', style: 'text-orange-300 border-orange-500/30 bg-orange-500/10' };
+    }
+    if (c.includes('shop') || c.includes('store') || c.includes('commerce')) {
+      return { label: 'E-Commerce & Retail', icon: '🛒', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
+    }
+    if (c.includes('tech') || c.includes('software') || c.includes('dev')) {
+      return { label: 'Technology & Software', icon: '💻', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
+    }
+    
+    return { label: 'Safe / Legitimate Domain', icon: '✅', style: 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' };
   };
 
   // Benign Niche Enrichment for Safe Domains

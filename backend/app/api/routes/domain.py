@@ -87,17 +87,21 @@ async def proxy_snapshot(timestamp: str, url: str, redirect_url: Optional[str] =
 
         # 1. First check if redirect target or original URL is cached in Redis (0ms response)
         html_content = None
-        if resolved_redirect_url and resolved_redirect_url != url:
-            try:
-                html_content = await wayback_service.cache.get_snapshot(timestamp, resolved_redirect_url)
-                if html_content:
-                    target_url = resolved_redirect_url
-            except Exception:
-                pass
+        from backend.app.services.snapshot_evidence import extract_original_url
+        clean_target = extract_original_url(url)
+        url_candidates = [url, clean_target, f"http://{clean_target}", f"https://{clean_target}"]
+        if resolved_redirect_url:
+            clean_red = extract_original_url(resolved_redirect_url)
+            url_candidates = [resolved_redirect_url, clean_red, f"http://{clean_red}", f"https://{clean_red}"] + url_candidates
 
-        if not html_content:
+        for cand in url_candidates:
+            if not cand:
+                continue
             try:
-                html_content = await wayback_service.cache.get_snapshot(timestamp, url)
+                html_content = await wayback_service.cache.get_snapshot(timestamp, cand)
+                if html_content:
+                    target_url = cand
+                    break
             except Exception:
                 pass
 

@@ -104,10 +104,10 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
     : (s.content_category || 'safe').replace(/_/g, ' ').toUpperCase();
   const catIcon = isUnavailable ? '📦' : (CATEGORY_ICONS[s.content_category || 'safe'] || 'SAFE');
 
-  // Instant preview loading timer: preview resolves within 400ms for instant pre-cached rendering
+  // Instant preview loading timer: preview resolves within 200ms for instant pre-cached rendering
   useEffect(() => {
     setIframeLoaded(false);
-    const timer = setTimeout(() => setIframeLoaded(true), 400);
+    const timer = setTimeout(() => setIframeLoaded(true), 200);
     return () => clearTimeout(timer);
   }, [proxyUrl]);
 
@@ -345,8 +345,8 @@ function SnapshotDetailPanel({ s }: { s: Snapshot }) {
                 src={proxyUrl}
                 title={`Preview: ${s.original_url}`}
                 sandbox="allow-scripts"
-                style={{ width: '100%', height: '100%', border: 'none', opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.4s ease' }}
-                loading="lazy"
+                style={{ width: '100%', height: '100%', border: 'none', opacity: iframeLoaded ? 1 : 0, transition: 'opacity 0.2s ease' }}
+                loading="eager"
                 referrerPolicy="no-referrer"
                 onLoad={() => setIframeLoaded(true)}
               />
