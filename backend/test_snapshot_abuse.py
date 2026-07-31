@@ -58,9 +58,40 @@ def test_historical_abuse_domain_classification():
     assert overall_score >= 70
     assert overall_level == "HIGH"
 
+def test_safe_domain_with_normal_external_links():
+    # Page with 13 standard external links (social media, partners, references)
+    html_content = """
+    <html>
+    <body>
+        <h1>Legitimate Business Site</h1>
+        <p>Contact us on social media:</p>
+        <a href="https://twitter.com/business">Twitter</a>
+        <a href="https://facebook.com/business">Facebook</a>
+        <a href="https://linkedin.com/company/business">LinkedIn</a>
+        <a href="https://instagram.com/business">Instagram</a>
+        <a href="https://youtube.com/user/business">YouTube</a>
+        <a href="https://github.com/business">GitHub</a>
+        <a href="https://google.com">Google</a>
+        <a href="https://apple.com">Apple</a>
+        <a href="https://microsoft.com">Microsoft</a>
+        <a href="https://wikipedia.org/wiki/Business">Wikipedia</a>
+        <a href="https://w3.org">W3C</a>
+        <a href="https://schema.org">Schema</a>
+        <a href="https://wordpress.org">WordPress</a>
+    </body>
+    </html>
+    """
+    domain = "legitimate-business-site.com"
+    score, findings, telemetry = analyze_snapshot_evidence(html_content, domain)
+    
+    assert score == 0
+    assert len(findings) == 0
+    assert telemetry["external_links_count"] == 13
+
 if __name__ == "__main__":
     test_extract_original_url()
     test_external_domain_check()
     test_snapshot_evidence_analyzer_gambling_script_and_backlinks()
     test_historical_abuse_domain_classification()
+    test_safe_domain_with_normal_external_links()
     print("ALL HISTORICAL SNAPSHOT ABUSE TESTS PASSED SUCCESSFULLY!")

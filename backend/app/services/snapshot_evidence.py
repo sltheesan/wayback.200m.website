@@ -205,17 +205,38 @@ def analyze_snapshot_evidence(
             })
             link_risk_score = max(link_risk_score, 60)
 
-    # 5. SEO Link Spam Detection Rule
+    # List of common benign social media, tech, and reference domains
+    BENIGN_DOMAINS = {
+        "twitter.com", "x.com", "facebook.com", "linkedin.com", "instagram.com",
+        "youtube.com", "github.com", "wikipedia.org", "google.com", "apple.com",
+        "microsoft.com", "schema.org", "w3.org", "wordpress.org", "vimeo.com"
+    }
+
+    # Filter out benign external links for spam evaluation
+    suspicious_ext_links = [
+        link for link in external_links
+        if not any(b_dom in link["domain"] for b_dom in BENIGN_DOMAINS)
+    ]
+
     total_ext_links = len(external_links)
-    if total_ext_links >= 10:
+    total_suspicious_ext_links = len(suspicious_ext_links)
+
+    # 5. Context-Aware SEO Link Spam Detection Rule
+    # Requires high volume of non-benign external links AND presence of threat backlinks
+    is_link_spam = (
+        (total_suspicious_ext_links >= 30 and link_threat_count >= 2) or
+        (total_suspicious_ext_links >= 40 and link_threat_count >= 1)
+    )
+
+    if is_link_spam:
         findings.append({
             "finding_type": "link_spam",
             "evidence": f"{total_ext_links} external links ({link_threat_count} threat links)",
             "category": "SEO Spam",
-            "risk_score": 50,
-            "description": f"Suspicious SEO link spam detected: page contains {total_ext_links} external links."
+            "risk_score": 35,
+            "description": f"Suspicious SEO link spam detected: page contains {total_suspicious_ext_links} non-benign external links and {link_threat_count} threat backlinks."
         })
-        link_risk_score = max(link_risk_score, 50)
+        link_risk_score = max(link_risk_score, 35)
 
     # 6. Redirect Target Threat Evaluation
     redirect_risk_score = 0
