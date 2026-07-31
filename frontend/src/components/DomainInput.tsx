@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Search, RotateCcw, AlertTriangle, ShieldCheck, Globe } from 'lucide-react';
+import { Search, RotateCcw, AlertTriangle, ShieldCheck, Globe, X } from 'lucide-react';
 
 interface DomainInputProps {
   onScan: (domain: string, forceRefresh: boolean) => void;
@@ -72,7 +72,7 @@ export default function DomainInput({ onScan, loading }: DomainInputProps) {
         {/* Input & Search Group */}
         <div className="relative flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3">
           <div className="relative flex-1 group">
-            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-400 transition-colors duration-200" size={18} />
+            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-violet-400 transition-colors duration-200" size={18} />
             <input
               type="text"
               placeholder="Enter target domain (e.g. example.com, suspicious-site.net)"
@@ -83,17 +83,27 @@ export default function DomainInput({ onScan, loading }: DomainInputProps) {
                   handleSubmit(e);
                 }
               }}
-              className="w-full pl-11 pr-4 py-3.5 glass-input text-base font-medium tracking-wide focus:border-blue-500/50 focus:shadow-[0_0_20px_-3px_rgba(59,130,246,0.2)] transition-all duration-200"
+              className="w-full pl-11 pr-10 py-3.5 glass-input text-base font-medium tracking-wide focus:border-violet-500/60 focus:shadow-[0_0_20px_-3px_rgba(139,92,246,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 transition-all duration-200"
               disabled={loading}
             />
+            {domain && !loading && (
+              <button
+                type="button"
+                onClick={() => setDomain('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-200 transition-colors rounded-full hover:bg-slate-800/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50"
+                aria-label="Clear target domain input"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full md:w-auto px-8 py-3.5 rounded-lg font-bold transition-all duration-200 flex items-center justify-center space-x-2 text-base ${loading
-                ? 'bg-blue-600/50 text-slate-300 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
+            className={`w-full md:w-auto px-8 py-3.5 rounded-lg font-extrabold transition-all duration-200 flex items-center justify-center space-x-2 text-base ${loading
+                ? 'bg-violet-900/40 text-slate-400 border border-violet-500/20 cursor-not-allowed'
+                : 'bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:via-purple-500 hover:to-indigo-500 text-white shadow-[0_0_24px_rgba(139,92,246,0.35)] hover:shadow-[0_0_32px_rgba(139,92,246,0.5)] hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
               }`}
           >
             {loading ? (

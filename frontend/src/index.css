@@ -77,25 +77,25 @@
 /* ─── Reusable component classes ──────────────────────────────── */
 @layer components {
   .glass-panel {
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(18px) saturate(190%);
+    -webkit-backdrop-filter: blur(18px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
     border-radius: 1rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-panel-hover:hover {
-    background: rgba(15, 23, 42, 0.55);
-    border-color: rgba(139, 92, 246, 0.2);
-    box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.08);
+    background: rgba(15, 23, 42, 0.62);
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
     transform: translateY(-2px);
   }
 
   .glass-input {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.09);
     color: #f3f4f6;
     border-radius: 0.5rem;
     padding: 0.75rem 1rem;
@@ -105,9 +105,23 @@
 
   .glass-input:focus {
     outline: none;
-    border-color: rgba(139, 92, 246, 0.5);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25), inset 0 0 0 1px rgba(139, 92, 246, 0.2);
-    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25), inset 0 0 0 1px rgba(139, 92, 246, 0.25);
+    background: rgba(15, 23, 42, 0.88);
+  }
+
+  /* Ambient Glow Shadow Utilities */
+  .shadow-glow-violet {
+    box-shadow: 0 0 24px -2px rgba(139, 92, 246, 0.35);
+  }
+  .shadow-glow-emerald {
+    box-shadow: 0 0 24px -2px rgba(16, 185, 129, 0.35);
+  }
+  .shadow-glow-amber {
+    box-shadow: 0 0 24px -2px rgba(245, 158, 11, 0.35);
+  }
+  .shadow-glow-rose {
+    box-shadow: 0 0 24px -2px rgba(244, 63, 94, 0.35);
   }
 }
 

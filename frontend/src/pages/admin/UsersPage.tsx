@@ -55,6 +55,8 @@ export default function UsersPage() {
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
   const [viewTarget, setViewTarget] = useState<AdminUser | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
+  const [confirmSuspend, setConfirmSuspend] = useState<AdminUser | null>(null);
+  const [confirmActivate, setConfirmActivate] = useState<AdminUser | null>(null);
 
   // Sync roleFilter with URL query param
   useEffect(() => {
@@ -311,7 +313,7 @@ export default function UsersPage() {
                 {['ID', 'Full Name', 'Username', 'Email', 'Role', 'Status', 'Created', 'Last Login', 'Actions'].map((h) => (
                   <th key={h} style={{
                     padding: '13px 16px', textAlign: 'left',
-                    color: '#475569', fontWeight: 600, fontSize: 12,
+                    color: '#64748b', fontWeight: 700, fontSize: 12,
                     textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap',
                   }}>{h}</th>
                 ))}
@@ -319,9 +321,9 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#475569' }}>Loading...</td></tr>
+                <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#64748b' }}>Loading...</td></tr>
               ) : !data?.users.length ? (
-                <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#475569' }}>No users found.</td></tr>
+                <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: '#64748b' }}>No users found.</td></tr>
               ) : (
                 data.users.map((user) => {
                   const roleBadge = ROLE_BADGE[user.role];
@@ -331,10 +333,10 @@ export default function UsersPage() {
                       borderBottom: '1px solid rgba(255,255,255,0.04)',
                       transition: 'background 0.15s',
                     }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(99,102,241,0.05)')}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(139,92,246,0.06)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
-                      <td style={{ padding: '13px 16px', color: '#475569' }}>#{user.id}</td>
+                      <td style={{ padding: '13px 16px', color: '#64748b', fontFamily: 'monospace' }}>#{user.id}</td>
                       <td style={{ padding: '13px 16px', color: '#e2e8f0', fontWeight: 500 }}>{user.full_name}</td>
                       <td style={{ padding: '13px 16px', color: '#94a3b8' }}>{user.username}</td>
                       <td style={{ padding: '13px 16px', color: '#94a3b8' }}>{user.email}</td>
@@ -349,10 +351,10 @@ export default function UsersPage() {
                       <td style={{ padding: '13px 16px' }}>
                         <Badge text={user.status} color={statusBadge?.color ?? '#64748b'} bg={statusBadge?.bg ?? 'transparent'} />
                       </td>
-                      <td style={{ padding: '13px 16px', color: '#475569', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '13px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
-                      <td style={{ padding: '13px 16px', color: '#475569', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '13px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
                         {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : '—'}
                       </td>
                       <td style={{ padding: '13px 16px' }}>
@@ -363,8 +365,8 @@ export default function UsersPage() {
                             <ActionBtn icon={<Edit3 size={13} />} title="Edit" color="#8b5cf6" onClick={() => setEditTarget(user)} />
                             <ActionBtn icon={<Lock size={13} />} title="Reset Password" color="#f59e0b" onClick={() => setResetTarget(user)} />
                             {user.status === 'active'
-                              ? <ActionBtn icon={<UserX size={13} />} title="Suspend" color="#ef4444" onClick={() => handleSuspend(user)} />
-                              : <ActionBtn icon={<UserCheck size={13} />} title="Activate" color="#10b981" onClick={() => handleActivate(user)} />
+                              ? <ActionBtn icon={<UserX size={13} />} title="Suspend User" color="#ef4444" onClick={() => setConfirmSuspend(user)} />
+                              : <ActionBtn icon={<UserCheck size={13} />} title="Activate User" color="#10b981" onClick={() => setConfirmActivate(user)} />
                             }
                             <ActionBtn icon={<Trash2 size={13} />} title="Delete" color="#ef4444" onClick={() => setConfirmDelete(user)} />
                           </>}
@@ -404,7 +406,7 @@ export default function UsersPage() {
       {/* Delete Confirm Dialog */}
       {confirmDelete && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
         }}>
           <div style={{
@@ -425,6 +427,68 @@ export default function UsersPage() {
                 flex: 1, padding: '10px', borderRadius: 10, border: 'none',
                 background: '#ef4444', color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 600,
               }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Suspend Confirm Dialog */}
+      {confirmSuspend && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+        }}>
+          <div style={{
+            background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 16, padding: 32, maxWidth: 400, width: '90%',
+          }}>
+            <h3 style={{ color: '#ef4444', margin: '0 0 12px', fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserX size={18} /> Suspend User Account
+            </h3>
+            <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+              Are you sure you want to suspend <strong style={{ color: '#e2e8f0' }}>{confirmSuspend.username}</strong>?
+              They will be temporarily blocked from logging in.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setConfirmSuspend(null)} style={{
+                flex: 1, padding: '10px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
+                background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 14,
+              }}>Cancel</button>
+              <button onClick={() => { handleSuspend(confirmSuspend); setConfirmSuspend(null); }} style={{
+                flex: 1, padding: '10px', borderRadius: 10, border: 'none',
+                background: '#ef4444', color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+              }}>Suspend</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Activate Confirm Dialog */}
+      {confirmActivate && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+        }}>
+          <div style={{
+            background: 'rgba(15,23,42,0.98)', border: '1px solid rgba(16,185,129,0.3)',
+            borderRadius: 16, padding: 32, maxWidth: 400, width: '90%',
+          }}>
+            <h3 style={{ color: '#10b981', margin: '0 0 12px', fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UserCheck size={18} /> Activate User Account
+            </h3>
+            <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+              Reactivate <strong style={{ color: '#e2e8f0' }}>{confirmActivate.username}</strong>?
+              They will regain full system access.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setConfirmActivate(null)} style={{
+                flex: 1, padding: '10px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
+                background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: 14,
+              }}>Cancel</button>
+              <button onClick={() => { handleActivate(confirmActivate); setConfirmActivate(null); }} style={{
+                flex: 1, padding: '10px', borderRadius: 10, border: 'none',
+                background: '#10b981', color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+              }}>Activate</button>
             </div>
           </div>
         </div>

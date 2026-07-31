@@ -1,4 +1,4 @@
-import { ShieldCheck, ShieldAlert, Calendar, Layers } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, Calendar, Layers } from 'lucide-react';
 import { DomainAnalysisResponse } from '../types';
 
 interface RiskSummaryProps {
@@ -64,7 +64,7 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
     return {
       color: 'text-amber-300 border-amber-500/30 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.2)]',
       fill: '#f59e0b',
-      icon: <ShieldAlert className="text-amber-400" size={18} />,
+      icon: <AlertTriangle className="text-amber-400" size={18} />,
       bg: 'bg-amber-500',
       desc: 'Moderate risk. Detected some flagged categories or irregular historical content changes.',
       topGradient: 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 shadow-[0_2px_14px_rgba(245,158,11,0.4)]',
