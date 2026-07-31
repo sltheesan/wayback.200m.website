@@ -640,13 +640,20 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
     timeline_entries = build_timeline(list(snapshot_results))
     primary_category = get_primary_category(timeline_entries)
 
-    # Historical Abuse Override Rule:
-    # If peak snapshot score is >= 70, domain cannot be SAFE
-    if peak_score >= 70:
+    # Check for redirect abuse across all snapshots
+    has_redirect = any(s.get("is_redirect") or s.get("redirect_detected") or s.get("redirect_url") or s.get("redirect_target") for s in snapshot_results)
+
+    # Historical Abuse & Redirect Override Rule:
+    # If any snapshot exhibits redirect behavior or peak snapshot score is >= 70, domain MUST be UNSAFE
+    if has_redirect or peak_score >= 70:
         overall_level = "HIGH"
-        overall_score = max(overall_score, peak_score)
-        if primary_category == "safe" or not primary_category:
-            # Find the threat category associated with highest risk snapshot
+        overall_score = max(overall_score, peak_score, 85 if has_redirect else 70)
+        
+        if has_redirect and (primary_category == "safe" or not primary_category):
+            red_snap = next((s for s in snapshot_results if s.get("is_redirect") or s.get("redirect_detected") or s.get("redirect_url")), snapshot_results[0])
+            red_cat = red_snap.get("redirect_target_category") or red_snap.get("content_category") or "Redirect"
+            primary_category = f"Redirect Abuse -> {red_cat.capitalize()}" if red_cat != "Redirect" else "Redirect Abuse (Historical)"
+        elif peak_score >= 70 and (primary_category == "safe" or not primary_category):
             highest_risk_snap = max(snapshot_results, key=lambda s: s["risk_score"])
             snap_cat = highest_risk_snap.get("content_category") or (highest_risk_snap["flags"][0]["category"] if highest_risk_snap.get("flags") else "Threat Abuse")
             primary_category = f"{snap_cat.capitalize()} Abuse (Historical)"
@@ -666,8 +673,14 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         domain=domain_clean,
     )
 
-    # Append Historical Abuse Narrative if peak score >= 70
-    if peak_score >= 70 and "Historical" not in (explanation.narrative or ""):
+    # Append Redirect / Historical Abuse Narrative if redirect found or peak score >= 70
+    if has_redirect:
+        explanation.narrative = (
+            f"⚠️ CHRONOSENTINEL WARNING: Domain {domain_clean} contains historical snapshot redirect abuse. "
+            f"Historical captures redirect to external destination target. Domain is classified as UNSAFE. "
+            f"{explanation.narrative or ''}"
+        )
+    elif peak_score >= 70 and "Historical" not in (explanation.narrative or ""):
         highest_risk_snap = max(snapshot_results, key=lambda s: s["risk_score"])
         ts_date = highest_risk_snap.get("timestamp", "")
         formatted_date = f"{ts_date[:4]}-{ts_date[4:6]}-{ts_date[6:8]}" if len(ts_date) >= 8 else ts_date

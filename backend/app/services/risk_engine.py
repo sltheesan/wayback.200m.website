@@ -42,8 +42,20 @@ def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int,
         raw_avg = sum(scores) / len(scores) if scores else 0.0
     avg_score = int(round(raw_avg))
 
-    # Historical Snapshot Abuse Policy:
-    # If any historical snapshot shows severe abuse (peak_score >= 70), the domain retains UNSAFE status.
+    # Mandatory Redirect & Historical Abuse Policy:
+    # If any snapshot exhibits redirect behavior or peak score >= 70, domain MUST be UNSAFE (HIGH risk).
+    has_redirect_abuse = False
+    for item in scores_or_snapshots:
+        if isinstance(item, dict):
+            if item.get("is_redirect") or item.get("redirect_detected") or item.get("redirect_url") or item.get("redirect_target"):
+                has_redirect_abuse = True
+                break
+
+    if has_redirect_abuse:
+        final_score = max(peak_score, 85)
+        level = "HIGH"
+        return final_score, level, max(peak_score, 85), avg_score
+
     if peak_score >= 70:
         final_score = max(peak_score, int(round(0.85 * peak_score + 0.15 * raw_avg)))
     elif peak_score >= 50:
