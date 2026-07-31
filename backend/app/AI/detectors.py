@@ -165,11 +165,11 @@ def content_length_detector(
 
 
 _RE_GAMBLING_KEYWORDS = re.compile(
-    r'\b(?:casino|slots?|roulette|baccarat|poker|jackpot|betting|gambling|online\s+casino|slot\s+gacor|pragmatic\s+play|judi\s+online|bkr\s+toetsing|geld\s+lenen|togel|sbobet|agen\s+judi|slot\s+online|bookie|wager|maxwin|rtp\s+live|situs\s+judi|domino99|bandar|poker88)\b',
+    r'\b(?:casino|slots?|roulette|baccarat|poker|jackpot|betting|gambling|online\s+casino|slot\s+gacor|pragmatic\s+play|judi\s+online|bkr\s+toetsing|geld\s+lenen)\b',
     re.IGNORECASE,
 )
 _RE_ADULT_KEYWORDS = re.compile(
-    r'\b(?:porn|adult|erotic|sex|nude|camgirl|hentai|xx+|breast|strip-poker|onlyfans|escort)\b',
+    r'\b(?:porn|adult|erotic|sex|nude|camgirl|hentai|xx+|breast|strip-poker)\b',
     re.IGNORECASE,
 )
 _RE_META_REFRESH = re.compile(

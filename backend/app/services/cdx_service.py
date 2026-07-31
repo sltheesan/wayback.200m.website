@@ -37,19 +37,10 @@ def filter_homepage_snapshots(raw_snapshots: List[Dict[str, Any]], domain_clean:
     if not raw_snapshots:
         return []
 
-    # 1. First pass: Homepage candidate snapshots + ALL HTTP redirect snapshots
+    # 1. First pass: Homepage candidate snapshots matching valid statuses
     snapshots = []
     for snap in raw_snapshots:
         if not is_valid_snapshot(snap):
-            continue
-
-        status = str(snap.get("statuscode", "")).strip()
-        mime = str(snap.get("mime", "")).strip().lower()
-        is_redirect_snap = status in ("301", "302", "303", "307", "308") or "redirect" in mime
-
-        # ALWAYS preserve HTTP redirect snapshots regardless of subpath so threat redirects are never missed
-        if is_redirect_snap:
-            snapshots.append(snap)
             continue
 
         original_url = snap.get("original", "")

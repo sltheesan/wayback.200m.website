@@ -12,12 +12,7 @@ _RE_META_REFRESH = re.compile(
 )
 
 _RE_JS_ASSIGNMENT = re.compile(
-    r'(?:window\.|top\.|self\.|document\.)?location(?:\.href|\.replace|\.assign)?\s*(?:=\s*|\(\s*)["\']([^"\'\s;)]+)["\']',
-    re.IGNORECASE
-)
-
-_RE_WAYBACK_ANCHOR_REDIRECT = re.compile(
-    r'<a\s+href=["\']([^"\'\s>]+)["\']>\s*(?:301|302|303|307|308|Redirect|Moved|Found|Click here)',
+    r'(?:window\.location(?:\.href)?|location\.href|location\.replace|location\.assign|top\.location)\s*=\s*["\']([^"\'\s;]+)["\']',
     re.IGNORECASE
 )
 
@@ -26,19 +21,6 @@ _WAYBACK_ARTIFACT_KEYWORDS = [
     "web.archive.org", "dis_arm.js", "atc.js"
 ]
 
-def unwrap_wayback_target_url(raw_url: Optional[str]) -> Optional[str]:
-    """Strips Wayback Machine URL wrappers (e.g., /web/20190101000000/http://target.com -> http://target.com)."""
-    if not raw_url:
-        return raw_url
-    u = raw_url.strip()
-    if "/web/" in u:
-        parts = u.split("/web/")
-        if len(parts) > 1:
-            sub = parts[1].split("/", 1)
-            if len(sub) > 1:
-                u = sub[1]
-    return u
-
 @dataclass
 class RedirectEvaluationResult:
     redirect_detected: bool = False
@@ -46,9 +28,6 @@ class RedirectEvaluationResult:
     redirect_method: Optional[str] = None
     redirect_confidence: int = 0
     redirect_verified: bool = False
-    redirect_same_domain: bool = False
-    redirect_target_status: Optional[int] = None
-    evidence: List[str] = field(default_factory=list)
     redirect_same_domain: bool = False
     redirect_target_status: Optional[int] = None
     evidence: List[str] = field(default_factory=list)
@@ -247,8 +226,8 @@ class RedirectEngine:
                 meta_target = meta_match.group(1)
 
         if meta_target:
-            score += 55
-            evidence_items.append(f"✓ Meta Refresh Tag: {meta_target} (+55)")
+            score += 25
+            evidence_items.append(f"✓ Meta Refresh Tag: {meta_target} (+25)")
             if not raw_target:
                 raw_target = meta_target
 
@@ -262,31 +241,22 @@ class RedirectEngine:
                 js_target = js_match.group(1)
 
         if js_target:
-            score += 55
-            evidence_items.append(f"✓ JavaScript Location Script: {js_target} (+55)")
+            score += 20
+            evidence_items.append(f"✓ JavaScript Location Script: {js_target} (+20)")
             if not raw_target:
                 raw_target = js_target
 
-        # 5. Wayback Anchor Redirect & HTML Comment Evidence
+        # 5. HTML Comment / Target Tag Evidence
         if html_content:
-            anchor_match = _RE_WAYBACK_ANCHOR_REDIRECT.search(html_content)
-            if anchor_match:
-                anchor_target = unwrap_wayback_target_url(anchor_match.group(1))
-                score += 55
-                evidence_items.append(f"✓ Wayback 301/302 Anchor Redirect: {anchor_target} (+55)")
-                if not raw_target:
-                    raw_target = anchor_target
-
             target_comment = re.search(r'<!-- REDIRECT TARGET URL:\s*([^\s]+)\s*-->', html_content)
             if target_comment:
-                comment_target = unwrap_wayback_target_url(target_comment.group(1))
-                score += 25
-                evidence_items.append(f"✓ HTML Redirect Comment (+25)")
+                comment_target = target_comment.group(1)
+                score += 5
+                evidence_items.append(f"✓ HTML Redirect Comment (+5)")
                 if not raw_target:
                     raw_target = comment_target
 
         # Resolve relative redirect URLs against original URL
-        raw_target = unwrap_wayback_target_url(raw_target)
         resolved_target = raw_target
         if raw_target and original_url:
             resolved_target = urllib.parse.urljoin(original_url, raw_target)
