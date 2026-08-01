@@ -234,9 +234,39 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="text-[10px] uppercase tracking-widest font-extrabold text-slate-500 block mb-2">
-            Target Domain List (One per line, or comma-separated)
-          </label>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <label className="text-[10px] uppercase tracking-widest font-extrabold text-slate-400 block">
+              Target Domain List (One per line, or comma-separated)
+            </label>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                disabled={isBatchRunning}
+                onClick={() => setInputText('example.com\naceacademyarkansas.com\nwikipedia.org')}
+                className="px-2 py-0.5 rounded bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/20 text-[10px] font-bold transition-all cursor-pointer"
+              >
+                + Sample Batch
+              </button>
+              <button
+                type="button"
+                disabled={isBatchRunning}
+                onClick={() => setInputText('aceacademyarkansas.com\ncasinowin88.com\nfreecrypto-scam.net')}
+                className="px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-[10px] font-bold transition-all cursor-pointer"
+              >
+                + Threat Suite
+              </button>
+              {inputText && (
+                <button
+                  type="button"
+                  disabled={isBatchRunning}
+                  onClick={() => setInputText('')}
+                  className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] font-bold transition-all cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
           <textarea
             value={inputText}
             onChange={(e) => {
@@ -308,9 +338,21 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
               </p>
             </div>
 
-            <div className="flex justify-between gap-3 font-mono text-[10px] text-slate-500 pt-1 border-t border-slate-900">
+            <div className="flex items-center justify-between gap-3 font-mono text-[10px] text-slate-500 pt-1 border-t border-slate-900">
               <span>Celery Task ID:</span>
-              <span className="text-slate-400 truncate">{taskInfo?.id || 'Waiting for queue response'}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-slate-400 truncate">{taskInfo?.id || 'Waiting for queue response'}</span>
+                {taskInfo?.id && (
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(taskInfo.id)}
+                    className="text-violet-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                    title="Copy Task ID"
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -336,10 +378,38 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
 
       {taskStatus === 'SUCCESS' && (
         <div className="mt-8 pt-6 border-t border-slate-800 space-y-4">
-          <h4 className="text-sm font-bold text-emerald-400 flex items-center">
-            <CheckCircle2 size={16} className="mr-2" />
-            Batch Analysis Complete
-          </h4>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-slate-900/80 border border-emerald-500/30">
+            <h4 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 size={18} />
+              <span>Batch Analysis Complete ({successfulResults.length} analyzed, {failedDomains.length} failed)</span>
+            </h4>
+            <button
+              type="button"
+              onClick={() => {
+                if (!taskResults || !taskResults.length) return;
+                const headers = ['Domain', 'Risk Level', 'Risk Score', 'Primary Category', 'Snapshots Checked', 'Narrative'];
+                const rows = taskResults.map(r => [
+                  `"${r.domain}"`,
+                  `"${r.risk_level || 'UNKNOWN'}"`,
+                  `"${r.risk_score ?? 0}"`,
+                  `"${r.primary_category || 'safe'}"`,
+                  `"${r.snapshots_checked ?? 0}"`,
+                  `"${(r.risk_narrative || '').replace(/"/g, '""')}"`
+                ]);
+                const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', `Batch_Analysis_Report_${taskInfo?.id?.slice(0, 8) || 'run'}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span>Export Batch CSV</span>
+            </button>
+          </div>
 
           {successfulResults.length > 0 && (
             <div className="space-y-4">
