@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Database, HardDrive, RefreshCw, Activity, Cpu, CheckCircle2, AlertTriangle, Zap, Server, Globe } from 'lucide-react';
+import { Database, HardDrive, RefreshCw, Activity, Cpu, CheckCircle2, AlertTriangle, Zap, Server, Globe, Shield, Brain, Layers, Check } from 'lucide-react';
 import { apiService } from '../services/api';
 import { SystemStatus } from '../types';
 
@@ -201,6 +201,58 @@ export default function SystemHealth() {
             </div>
           );
         })()}
+      </div>
+
+      {/* Subsystems & Operational Health Matrix */}
+      <div className="p-5 rounded-2xl bg-slate-950/50 border border-slate-800/80 space-y-4">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-2">
+          <Layers size={14} className="text-violet-400" />
+          <span>Operational Pipeline & AI Engine Status</span>
+        </h4>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-medium">
+          {/* AI Classifier */}
+          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-1.5">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="flex items-center gap-1.5 font-bold text-slate-200">
+                <Brain size={13} className="text-violet-400" />
+                <span>AI Classifier Engine</span>
+              </span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">ONLINE</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Multilingual Chinese & English rule-based content classifier with falsifying keyword suppression.
+            </p>
+          </div>
+
+          {/* Redirect Intelligence */}
+          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-1.5">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="flex items-center gap-1.5 font-bold text-slate-200">
+                <Shield size={13} className="text-cyan-400" />
+                <span>Redirect Intelligence</span>
+              </span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">ACTIVE</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              5-tier weighted redirect verifier, cross-domain target inspection, and dual risk matrix scoring.
+            </p>
+          </div>
+
+          {/* Reputation Feeds */}
+          <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-1.5">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="flex items-center gap-1.5 font-bold text-slate-200">
+                <Check size={13} className="text-emerald-400" />
+                <span>Reputation Feeds</span>
+              </span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">5 OPERATIONAL</span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Integrated real-time domain threat intelligence blacklists & external lookup feeds.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Footer Info Strip */}
