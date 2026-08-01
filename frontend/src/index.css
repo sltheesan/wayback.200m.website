@@ -360,8 +360,74 @@ html.light .login-page-root .border-slate-800\/80 {
   border-color: rgba(30, 41, 59, 0.8) !important;
 }
 
-html.light .login-page-root .glass-input {
-  background: rgba(15, 23, 42, 0.65) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  color: #f3f4f6 !important;
+/* ─── Specific Card Light Mode Overrides ─────────────────── */
+/* Risk Intelligence Found Card in Light Theme */
+html.light .from-rose-950\/50,
+html.light .via-purple-950\/40,
+html.light .to-slate-950\/80 {
+  --tw-gradient-from: #fff1f2 !important;
+  --tw-gradient-to: #f8fafc !important;
+  --tw-gradient-stops: var(--tw-gradient-from), #faf5ff, var(--tw-gradient-to) !important;
+}
+
+html.light .bg-rose-950\/90,
+html.light .bg-rose-950\/60 {
+  background-color: #ffe4e6 !important;
+  border-color: #f43f5e !important;
+  color: #9f1239 !important;
+}
+
+html.light .text-rose-300,
+html.light .text-rose-200 {
+  color: #9f1239 !important;
+}
+
+/* Catalogued Domain Targets Hero Stat Card & Tier Cards */
+html.light .from-slate-900\/90,
+html.light .to-slate-950\/80 {
+  --tw-gradient-from: #ffffff !important;
+  --tw-gradient-to: #f1f5f9 !important;
+  --tw-gradient-stops: var(--tw-gradient-from), #f8fafc, var(--tw-gradient-to) !important;
+}
+
+html.light .text-emerald-300 { color: #047857 !important; }
+html.light .text-amber-300   { color: #b45309 !important; }
+html.light .text-purple-300  { color: #6b21a8 !important; }
+html.light .text-purple-200  { color: #581c87 !important; }
+
+html.light .bg-emerald-500\/5,
+html.light .bg-amber-500\/5,
+html.light .bg-rose-500\/5 {
+  background-color: #ffffff !important;
+}
+
+/* ─── Snapshot Timeline Light Mode Complete Overrides ─────────────────── */
+html.light .snapshot-detail-pane,
+html.light .snapshot-details-grid {
+  color: #0f172a !important;
+}
+
+html.light .snapshot-detail-pane [style*="background: 'rgba(10,14,26,0.85)'"],
+html.light .snapshot-details-grid [style*="background: 'rgba(10,14,26,0.85)'"],
+html.light .snapshot-details-grid [style*="background: 'rgba(15,23,42,0.7)'"],
+html.light .snapshot-details-grid [style*="background: 'rgba(17,24,39,0.98)'"],
+html.light .snapshot-details-grid [style*="background: 'rgba(0,0,0,0.3)'"] {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light span[style*="color: '#f1f5f9'"],
+html.light span[style*="color: '#f8fafc'"],
+html.light span[style*="color: '#e2e8f0'"],
+html.light div[style*="color: '#f1f5f9'"],
+html.light div[style*="color: '#f8fafc'"],
+html.light div[style*="color: '#e2e8f0'"] {
+  color: #0f172a !important;
+}
+
+html.light code[style*="color: '#ffffff'"],
+html.light code[style*="color: '#f8fafc'"] {
+  color: #0f172a !important;
+  background-color: #f1f5f9 !important;
 }
