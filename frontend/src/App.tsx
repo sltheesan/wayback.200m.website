@@ -58,7 +58,23 @@ function ScanApp() {
   });
   const [selectedBatchJob, setSelectedBatchJob] = useState<any | null>(null);
   const [inspectedBatchDomain, setInspectedBatchDomain] = useState<string | null>(null);
+  const [batchInspectedData, setBatchInspectedData] = useState<DomainAnalysisResponse | null>(null);
+  const [batchLoading, setBatchLoading] = useState<boolean>(false);
   const [activeScanningDomain, setActiveScanningDomain] = useState<string>('');
+
+  const handleScanBatchDomain = async (domain: string) => {
+    setBatchLoading(true);
+    setInspectedBatchDomain(domain);
+    try {
+      const result = await apiService.analyzeDomain(domain, false);
+      setBatchInspectedData(result);
+    } catch (err) {
+      console.error('Failed to load batch inspection domain:', err);
+      setBatchInspectedData(null);
+    } finally {
+      setBatchLoading(false);
+    }
+  };
 
   const handleJobCompleted = (newEntry: any) => {
     setBatchHistory(prev => {
@@ -99,7 +115,6 @@ function ScanApp() {
     try {
       const result = await apiService.analyzeDomain(domain, forceRefresh);
       setActiveData(result);
-      setInspectedBatchDomain(result.domain);
       if (result.snapshots && result.snapshots.length > 0) {
         // Default to the first (earliest) snapshot
         setActiveSnapshot(result.snapshots[0]);
@@ -113,7 +128,6 @@ function ScanApp() {
         'An unexpected error occurred during domain risk scanning. Please check your backend connection.';
       setError(errMsg);
       setActiveData(null);
-      setInspectedBatchDomain(null);
     } finally {
       setLoading(false);
     }
@@ -646,7 +660,7 @@ function ScanApp() {
               <div className="lg:col-span-3 space-y-6">
                 <BatchUpload 
                   onScanDomain={(d) => {
-                    handleScanDomain(d, false);
+                    handleScanBatchDomain(d);
                   }} 
                   loadedJob={selectedBatchJob}
                   onJobCompleted={handleJobCompleted}
@@ -655,24 +669,27 @@ function ScanApp() {
             </div>
 
             {/* BOTTOM ROW: Full-Width Target Inspection Dashboard */}
-            {loading ? (
+            {batchLoading ? (
               <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6">
-                <UniqueDomainLoader targetDomain={activeScanningDomain || inspectedBatchDomain || 'Target Domain'} />
+                <UniqueDomainLoader targetDomain={inspectedBatchDomain || 'Target Domain'} />
               </div>
-            ) : (activeData && activeData.domain) ? (
+            ) : (batchInspectedData && batchInspectedData.domain) ? (
               <div id="batch-inspection-section" className="pt-8 border-t border-slate-900 scroll-mt-6 space-y-8">
                 <div className="space-y-8 animate-fade-in text-left">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                     <div>
                       <h2 className="text-lg font-bold text-white flex items-center gap-2">
                         <span className="h-2 w-2 rounded-full bg-brand-500 animate-pulse" />
-                        <span>Inspection Workspace: <span className="text-brand-400">{activeData.domain}</span></span>
+                        <span>Inspection Workspace: <span className="text-brand-400">{batchInspectedData.domain}</span></span>
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">Deep risk details loaded from bulk batch scan results</p>
                     </div>
                     {/* Button to quickly go to the main scanner tab */}
                     <button
-                      onClick={() => setActiveTab('scan')}
+                      onClick={() => {
+                        handleScanDomain(batchInspectedData.domain, false);
+                        setActiveTab('scan');
+                      }}
                       className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-[10px] font-bold text-slate-300 hover:text-white hover:border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <span>Full View</span>
@@ -680,14 +697,14 @@ function ScanApp() {
                     </button>
                   </div>
                   
-                  <RiskSummary data={activeData} />
+                  <RiskSummary data={batchInspectedData} />
                   
-                  {activeData.risk_narrative && (
-                    <ExplainabilityCard data={activeData} />
+                  {batchInspectedData.risk_narrative && (
+                    <ExplainabilityCard data={batchInspectedData} />
                   )}
 
                   <SnapshotTimeline 
-                    snapshots={activeData.snapshots} 
+                    snapshots={batchInspectedData.snapshots} 
                     activeSnapshot={activeSnapshot}
                     onSelectSnapshot={handleSelectSnapshot}
                   />

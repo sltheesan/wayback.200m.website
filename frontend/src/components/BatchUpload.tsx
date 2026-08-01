@@ -239,22 +239,6 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
               Target Domain List (One per line, or comma-separated)
             </label>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                disabled={isBatchRunning}
-                onClick={() => setInputText('example.com\naceacademyarkansas.com\nwikipedia.org')}
-                className="px-2 py-0.5 rounded bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/20 text-[10px] font-bold transition-all cursor-pointer"
-              >
-                + Sample Batch
-              </button>
-              <button
-                type="button"
-                disabled={isBatchRunning}
-                onClick={() => setInputText('aceacademyarkansas.com\ncasinowin88.com\nfreecrypto-scam.net')}
-                className="px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-[10px] font-bold transition-all cursor-pointer"
-              >
-                + Threat Suite
-              </button>
               {inputText && (
                 <button
                   type="button"
