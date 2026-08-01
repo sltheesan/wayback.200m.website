@@ -202,7 +202,8 @@ html.light .bg-slate-950\/60,
 html.light .bg-slate-950\/50,
 html.light .bg-slate-950\/40,
 html.light .bg-slate-950\/20 {
-  background-color: rgba(248, 250, 252, 0.9) !important;
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
 }
 
 html.light .bg-slate-900,
@@ -212,8 +213,58 @@ html.light .bg-slate-900\/70,
 html.light .bg-slate-900\/60,
 html.light .bg-slate-900\/50,
 html.light .bg-slate-900\/40,
-html.light .bg-slate-900\/30 {
+html.light .bg-slate-900\/30,
+html.light .bg-slate-900\/20,
+html.light .bg-slate-800,
+html.light .bg-slate-800\/80,
+html.light .bg-slate-800\/60,
+html.light .bg-slate-800\/50,
+html.light .bg-slate-800\/30,
+html.light .bg-slate-700\/30 {
   background-color: #ffffff !important;
+}
+
+/* Hover background states in Light Mode */
+html.light .hover\:bg-slate-900\/60:hover,
+html.light .hover\:bg-slate-900\/70:hover,
+html.light .hover\:bg-slate-900\/80:hover,
+html.light .hover\:bg-slate-900:hover,
+html.light .hover\:bg-slate-950\/60:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Code & Pre Blocks in Light Mode */
+html.light code,
+html.light pre {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Inline background style overrides for legacy cards and code blocks */
+html.light [style*="background: rgba(15,23,42"],
+html.light [style*="background: rgba(17,24,39"],
+html.light [style*="background: rgba(10,14,26"],
+html.light [style*="background: rgba(0,0,0"],
+html.light [style*="background: '#0f172a'"],
+html.light [style*="background: '#030712'"] {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Inline text color overrides in Light Mode */
+html.light [style*="color: '#f8fafc'"],
+html.light [style*="color: '#f1f5f9'"],
+html.light [style*="color: '#e2e8f0'"],
+html.light [style*="color: '#cbd5e1'"],
+html.light [style*="color: '#slate-100'"] {
+  color: #0f172a !important;
+}
+
+html.light [style*="color: '#94a3b8'"],
+html.light [style*="color: '#64748b'"] {
+  color: #475569 !important;
 }
 
 /* Hardcoded Text Overrides in Light Mode */
@@ -235,7 +286,15 @@ html.light .text-slate-500 {
   color: #64748b !important;
 }
 
-/* Gradient text overrides in Light Mode */
+/* Status Badge Text Contrast in Light Mode */
+html.light .text-emerald-400 { color: #059669 !important; }
+html.light .text-rose-400    { color: #e11d48 !important; }
+html.light .text-amber-400   { color: #d97706 !important; }
+html.light .text-violet-400  { color: #7c3aed !important; }
+html.light .text-indigo-400  { color: #4f46e5 !important; }
+html.light .text-cyan-400    { color: #0891b2 !important; }
+
+/* Gradient text & container overrides in Light Mode */
 html.light .from-violet-300.via-purple-200.to-indigo-200,
 html.light .from-violet-300.via-purple-300.to-indigo-200 {
   --tw-gradient-from: #6d28d9 !important;
@@ -248,8 +307,9 @@ html.light .border-slate-800,
 html.light .border-slate-800\/80,
 html.light .border-slate-800\/60,
 html.light .border-slate-800\/40,
-html.light .border-slate-900 {
-  border-color: #e2e8f0 !important;
+html.light .border-slate-900,
+html.light .border-slate-700 {
+  border-color: #cbd5e1 !important;
 }
 
 /* Scrollbars in Light Mode */
