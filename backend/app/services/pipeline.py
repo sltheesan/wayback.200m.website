@@ -425,8 +425,20 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         # Final risk score calculation combining Dual Risk Engine + verified redirect threats
         final_risk_score = max(risk_score, dual_risk.final_risk_score)
 
-        if redirect_eval.redirect_detected and dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "phishing_scam", "malware", "malware_hacking"):
+        # MANDATORY POLICY: Every redirected snapshot MUST be marked as UNSAFE (score >= 85)
+        if redirect_eval.redirect_detected or redirect_eval.redirect_target or status in (301, 302, 303, 307, 308):
             final_risk_score = max(final_risk_score, 85)
+            if not any(isinstance(f, dict) and f.get("category") in ("redirect_abuse", "redirect") for f in flags):
+                flags.append({
+                    "category": "redirect_abuse",
+                    "keyword": "external_redirect",
+                    "weight": 85,
+                    "match_count": 1,
+                    "element": "HTTP Redirect Header",
+                    "matched_text": redirect_eval.redirect_target or original,
+                    "snippet": f"Snapshot contains external redirect to: {redirect_eval.redirect_target or 'external destination'}",
+                    "position": 0
+                })
 
         evidence_url = build_snapshot_evidence_url(
             timestamp, original, final_risk_score, flags, snap.get("source", "archive")

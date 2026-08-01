@@ -264,6 +264,15 @@ def analyze_snapshot_evidence(
                 "description": f"Snapshot redirects directly to external {cat_display} domain: {red_dom}"
             })
             redirect_risk_score = 90
+        else:
+            findings.append({
+                "finding_type": "redirect_abuse",
+                "evidence": red_dom or red_url,
+                "category": "Redirect Abuse",
+                "risk_score": 85,
+                "description": f"Snapshot redirects to external destination target ({red_dom or red_url}), indicating historical redirect abuse."
+            })
+            redirect_risk_score = 85
 
     # 7. Aggregate Total Snapshot Risk Score
     if findings:
