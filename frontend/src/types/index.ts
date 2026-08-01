@@ -103,6 +103,11 @@ export interface DomainAnalysisResponse {
   timeline?: TimelineEntry[] | null;
   threat_intel?: ThreatIntel[] | null;
   threat_overall?: string | null;
+  checked_by?: {
+    user_id?: number;
+    username?: string;
+    full_name?: string;
+  } | null;
 }
 
 export interface SystemStatus {

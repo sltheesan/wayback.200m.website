@@ -31,7 +31,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 import { useAuth } from './contexts/AuthContext';
 import { apiService } from './services/api';
 import { DomainAnalysisResponse, GlobalStats, Snapshot } from './types';
-import { BarChart3, Database, ShieldAlert, ArrowUpRight, X, Eye, Search, Clock } from 'lucide-react';
+import { BarChart3, Database, ShieldAlert, ArrowUpRight, X, Eye, Search, Clock, User as UserIcon } from 'lucide-react';
 
 const DEFAULT_STATS: GlobalStats = {
   total_analyzed: 0,
@@ -399,6 +399,7 @@ function ScanApp() {
                   {filteredDbDomains.length > 0 ? (
                     filteredDbDomains.map((d, index) => {
                       const relTime = formatRelativeDate(d.last_analyzed_at);
+                      const auditorName = d.checked_by?.username || (d.checked_by?.full_name ? d.checked_by.full_name.split(' ')[0] : 'System');
                       return (
                         <button
                           key={index}
@@ -411,12 +412,17 @@ function ScanApp() {
                             <span className="font-bold text-white group-hover:text-violet-300 transition-colors block truncate">
                               {d.domain}
                             </span>
-                            <div className="flex items-center space-x-2 text-[10px] text-slate-500 font-mono">
+                            <div className="flex items-center space-x-1.5 text-[10px] text-slate-500 font-mono flex-wrap gap-y-0.5">
                               <span>Score: {d.risk_score}/100</span>
                               <span>•</span>
                               <span className="flex items-center text-slate-400 space-x-1" title={`Last analyzed: ${d.last_analyzed_at || 'N/A'}`}>
                                 <Clock size={10} className="text-violet-400 shrink-0" />
                                 <span className="text-slate-300 font-semibold">{relTime}</span>
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center text-slate-400 space-x-1" title={`Analyzed by: ${d.checked_by?.full_name || auditorName}`}>
+                                <UserIcon size={10} className="text-indigo-400 shrink-0" />
+                                <span className="text-slate-300 font-semibold truncate max-w-[80px]">{auditorName}</span>
                               </span>
                             </div>
                           </div>
