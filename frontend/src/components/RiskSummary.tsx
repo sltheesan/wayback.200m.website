@@ -277,19 +277,19 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
       </div>
 
       {/* Domain Details */}
-      <div className="flex-1 flex flex-col justify-between relative z-10 w-full">
+      <div className="flex-1 flex flex-col justify-between relative z-10 w-full min-w-0">
         <div>
-          <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">{domain}</h2>
+          <div className="flex flex-wrap items-center gap-2.5 mb-2.5 min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white truncate max-w-full">{domain}</h2>
             
             {/* Risk Level Badge */}
-            <div className={`px-3 py-1 rounded-full text-xs font-extrabold border uppercase tracking-wider flex items-center space-x-1.5 ${details.color}`}>
+            <div className={`px-3 py-1 rounded-full text-xs font-extrabold border uppercase tracking-wider flex items-center space-x-1.5 shrink-0 ${details.color}`}>
               {details.icon}
               <span>{risk_level} RISK</span>
             </div>
 
             {/* Category Classification Badge */}
-            <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center space-x-1.5 ${catMeta.style}`}>
+            <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center space-x-1.5 shrink-0 ${catMeta.style}`}>
               <span>{catMeta.icon}</span>
               <span>Category: {catMeta.label}</span>
             </div>
@@ -301,19 +301,19 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
 
           {/* REDIRECT THREAT INTELLIGENCE SUMMARY CARD */}
           {hasRedirect && threatRedirectSnap && (
-            <div className="mb-5 p-4 sm:p-5 rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-950/50 via-purple-950/40 to-slate-950/80 shadow-xl relative overflow-hidden">
+            <div className="mb-5 p-4 sm:p-5 rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-950/50 via-purple-950/40 to-slate-950/80 shadow-xl relative overflow-hidden w-full max-w-full box-border">
               {/* Header Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2.5 border-b border-rose-500/20">
-                <div className="flex flex-wrap items-center gap-2">
-                  <RefreshCw className="text-rose-400 animate-spin-slow" size={16} />
-                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-rose-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2.5 border-b border-rose-500/20 w-full">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <RefreshCw className="text-rose-400 animate-spin-slow shrink-0" size={16} />
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-rose-300 truncate">
                     Redirect Intelligence Found
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
                     {redirectSnapshots.length || 1} Redirect Snapshot{redirectSnapshots.length !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] font-extrabold bg-purple-500/30 text-purple-200 px-2.5 py-1 rounded-md border border-purple-500/40">
                     {threatRedirectSnap.redirect_confidence ?? (threatRedirectSnap.redirect_verified ? 95 : 5)}% Redirect Confidence
                   </span>
@@ -321,11 +321,11 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
               </div>
 
               {/* Redirect Flow Path */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-mono bg-slate-950/90 p-3 rounded-xl border border-slate-800/80 mb-3 overflow-hidden">
-                <div className="flex items-center gap-2 min-w-0 flex-1 overflow-x-auto py-1 scrollbar-thin">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-mono bg-slate-950/90 p-3 rounded-xl border border-slate-800/80 mb-3 overflow-hidden w-full max-w-full">
+                <div className="flex items-center gap-2 min-w-0 flex-1 overflow-x-auto py-1 scrollbar-thin max-w-full">
                   <span className="text-slate-300 font-bold shrink-0">{domain}</span>
                   <ArrowRight size={14} className="text-rose-400 shrink-0" />
-                  <span className="text-rose-300 font-extrabold bg-rose-950/90 px-2.5 py-1 rounded-lg border border-rose-500/30 truncate max-w-xs sm:max-w-md" title={threatRedirectSnap.redirect_target || threatRedirectSnap.redirect_url || ''}>
+                  <span className="text-rose-300 font-extrabold bg-rose-950/90 px-2.5 py-1 rounded-lg border border-rose-500/30 truncate max-w-[200px] sm:max-w-xs md:max-w-md" title={threatRedirectSnap.redirect_target || threatRedirectSnap.redirect_url || ''}>
                     {threatRedirectSnap.redirect_target || threatRedirectSnap.redirect_url || ('http://www.' + domain + '/lander')}
                   </span>
                 </div>
@@ -344,19 +344,19 @@ export default function RiskSummary({ data }: RiskSummaryProps) {
               </div>
 
               {/* Dual Category Breakdown (Original Page vs Redirect Target) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
-                <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <span className="text-slate-400 font-medium">Original Page Category:</span>
-                  <span className="text-slate-200 font-bold uppercase flex items-center gap-1">
-                    <span>{getCategoryMeta(threatRedirectSnap.original_category || 'safe').icon}</span>
-                    <span>{getCategoryMeta(threatRedirectSnap.original_category || 'safe').label}</span>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5 text-xs w-full max-w-full">
+                <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 min-w-0">
+                  <span className="text-slate-400 font-medium shrink-0">Original Page Category:</span>
+                  <span className="text-slate-200 font-bold uppercase flex items-center gap-1 min-w-0 truncate">
+                    <span className="shrink-0">{getCategoryMeta(threatRedirectSnap.original_category || 'safe').icon}</span>
+                    <span className="truncate">{getCategoryMeta(threatRedirectSnap.original_category || 'safe').label}</span>
                   </span>
                 </div>
-                <div className="bg-rose-950/60 p-3 rounded-xl border border-rose-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <span className="text-rose-300 font-medium">Redirect Target Category:</span>
-                  <span className="text-rose-200 font-extrabold uppercase flex items-center gap-1">
-                    <span>{getCategoryMeta(threatRedirectSnap.redirect_target_category || 'gambling').icon}</span>
-                    <span>{getCategoryMeta(threatRedirectSnap.redirect_target_category || 'gambling').label}</span>
+                <div className="bg-rose-950/60 p-3 rounded-xl border border-rose-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 min-w-0">
+                  <span className="text-rose-300 font-medium shrink-0">Redirect Target Category:</span>
+                  <span className="text-rose-200 font-extrabold uppercase flex items-center gap-1 min-w-0 truncate">
+                    <span className="shrink-0">{getCategoryMeta(threatRedirectSnap.redirect_target_category || 'gambling').icon}</span>
+                    <span className="truncate">{getCategoryMeta(threatRedirectSnap.redirect_target_category || 'gambling').label}</span>
                   </span>
                 </div>
               </div>

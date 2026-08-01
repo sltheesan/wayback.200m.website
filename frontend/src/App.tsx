@@ -201,7 +201,7 @@ function ScanApp() {
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <main className={`flex-1 w-full mx-auto px-3 sm:px-6 lg:px-8 pt-6 sm:pt-8 transition-all duration-300 ${
-        activeTab === 'batch' ? 'max-w-[1600px] lg:px-4' : 'max-w-7xl'
+        activeTab === 'batch' ? 'max-w-[1600px] lg:px-4' : 'max-w-[1530px] lg:px-6'
       }`}>
         
         {/* Render Tab Contents */}
