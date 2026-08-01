@@ -142,50 +142,117 @@
   transform-origin: 50% 50%;
 }
 
-/* ─── Light Mode Theme Adjustments ───────────────────────────── */
+/* ─── Light Mode Complete Theme Overrides ─────────────────────────── */
 html.light body {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
 }
 
 html.light body::before {
   background-image:
-    radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.08) 0%, transparent 45%),
-    radial-gradient(circle at 85% 75%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 60%);
+    radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at 85% 75%, rgba(59, 130, 246, 0.07) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 60%) !important;
 }
 
 html.light body::after {
   background-image:
     linear-gradient(rgba(124, 58, 237, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(124, 58, 237, 0.04) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(124, 58, 237, 0.04) 1px, transparent 1px) !important;
 }
 
+/* Glass Panels & Inputs */
 html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
+  color: #0f172a !important;
 }
 
 html.light .glass-panel-hover:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(124, 58, 237, 0.4);
-  box-shadow: 0 14px 35px -5px rgba(124, 58, 237, 0.12);
+  background: #ffffff !important;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+  box-shadow: 0 14px 35px -5px rgba(124, 58, 237, 0.12) !important;
 }
 
 html.light .glass-input {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(203, 213, 225, 0.9);
-  color: #0f172a;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light .glass-input::placeholder {
+  color: #94a3b8 !important;
 }
 
 html.light .glass-input:focus {
-  background: #ffffff;
-  border-color: rgba(124, 58, 237, 0.6);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  background: #ffffff !important;
+  border-color: rgba(124, 58, 237, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15) !important;
 }
 
-html.light ::-webkit-scrollbar-track { background: rgba(241, 245, 249, 0.8); }
-html.light ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); }
+/* Hardcoded Slate Background Overrides in Light Mode */
+html.light .bg-slate-950,
+html.light .bg-slate-950\/90,
+html.light .bg-slate-950\/80,
+html.light .bg-slate-950\/70,
+html.light .bg-slate-950\/60,
+html.light .bg-slate-950\/50,
+html.light .bg-slate-950\/40,
+html.light .bg-slate-950\/20 {
+  background-color: rgba(248, 250, 252, 0.9) !important;
+}
+
+html.light .bg-slate-900,
+html.light .bg-slate-900\/90,
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/70,
+html.light .bg-slate-900\/60,
+html.light .bg-slate-900\/50,
+html.light .bg-slate-900\/40,
+html.light .bg-slate-900\/30 {
+  background-color: #ffffff !important;
+}
+
+/* Hardcoded Text Overrides in Light Mode */
+html.light .text-white,
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Gradient text overrides in Light Mode */
+html.light .from-violet-300.via-purple-200.to-indigo-200,
+html.light .from-violet-300.via-purple-300.to-indigo-200 {
+  --tw-gradient-from: #6d28d9 !important;
+  --tw-gradient-to: #4338ca !important;
+  --tw-gradient-stops: var(--tw-gradient-from), #7c3aed, var(--tw-gradient-to) !important;
+}
+
+/* Border Overrides in Light Mode */
+html.light .border-slate-800,
+html.light .border-slate-800\/80,
+html.light .border-slate-800\/60,
+html.light .border-slate-800\/40,
+html.light .border-slate-900 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Scrollbars in Light Mode */
+html.light ::-webkit-scrollbar-track { background: rgba(241, 245, 249, 0.8) !important; }
+html.light ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.5) !important; }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.5) !important; }
