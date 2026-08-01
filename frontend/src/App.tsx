@@ -68,6 +68,12 @@ function ScanApp() {
     try {
       const result = await apiService.analyzeDomain(domain, false);
       setBatchInspectedData(result);
+      setTimeout(() => {
+        const el = document.getElementById('batch-inspection-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
     } catch (err) {
       console.error('Failed to load batch inspection domain:', err);
       setBatchInspectedData(null);

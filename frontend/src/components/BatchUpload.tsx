@@ -543,8 +543,17 @@ export default function BatchUpload({ onScanDomain, loadedJob, onJobCompleted }:
                       <div className="flex justify-end border-t border-slate-800/60 pt-3">
                         <button
                           type="button"
-                          onClick={(e) => { e.preventDefault(); onScanDomain(result.domain); }}
-                          className="flex items-center space-x-1.5 px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 text-[10px] font-bold rounded-lg border border-violet-500/20 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onScanDomain(result.domain);
+                            setTimeout(() => {
+                              const el = document.getElementById('batch-inspection-section');
+                              if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
+                            }, 100);
+                          }}
+                          className="flex items-center space-x-1.5 px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 text-[10px] font-bold rounded-lg border border-violet-500/20 transition-colors cursor-pointer"
                         >
                           <span>Deep Scan</span>
                           <ArrowUpRight size={11} />
