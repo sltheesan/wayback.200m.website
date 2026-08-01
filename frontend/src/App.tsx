@@ -31,7 +31,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 import { useAuth } from './contexts/AuthContext';
 import { apiService } from './services/api';
 import { DomainAnalysisResponse, GlobalStats, Snapshot } from './types';
-import { BarChart3, Database, ShieldAlert, ArrowUpRight, X, Eye, Search, Clock, User as UserIcon } from 'lucide-react';
+import { Database, ShieldAlert, ShieldCheck, AlertTriangle, ArrowUpRight, X, Eye, Search, Clock, User as UserIcon, Activity, Radio } from 'lucide-react';
 
 const DEFAULT_STATS: GlobalStats = {
   total_analyzed: 0,
@@ -286,55 +286,128 @@ function ScanApp() {
 
             {/* Sidebar */}
             <div className="space-y-8 lg:col-span-1">
-              {/* Global Statistics Panel */}
-              <div className="glass-panel p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center">
-                    <BarChart3 size={16} className="mr-2 text-violet-400" />
-                    Global System Stats
-                  </h3>
-                  <span className="text-[10px] text-slate-500 font-bold bg-slate-900 border border-slate-800 px-2 py-0.5 rounded uppercase tracking-wider">
-                    Live DB
-                  </span>
+              {/* Creative Global System Telemetry Panel */}
+              <div className="glass-panel p-6 space-y-6 relative overflow-hidden border border-violet-500/20 bg-slate-900/60 shadow-2xl">
+                {/* Background Ambient Glow */}
+                <div className="absolute -top-20 -right-20 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="p-1.5 rounded-lg bg-violet-600/10 border border-violet-500/30 text-violet-400">
+                      <Radio size={16} className="animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-200">
+                        Global Telemetry
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-medium">Real-time DB & Risk Engine</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Live Database</span>
+                  </div>
                 </div>
 
-                <div className="bg-slate-900/50 border border-slate-800/80 p-4 rounded-xl text-center">
-                  <span className="text-3xl font-extrabold text-white block">{stats.total_analyzed}</span>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1 block">
-                    Domains in Database
+                {/* Hero Stat: Total Domains Card with Gradient Ring Glow */}
+                <div className="relative p-5 rounded-2xl bg-gradient-to-b from-slate-900/90 to-slate-950/80 border border-slate-800 shadow-inner flex flex-col items-center justify-center text-center overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-600/10 via-purple-600/10 to-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  
+                  <span className="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-purple-200 to-indigo-200 font-mono">
+                    {stats.total_analyzed}
                   </span>
+                  
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mt-1">
+                    Catalogued Domain Targets
+                  </span>
+
+                  <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-slate-400 font-medium border-t border-slate-800/80 pt-2.5 w-full">
+                    <span className="flex items-center gap-1"><Database size={11} className="text-violet-400" /> Archive Index</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1"><Activity size={11} className="text-emerald-400" /> Active Audit</span>
+                  </div>
                 </div>
 
-                <div className="space-y-3.5 pt-2">
-                  <h4 className="text-xs font-semibold text-slate-400">Risk Profile Distribution</h4>
+                {/* Multi-Segment Horizontal Stacked Bar */}
+                {(() => {
+                  const total = stats.total_analyzed || 1;
+                  const safeCount = stats.risk_breakdown?.SAFE ?? 0;
+                  const mediumCount = stats.risk_breakdown?.MEDIUM ?? 0;
+                  const highCount = (stats.risk_breakdown?.HIGH ?? 0) + (stats.risk_breakdown?.UNSAFE ?? 0);
+                  const safePct = Math.round((safeCount / total) * 100);
+                  const mediumPct = Math.round((mediumCount / total) * 100);
+                  const highPct = Math.round((highCount / total) * 100);
 
-                  {(['SAFE', 'MEDIUM', 'HIGH'] as const).map((level) => {
-                    const colors: Record<'SAFE' | 'MEDIUM' | 'HIGH', { label: string; bar: string; text: string }> = {
-                      SAFE: { label: 'Safe Domains', bar: 'bg-emerald-500', text: 'text-emerald-400' },
-                      MEDIUM: { label: 'Medium Risk', bar: 'bg-amber-500', text: 'text-amber-400' },
-                      HIGH: { label: 'High Risk', bar: 'bg-rose-500', text: 'text-rose-400' },
-                    };
-                    const c = colors[level];
-                    let count = stats.risk_breakdown?.[level] ?? 0;
-                    if (level === 'HIGH') {
-                      count += stats.risk_breakdown?.UNSAFE ?? 0;
-                    }
-                    const totalAnalyzed = stats.total_analyzed ?? 0;
-                    const pct = totalAnalyzed ? (count / totalAnalyzed) * 100 : 0;
-
-                    return (
-                      <div key={level} className="space-y-1.5">
-                        <div className="flex justify-between text-xs font-medium">
-                          <span className={c.text}>{c.label}</span>
-                          <span className="text-slate-300 font-semibold">{count}</span>
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between items-center text-xs font-bold mb-2">
+                          <span className="text-slate-300 uppercase tracking-wider text-[11px]">System Risk Proportion</span>
+                          <span className="text-violet-400 font-mono text-[10px] font-extrabold">{total} Scans</span>
                         </div>
-                        <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800/40">
-                          <div className={`${c.bar} h-full rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                        
+                        {/* Segmented bar */}
+                        <div className="h-3 w-full rounded-full bg-slate-950 border border-slate-800 overflow-hidden flex p-0.5 space-x-0.5">
+                          <div style={{ width: `${safePct}%` }} className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-l-full transition-all duration-500" title={`Safe: ${safeCount} (${safePct}%)`} />
+                          <div style={{ width: `${mediumPct}%` }} className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-500" title={`Medium: ${mediumCount} (${mediumPct}%)`} />
+                          <div style={{ width: `${highPct}%` }} className="h-full bg-gradient-to-r from-rose-600 to-pink-500 rounded-r-full transition-all duration-500" title={`High Threat: ${highCount} (${highPct}%)`} />
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Interactive Risk Profile Cards */}
+                      <div className="space-y-2.5">
+                        {/* Safe Tier Card */}
+                        <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between transition-all hover:border-emerald-500/40">
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+                              <ShieldCheck size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-emerald-300 block truncate">Safe Baselines</span>
+                              <span className="text-[10px] text-slate-400 block font-medium">{safeCount} targets</span>
+                            </div>
+                          </div>
+                          <span className="font-mono text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            {safePct}%
+                          </span>
+                        </div>
+
+                        {/* Medium Tier Card */}
+                        <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-center justify-between transition-all hover:border-amber-500/40">
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 shrink-0">
+                              <AlertTriangle size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-amber-300 block truncate">Medium Risk Signals</span>
+                              <span className="text-[10px] text-slate-400 block font-medium">{mediumCount} targets</span>
+                            </div>
+                          </div>
+                          <span className="font-mono text-xs font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                            {mediumPct}%
+                          </span>
+                        </div>
+
+                        {/* High Threat Tier Card */}
+                        <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/5 flex items-center justify-between transition-all hover:border-rose-500/40">
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 shrink-0">
+                              <ShieldAlert size={16} />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-rose-300 block truncate">High / Unsafe Abuse</span>
+                              <span className="text-[10px] text-slate-400 block font-medium">{highCount} targets</span>
+                            </div>
+                          </div>
+                          <span className="font-mono text-xs font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                            {highPct}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Domain Catalog Panel */}
