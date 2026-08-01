@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Activity, Database, Server, LogOut, User } from 'lucide-react';
+import { Activity, Database, Server, LogOut, User, Sun, Moon } from 'lucide-react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 import logo200M from '../assets/logo_200m.png';
 
@@ -18,6 +19,7 @@ interface HeaderProps {
 
 export default function Header({ activeTab, setActiveTab }: HeaderProps) {
   const { currentUser, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [systemStatus, setSystemStatus] = useState<SystemStatusState>({
     status: 'checking',
     postgres: 'checking',
@@ -114,6 +116,20 @@ export default function Header({ activeTab, setActiveTab }: HeaderProps) {
 
           {/* Right: status + hamburger */}
           <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+            {/* Dark / Light Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/80 text-slate-300 hover:text-white transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-center"
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              aria-label="Toggle Theme"
+            >
+              {theme === 'dark' ? (
+                <Sun size={15} className="text-amber-400 hover:rotate-45 transition-transform duration-300" />
+              ) : (
+                <Moon size={15} className="text-violet-500 hover:-rotate-12 transition-transform duration-300" />
+              )}
+            </button>
+
             {/* User Profile / Logout Dropdown */}
             {currentUser ? (
               <div className="relative border-r border-slate-800 pr-2 sm:pr-3 mr-0.5">
