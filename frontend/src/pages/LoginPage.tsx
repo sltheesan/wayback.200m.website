@@ -157,7 +157,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex text-slate-100 bg-slate-950 font-sans">
+    <div className="login-page-root min-h-screen flex text-slate-100 bg-slate-950 font-sans">
       
       {/* LEFT SIDE: CYBERSECURITY IMAGE BANNER (Hidden on Mobile) */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden select-none">
