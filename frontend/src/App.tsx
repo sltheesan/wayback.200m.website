@@ -31,7 +31,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 import { useAuth } from './contexts/AuthContext';
 import { apiService } from './services/api';
 import { DomainAnalysisResponse, GlobalStats, Snapshot } from './types';
-import { BarChart3, Database, ShieldAlert, ArrowUpRight, X, Eye, User as UserIcon } from 'lucide-react';
+import { BarChart3, Database, ShieldAlert, ArrowUpRight, X, Eye, Search, Clock } from 'lucide-react';
 
 const DEFAULT_STATS: GlobalStats = {
   total_analyzed: 0,
@@ -50,6 +50,8 @@ function ScanApp() {
   const [stats, setStats] = useState<GlobalStats>(DEFAULT_STATS);
   const [timelineModalOpen, setTimelineModalOpen] = useState<boolean>(false);
   const [threatIntelModalOpen, setThreatIntelModalOpen] = useState<boolean>(false);
+  const [dbSearchQuery, setDbSearchQuery] = useState<string>('');
+  const [dbTimeFilter, setDbTimeFilter] = useState<'all' | 'today' | '7days' | 'older'>('all');
   const [batchHistory, setBatchHistory] = useState<any[]>(() => {
     const saved = localStorage.getItem('dhr_batch_history');
     return saved ? JSON.parse(saved) : [];
@@ -145,6 +147,49 @@ function ScanApp() {
     if (level === 'UNKNOWN') return 'text-violet-400 border-violet-500/20 bg-violet-500/5';
     return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5';
   };
+
+  const formatRelativeDate = (isoString?: string) => {
+    if (!isoString) return 'recently';
+    try {
+      const date = new Date(isoString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+
+      if (diffHours < 1) return 'Just now';
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays}d ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+      return `${Math.floor(diffDays / 30)}m ago`;
+    } catch (e) {
+      return 'recently';
+    }
+  };
+
+  const filteredDbDomains = (stats?.recent_domains || []).filter((d) => {
+    const query = dbSearchQuery.trim().toLowerCase();
+    const matchesQuery =
+      !query ||
+      d.domain.toLowerCase().includes(query) ||
+      d.risk_level.toLowerCase().includes(query) ||
+      (d.checked_by?.username && d.checked_by.username.toLowerCase().includes(query));
+
+    if (!matchesQuery) return false;
+    if (dbTimeFilter === 'all') return true;
+    if (!d.last_analyzed_at) return true;
+
+    const date = new Date(d.last_analyzed_at);
+    const now = new Date();
+    const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (dbTimeFilter === 'today') return diffHours <= 24;
+    if (dbTimeFilter === '7days') return diffHours <= 24 * 7;
+    if (dbTimeFilter === 'older') return diffHours > 24 * 7;
+
+    return true;
+  });
 
   // Helper to update the selected snapshot detail card.
   const handleSelectSnapshot = (snap: Snapshot) => {
@@ -293,45 +338,101 @@ function ScanApp() {
               </div>
 
               {/* Domain Catalog Panel */}
-              <div className="glass-panel p-6 space-y-4 h-[440px] flex flex-col">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
-                  Database Domains
-                </h3>
-                <div className="space-y-2.5 overflow-y-auto pr-1 flex-1">
-                  {Array.isArray(stats?.recent_domains) && stats.recent_domains.length > 0 ? (
-                    stats.recent_domains.map((d, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleScanDomain(d.domain, false)}
-                        disabled={loading}
-                        className="w-full flex items-center justify-between p-3 border border-slate-800 bg-slate-900/10 hover:bg-slate-900/35 hover:border-slate-700 rounded-xl transition-all text-left text-xs group"
-                      >
-                        <div className="space-y-1 text-left min-w-0 flex-1 pr-2">
-                          <span className="font-bold text-white group-hover:text-brand-300 transition-colors block truncate">
-                            {d.domain}
-                          </span>
-                          <div className="flex items-center space-x-2 text-[10px] text-slate-500 font-mono">
-                            <span>Score: {d.risk_score}/100</span>
-                            <span>•</span>
-                            <span className="flex items-center text-slate-400 space-x-1" title={d.checked_by?.full_name || 'System / Anonymous'}>
-                              <UserIcon size={10} className="text-brand-400 shrink-0" />
-                              <span className="text-slate-300 truncate max-w-[110px]">
-                                {d.checked_by?.username || (d.checked_by?.full_name ? d.checked_by.full_name.split(' ')[0] : 'System')}
-                              </span>
+              <div className="glass-panel p-5 space-y-3.5 h-[520px] flex flex-col">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center">
+                    <Database size={15} className="mr-2 text-violet-400" />
+                    Database Domains
+                  </h3>
+                  <span className="text-[10px] text-slate-400 font-mono font-bold bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">
+                    {filteredDbDomains.length} / {stats?.recent_domains?.length || 0}
+                  </span>
+                </div>
+
+                {/* Domain Search Bar */}
+                <div className="relative group">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Search database domains..."
+                    value={dbSearchQuery}
+                    onChange={(e) => setDbSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-7 py-2 bg-slate-950/70 border border-slate-800 text-xs font-medium text-white rounded-lg focus:outline-none focus:border-violet-500/60 transition-all placeholder:text-slate-500"
+                  />
+                  {dbSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setDbSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Date Recency Filter Chips */}
+                <div className="flex items-center gap-1 text-[10px] font-bold pb-1 border-b border-slate-800/60">
+                  <span className="text-slate-500 uppercase tracking-widest mr-1 text-[9px]">Days:</span>
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'today', label: 'Today' },
+                    { id: '7days', label: '7 Days' },
+                    { id: 'older', label: 'Older' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setDbTimeFilter(tab.id as any)}
+                      className={`px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                        dbTimeFilter === tab.id
+                          ? 'bg-violet-600/20 border-violet-500/50 text-violet-300 shadow-[0_0_8px_rgba(139,92,246,0.15)]'
+                          : 'bg-slate-900/40 border-slate-800/80 text-slate-400 hover:text-white hover:border-slate-700'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Domains List */}
+                <div className="space-y-2 overflow-y-auto pr-1 flex-1">
+                  {filteredDbDomains.length > 0 ? (
+                    filteredDbDomains.map((d, index) => {
+                      const relTime = formatRelativeDate(d.last_analyzed_at);
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleScanDomain(d.domain, false)}
+                          disabled={loading}
+                          className="w-full flex items-center justify-between p-3 border border-slate-800/80 bg-slate-900/20 hover:bg-slate-900/60 hover:border-slate-700 rounded-xl transition-all text-left text-xs group cursor-pointer"
+                        >
+                          <div className="space-y-1 text-left min-w-0 flex-1 pr-2">
+                            <span className="font-bold text-white group-hover:text-violet-300 transition-colors block truncate">
+                              {d.domain}
                             </span>
+                            <div className="flex items-center space-x-2 text-[10px] text-slate-500 font-mono">
+                              <span>Score: {d.risk_score}/100</span>
+                              <span>•</span>
+                              <span className="flex items-center text-slate-400 space-x-1" title={`Last analyzed: ${d.last_analyzed_at || 'N/A'}`}>
+                                <Clock size={10} className="text-violet-400 shrink-0" />
+                                <span className="text-slate-300 font-semibold">{relTime}</span>
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2 shrink-0">
-                          <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-extrabold border ${getRiskColor(d.risk_level)}`}>
-                            {d.risk_level}
-                          </span>
-                          <ArrowUpRight size={14} className="text-slate-500 group-hover:text-white transition-colors" />
-                        </div>
-                      </button>
-                    ))
+                          <div className="flex items-center space-x-2 shrink-0">
+                            <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-extrabold border ${getRiskColor(d.risk_level)}`}>
+                              {d.risk_level}
+                            </span>
+                            <ArrowUpRight size={14} className="text-slate-500 group-hover:text-white transition-colors" />
+                          </div>
+                        </button>
+                      );
+                    })
                   ) : (
-                    <div className="text-center py-6 border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
-                      No domains found in database
+                    <div className="text-center py-8 border border-dashed border-slate-800/80 rounded-xl text-slate-500 text-xs space-y-1">
+                      <p className="font-semibold text-slate-400">No matching domains</p>
+                      <p className="text-[11px]">Try adjusting your search query or day filter</p>
                     </div>
                   )}
                 </div>
