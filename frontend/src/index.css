@@ -286,6 +286,24 @@ html.light .text-slate-500 {
   color: #64748b !important;
 }
 
+/* Preserve crisp white text for filled buttons and action controls in Light Mode */
+html.light button.bg-gradient-to-r,
+html.light button.bg-gradient-to-r *,
+html.light button[type="submit"],
+html.light button[type="submit"] *,
+html.light .bg-gradient-to-r.from-violet-600,
+html.light .bg-gradient-to-r.from-violet-600 *,
+html.light button.bg-violet-600,
+html.light button.bg-violet-600 *,
+html.light button.bg-brand-600,
+html.light button.bg-brand-600 *,
+html.light button.bg-emerald-600,
+html.light button.bg-emerald-600 *,
+html.light button.bg-rose-600,
+html.light button.bg-rose-600 * {
+  color: #ffffff !important;
+}
+
 /* Status Badge Text Contrast in Light Mode */
 html.light .text-emerald-400 { color: #059669 !important; }
 html.light .text-rose-400    { color: #e11d48 !important; }
