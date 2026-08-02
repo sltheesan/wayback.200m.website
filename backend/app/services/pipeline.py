@@ -425,18 +425,18 @@ async def analyze_domain_pipeline(domain: str, force_refresh: bool, db: AsyncSes
         # Final risk score calculation combining Dual Risk Engine + verified redirect threats
         final_risk_score = max(risk_score, dual_risk.final_risk_score)
 
-        # MANDATORY POLICY: Every redirected snapshot MUST be marked as UNSAFE (score >= 85)
-        if redirect_eval.redirect_detected or redirect_eval.redirect_target or status in (301, 302, 303, 307, 308):
-            final_risk_score = max(final_risk_score, 85)
+        # Threat Redirect Policy: Only boost risk score if redirect target is a confirmed threat category
+        if dual_risk.redirect_target_category in ("gambling", "adult", "phishing", "phishing_scam", "malware", "malware_hacking", "illegal_pharmaceuticals"):
+            final_risk_score = max(final_risk_score, dual_risk.final_risk_score, 85)
             if not any(isinstance(f, dict) and f.get("category") in ("redirect_abuse", "redirect") for f in flags):
                 flags.append({
                     "category": "redirect_abuse",
-                    "keyword": "external_redirect",
+                    "keyword": "external_threat_redirect",
                     "weight": 85,
                     "match_count": 1,
-                    "element": "HTTP Redirect Header",
+                    "element": "HTTP Threat Redirect",
                     "matched_text": redirect_eval.redirect_target or original,
-                    "snippet": f"Snapshot contains external redirect to: {redirect_eval.redirect_target or 'external destination'}",
+                    "snippet": f"Snapshot contains external threat redirect to {dual_risk.redirect_target_category.upper()} target: {redirect_eval.redirect_target}",
                     "position": 0
                 })
 

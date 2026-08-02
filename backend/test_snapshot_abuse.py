@@ -89,10 +89,10 @@ def test_safe_domain_with_normal_external_links():
     assert telemetry["external_links_count"] == 13
 
 def test_redirect_snapshot_forces_unsafe_domain():
-    # Domain with historical snapshot redirect
+    # Domain with historical threat snapshot redirect (e.g. to gambling)
     snapshots_risk = [
         {"timestamp": "20180101", "risk_score": 0, "is_redirect": False},
-        {"timestamp": "20220518", "risk_score": 0, "is_redirect": True, "redirect_url": "https://casino.com"},
+        {"timestamp": "20220518", "risk_score": 90, "is_redirect": True, "redirect_url": "https://casino.com", "redirect_target_category": "gambling", "redirect_target_risk": 90},
         {"timestamp": "20260518", "risk_score": 0, "is_redirect": False}
     ]
     
@@ -101,6 +101,18 @@ def test_redirect_snapshot_forces_unsafe_domain():
     assert overall_score >= 85
     assert overall_level == "HIGH"
 
+def test_safe_canonical_redirect_is_not_unsafe():
+    # Domain with normal HTTP to HTTPS canonical redirect or safe destination
+    snapshots_risk = [
+        {"timestamp": "20180101", "risk_score": 0, "is_redirect": True, "redirect_url": "https://example.com", "redirect_same_domain": True, "redirect_target_category": "safe"},
+        {"timestamp": "20260518", "risk_score": 0, "is_redirect": False}
+    ]
+
+    overall_score, overall_level, peak_score, avg_score = compute_overall_risk(snapshots_risk)
+
+    assert overall_score == 0
+    assert overall_level == "SAFE"
+
 if __name__ == "__main__":
     test_extract_original_url()
     test_external_domain_check()
@@ -108,4 +120,5 @@ if __name__ == "__main__":
     test_historical_abuse_domain_classification()
     test_safe_domain_with_normal_external_links()
     test_redirect_snapshot_forces_unsafe_domain()
+    test_safe_canonical_redirect_is_not_unsafe()
     print("ALL HISTORICAL SNAPSHOT ABUSE TESTS PASSED SUCCESSFULLY!")

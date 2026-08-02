@@ -244,35 +244,43 @@ def analyze_snapshot_evidence(
         red_url = extract_original_url(redirect_target)
         red_dom = extract_domain_from_url(red_url)
         red_lower = red_url.lower()
-        
-        matched_cat = None
-        for category, kws in THREAT_KEYWORDS.items():
-            for kw in kws:
-                if kw in red_lower:
-                    matched_cat = category
-                    break
-            if matched_cat:
-                break
-                
-        if matched_cat:
-            cat_display = "Gambling" if matched_cat == "gambling" else ("Adult" if matched_cat == "adult" else "Scam/Phishing")
-            findings.append({
-                "finding_type": "redirect_abuse",
-                "evidence": red_dom or red_url,
-                "category": cat_display,
-                "risk_score": 90,
-                "description": f"Snapshot redirects directly to external {cat_display} domain: {red_dom}"
-            })
-            redirect_risk_score = 90
+
+        # Ignore same root domain canonical redirects (e.g. http -> https, domain -> www)
+        if base_domain and not is_external_domain(red_dom, base_domain):
+            pass
         else:
-            findings.append({
-                "finding_type": "redirect_abuse",
-                "evidence": red_dom or red_url,
-                "category": "Redirect Abuse",
-                "risk_score": 85,
-                "description": f"Snapshot redirects to external destination target ({red_dom or red_url}), indicating historical redirect abuse."
-            })
-            redirect_risk_score = 85
+            matched_cat = None
+            for category, kws in THREAT_KEYWORDS.items():
+                for kw in kws:
+                    if kw in red_lower:
+                        matched_cat = category
+                        break
+                if matched_cat:
+                    break
+
+            if matched_cat:
+                cat_display = "Gambling" if matched_cat == "gambling" else ("Adult" if matched_cat == "adult" else "Scam/Phishing")
+                findings.append({
+                    "finding_type": "redirect_abuse",
+                    "evidence": red_dom or red_url,
+                    "category": cat_display,
+                    "risk_score": 90,
+                    "description": f"Snapshot redirects directly to external {cat_display} domain: {red_dom}"
+                })
+                redirect_risk_score = 90
+            elif any(b_dom in red_dom for b_dom in BENIGN_DOMAINS):
+                # Redirecting to known benign domain (social media, google, wikipedia, etc.) -> safe
+                pass
+            else:
+                # External redirect without threat signals: record low-risk informational finding (0 risk penalty)
+                findings.append({
+                    "finding_type": "external_redirect",
+                    "evidence": red_dom or red_url,
+                    "category": "External Redirect",
+                    "risk_score": 10,
+                    "description": f"Snapshot redirects to external destination target ({red_dom or red_url})."
+                })
+                redirect_risk_score = 10
 
     # 7. Aggregate Total Snapshot Risk Score
     if findings:

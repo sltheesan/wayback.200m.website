@@ -265,19 +265,24 @@ class RedirectEngine:
         # Apply Penalties
         if resolved_target and original_url:
             if URLNormalizer.is_same_root_domain(original_url, resolved_target):
-                score -= 15
-                evidence_items.append("⚡ Same Root Domain Canonical Switch (-15)")
+                score -= 50
+                evidence_items.append("⚡ Same Root Domain Canonical Switch (-50)")
                 res.redirect_same_domain = True
 
             if any(kw in resolved_target.lower() for kw in _WAYBACK_ARTIFACT_KEYWORDS):
-                score -= 30
-                evidence_items.append("⚡ Wayback Machine Toolbar Artifact Penalty (-30)")
+                score -= 50
+                evidence_items.append("⚡ Wayback Machine Toolbar Artifact Penalty (-50)")
 
         # Clamp confidence score 0..100
         res.redirect_confidence = max(0, min(100, score))
         res.redirect_target = resolved_target
         res.evidence = evidence_items
-        res.redirect_detected = bool(resolved_target and res.redirect_confidence >= 50)
+        # A redirect is ONLY marked as a suspicious detected redirect if it is NOT same-domain
+        res.redirect_detected = bool(
+            resolved_target and 
+            res.redirect_confidence >= 50 and 
+            not res.redirect_same_domain
+        )
 
         if res.redirect_detected:
             # Build primary redirect method string

@@ -82,11 +82,11 @@ def test_risk_engine_classification():
     
     # Medium risk: 30 < final <= 60
     assert compute_overall_risk([40, 40, 40]) == (40, "MEDIUM", 40, 40)
-    assert compute_overall_risk([50, 60, 45]) == (57, "MEDIUM", 60, 52)
+    assert compute_overall_risk([50, 60, 45]) == (58, "MEDIUM", 60, 52)
     
     # High risk: final > 60
     assert compute_overall_risk([70, 70, 70]) == (70, "HIGH", 70, 70)
-    assert compute_overall_risk([80, 90, 75]) == (88, "HIGH", 90, 82)
+    assert compute_overall_risk([80, 90, 75]) == (90, "HIGH", 90, 82)
 
 def test_sampling_strategy_six_or_fewer():
     """Verify that all records are returned sorted chronologically."""

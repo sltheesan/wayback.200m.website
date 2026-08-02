@@ -42,16 +42,28 @@ def compute_overall_risk(scores_or_snapshots: List[Any]) -> Tuple[int, str, int,
         raw_avg = sum(scores) / len(scores) if scores else 0.0
     avg_score = int(round(raw_avg))
 
-    # Mandatory Redirect & Historical Abuse Policy:
-    # If any snapshot exhibits redirect behavior or peak score >= 70, domain MUST be UNSAFE (HIGH risk).
-    has_redirect_abuse = False
+    # Threat Redirect Abuse Policy:
+    # ONLY mark domain as UNSAFE if a snapshot exhibited CONFIRMED threat redirect abuse
+    # (e.g. redirect target risk >= 70 or target category in high-severity threat categories)
+    has_threat_redirect_abuse = False
     for item in scores_or_snapshots:
         if isinstance(item, dict):
-            if item.get("is_redirect") or item.get("redirect_detected") or item.get("redirect_url") or item.get("redirect_target"):
-                has_redirect_abuse = True
+            target_risk = int(item.get("redirect_target_risk") or 0)
+            target_cat = str(item.get("redirect_target_category", "")).lower()
+            snap_score = int(item.get("risk_score") or 0)
+
+            if target_cat in HIGH_SEVERITY_CATEGORIES or target_risk >= 70:
+                has_threat_redirect_abuse = True
                 break
 
-    if has_redirect_abuse:
+            snap_flags = item.get("flags", [])
+            if isinstance(snap_flags, list):
+                for f in snap_flags:
+                    if isinstance(f, dict) and f.get("category") in ("gambling", "adult", "phishing", "phishing_scam", "malware", "malware_hacking", "illegal_pharmaceuticals", "redirect_abuse") and int(f.get("weight", 0)) >= 70:
+                        has_threat_redirect_abuse = True
+                        break
+
+    if has_threat_redirect_abuse:
         final_score = max(peak_score, 85)
         level = "HIGH"
         return final_score, level, max(peak_score, 85), avg_score
