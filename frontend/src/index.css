@@ -408,16 +408,111 @@ html.light .to-slate-950\/80 {
   --tw-gradient-stops: var(--tw-gradient-from), #f8fafc, var(--tw-gradient-to) !important;
 }
 
-html.light .text-emerald-300 { color: #047857 !important; }
-html.light .text-amber-300   { color: #b45309 !important; }
-html.light .text-purple-300  { color: #6b21a8 !important; }
-html.light .text-purple-200  { color: #581c87 !important; }
+/* ─── Risk Vector & Threat Category Light Mode Color Overrides ─────────── */
+html.light .text-purple-200,
+html.light .text-purple-300,
+html.light .text-purple-400 { color: #6b21a8 !important; }
+html.light .bg-purple-500\/5,
+html.light .bg-purple-500\/10,
+html.light .bg-purple-500\/20,
+html.light .bg-purple-500\/30 { background-color: #f3e8ff !important; }
+html.light .border-purple-500\/20,
+html.light .border-purple-500\/30,
+html.light .border-purple-500\/40 { border-color: #d8b4fe !important; }
+html.light .hover\:bg-purple-500\/10:hover,
+html.light .hover\:bg-purple-500\/30:hover { background-color: #e9d5ff !important; }
+html.light .hover\:border-purple-500\/40:hover { border-color: #c084fc !important; }
 
-html.light .bg-emerald-500\/5,
+html.light .text-pink-200,
+html.light .text-pink-300,
+html.light .text-pink-400 { color: #9d174d !important; }
+html.light .bg-pink-500\/5,
+html.light .bg-pink-500\/10,
+html.light .bg-pink-500\/20,
+html.light .bg-pink-500\/30 { background-color: #fce7f3 !important; }
+html.light .border-pink-500\/20,
+html.light .border-pink-500\/30,
+html.light .border-pink-500\/40 { border-color: #fbcfe8 !important; }
+html.light .hover\:bg-pink-500\/10:hover,
+html.light .hover\:bg-pink-500\/30:hover { background-color: #fbcfe8 !important; }
+html.light .hover\:border-pink-500\/40:hover { border-color: #f472b6 !important; }
+
+html.light .text-amber-200,
+html.light .text-amber-300,
+html.light .text-amber-400 { color: #92400e !important; }
 html.light .bg-amber-500\/5,
-html.light .bg-rose-500\/5 {
-  background-color: #ffffff !important;
-}
+html.light .bg-amber-500\/10,
+html.light .bg-amber-500\/20,
+html.light .bg-amber-500\/30 { background-color: #fef3c7 !important; }
+html.light .border-amber-500\/20,
+html.light .border-amber-500\/30,
+html.light .border-amber-500\/40 { border-color: #fde68a !important; }
+html.light .hover\:bg-amber-500\/10:hover,
+html.light .hover\:bg-amber-500\/30:hover { background-color: #fde68a !important; }
+html.light .hover\:border-amber-500\/40:hover { border-color: #fbbf24 !important; }
+
+html.light .text-rose-200,
+html.light .text-rose-300,
+html.light .text-rose-400,
+html.light .text-red-200,
+html.light .text-red-300,
+html.light .text-red-400 { color: #9f1239 !important; }
+html.light .bg-rose-500\/5,
+html.light .bg-rose-500\/10,
+html.light .bg-rose-500\/20,
+html.light .bg-rose-500\/30,
+html.light .bg-red-500\/5,
+html.light .bg-red-500\/10 { background-color: #ffe4e6 !important; }
+html.light .border-rose-500\/20,
+html.light .border-rose-500\/30,
+html.light .border-rose-500\/40,
+html.light .border-red-500\/20,
+html.light .border-red-500\/30 { border-color: #fecdd3 !important; }
+html.light .hover\:bg-rose-500\/10:hover,
+html.light .hover\:bg-rose-500\/30:hover { background-color: #fecdd3 !important; }
+html.light .hover\:border-rose-500\/40:hover { border-color: #fb7185 !important; }
+
+html.light .text-emerald-200,
+html.light .text-emerald-300,
+html.light .text-emerald-400 { color: #065f46 !important; }
+html.light .bg-emerald-500\/5,
+html.light .bg-emerald-500\/10,
+html.light .bg-emerald-500\/20,
+html.light .bg-emerald-500\/30 { background-color: #d1fae5 !important; }
+html.light .border-emerald-500\/20,
+html.light .border-emerald-500\/30,
+html.light .border-emerald-500\/40 { border-color: #a7f3d0 !important; }
+html.light .hover\:bg-emerald-500\/10:hover,
+html.light .hover\:bg-emerald-500\/30:hover { background-color: #a7f3d0 !important; }
+html.light .hover\:border-emerald-500\/40:hover { border-color: #34d399 !important; }
+
+html.light .text-violet-200,
+html.light .text-violet-300,
+html.light .text-violet-400 { color: #5b21b6 !important; }
+html.light .bg-violet-500\/5,
+html.light .bg-violet-500\/10,
+html.light .bg-violet-500\/20,
+html.light .bg-violet-500\/30 { background-color: #ede9fe !important; }
+html.light .border-violet-500\/20,
+html.light .border-violet-500\/30,
+html.light .border-violet-500\/40 { border-color: #ddd6fe !important; }
+html.light .hover\:bg-violet-500\/10:hover,
+html.light .hover\:bg-violet-500\/30:hover { background-color: #ddd6fe !important; }
+html.light .hover\:border-violet-500\/40:hover { border-color: #a78bfa !important; }
+
+html.light .text-cyan-200,
+html.light .text-cyan-300,
+html.light .text-cyan-400 { color: #155e75 !important; }
+html.light .bg-cyan-500\/5,
+html.light .bg-cyan-500\/10,
+html.light .bg-cyan-500\/20,
+html.light .bg-cyan-500\/30 { background-color: #cffafe !important; }
+html.light .border-cyan-500\/20,
+html.light .border-cyan-500\/30,
+html.light .border-cyan-500\/40 { border-color: #a5f3fc !important; }
+html.light .hover\:bg-cyan-500\/10:hover,
+html.light .hover\:bg-cyan-500\/30:hover { background-color: #a5f3fc !important; }
+html.light .hover\:border-cyan-500\/40:hover { border-color: #38bdf8 !important; }
 
 /* ─── Snapshot Timeline Light Mode Complete Overrides ─────────────────── */
 html.light .snapshot-detail-pane,
